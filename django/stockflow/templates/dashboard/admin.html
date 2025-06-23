@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block content %}
+  <h1 class="text-center">Admin Dashboard</h1>
+  <p class="text-center">Welcome, {{ user.username }}!</p>
+  
+  <!-- logout button -->
+    <form class="text-center" method="post" action="{% url 'logout' %}">
+        {% csrf_token %}
+        <button type="submit" class="bg-red-600 text-white py-2 px-4 rounded hover:bg-red-700">
+            Logout
+        </button>
+    </form>
+
+    <!-- create raw item button -->
+    <div class="text-center mt-4">
+        <a href="{% url 'create_raw_item' %}" class="bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700">
+            Create Raw Item
+        </a>
+    </div>
+
+{% endblock %}

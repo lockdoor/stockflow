@@ -1,5 +1,6 @@
 up:
-	docker compose up
+	docker compose up -d
+	docker logs -f django
 
 down:
 	docker compose down

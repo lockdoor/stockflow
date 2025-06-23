@@ -19,23 +19,25 @@ services:
 
   postgres:
     image: postgres:16-bullseye
+    container_name: postgres
+    hostname: postgres
     restart: always
     volumes:
       - stockflow_data:/var/lib/postgresql/data
     env_file:
       - .env
 
-  # pgadmin:
-  #   image: dpage/pgadmin4
-  #   container_name: pgadmin
-  #   hostname: pgadmin
-  #   restart: always
-  #   env_file:
-  #     - .env
-  #   depends_on:
-  #     - postgres
-  #   ports:
-  #     - "8001:80"
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin
+    hostname: pgadmin
+    restart: always
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+    ports:
+      - "8001:80"
 
 volumes:
   stockflow_data:
