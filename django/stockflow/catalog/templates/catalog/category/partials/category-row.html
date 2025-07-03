@@ -1,0 +1,14 @@
+<tr id="category-row-{{ category.id }}">
+    <td><a href="{% url 'catalog:category-detail' category.id%}">{{ category.name|truncatechars:20 }}</a></td>
+    <td>{{ category.description|truncatechars:20 }}</td>
+    <td>{{ category.created_at|date:"M d, Y" }}</td>
+    <td>
+        <button class="btn btn-secondary" 
+            hx-get="{% url 'catalog:category-edit' category.id %}"
+            hx-target="#category-form-container" 
+            hx-swap="innerHTML" 
+            hx-trigger="click"
+            onclick="document.getElementById('category-modal').showModal()">
+            Edit</button>
+    </td>
+</tr>

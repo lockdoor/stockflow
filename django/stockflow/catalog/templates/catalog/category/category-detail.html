@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}{{category.name}}{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-center h-screen">
+    <div class="bg-white p-8 m-4 rounded shadow-md w-full ">
+        <!-- <div class="overflow-x-auto"> -->
+        <h2 class="text-center">Category Detail</h2>
+        <!-- table definition list style -->
+        <table class="table table-zebra table-pin-rows">
+            <tbody id="category-table-body">
+                <tr>
+                    <th class="w-10">Name</th>
+                    <td>{{ category.name }}</td>
+                </tr>
+                <tr>
+                    <th class="w-10">Description</th>
+                    <td>{{ category.description }}</td>
+                </tr>
+                <tr>
+                    <th class="w-10">Created by</th>
+                    <td>{{category.created_by}}: {{ category.created_at|date:"Y-m-d H:i:s" }}</td>
+                </tr>
+                <tr>
+                    <th class="w-10">Updated At</th>
+                    <td>{{category.updated_by}}: {{ category.updated_at|date:"Y-m-d H:i:s" }}</td>
+                </tr>
+            </tbody>
+        </table>
+        <!-- button to back -->
+        <div class="text-center mt-4">
+            <button class="btn btn-info px-24" onclick="history.back()">Go Back</button>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

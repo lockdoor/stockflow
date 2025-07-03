@@ -1,0 +1,66 @@
+{% load widget_tweaks %}
+<form 
+    hx-post="{% if form.instance.id %}{% url 'catalog:category-edit' form.instance.id %}{% else %}{% url 'catalog:category-create' %}{% endif %}" 
+    hx-target="{% if form.instance.pk %}#category-row-{{ form.instance.id }}{% else %}#category-table-body{% endif %}"
+    hx-swap="{% if form.instance.pk %}outerHTML{% else %}afterbegin{% endif %}"
+    hx-encoding='multipart/form-data'
+    hx-on:success="document.getElementById('category-modal').close(); this.reset();"
+    class="mb-4">
+
+    {% csrf_token %}
+
+    <h3 class="font-bold text-lg mb-4">
+            {% if form.instance.id %}
+                Edit Category
+            {% else %}
+                Add New Category
+            {% endif %}
+    </h3>
+
+    <div class="form-control w-full">
+        <div class="mb-4">
+            <label class="block mb-1 text-sm font-medium">Category Name:</label>
+            {{ form.name|add_class:"w-full px-3 py-2 border rounded" }}
+            {% if form.name.errors %}
+            <div class="text-error text-sm mt-1">
+                {% for error in form.name.errors %}
+                <div>{{ error }}</div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="mb-4">
+            <label class="block mb-1 text-sm font-medium">Description:</label>
+            {{ form.description|add_class:"w-full px-3 py-2 border rounded" }}
+            {% if form.description.errors %}
+            <div class="text-error text-sm mt-1">
+                {% for error in form.description.errors %}
+                <div>{{ error }}</div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- แสดง non-field errors -->
+        {% if form.non_field_errors %}
+        <div class="text-error text-sm mb-4">
+            {% for error in form.non_field_errors %}
+            <div>{{ error }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="modal-action">
+        <button type="button" class="btn" onclick="document.getElementById('category-modal').close()">Cancel</button>
+        <button type="submit" class="btn btn-primary">
+            {% if form.instance.id %}
+                Edit Category
+            {% else %}
+                Add Category
+            {% endif %}
+        </button>
+    </div>
+
+</form>

@@ -4,9 +4,27 @@
 <head>
   <meta charset="UTF-8">
   <title>{% block title %}StockFlow{% endblock %}</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- {% load static %} -->
+  <script src="{% static 'js/htmx.js' %}"></script>
+  <!-- <link href="{% static 'css/output.css' %}" rel="stylesheet" type="text/css" /> -->
+  <!-- <script src="{% static 'css/daisyui.js'  %}"></script> -->
+  <!-- <script src="{% static 'css/daisyui-theme.js'  %}"></script> -->
+
+  <!-- <script src="https://cdn.tailwindcss.com"></script> -->
+
+  <!-- tailwind+daisyui cdn -->
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" type="text/css" />
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 </head>
 <body class="bg-gray-100">
-  {% block content %}{% endblock %}
+  {% block content %}
+  {% endblock %}
+  <script>
+    document.body.addEventListener('htmx:configRequest', (event) => {
+      const token = document.querySelector('[name=csrfmiddlewaretoken]').value;
+      event.detail.headers['X-CSRFToken'] = token;
+    });
+  </script>
 </body>
 </html>

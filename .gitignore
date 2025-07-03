@@ -1,2 +1,11 @@
 .env
 __pycache__
+*.pyc
+*.pyo
+*.pyd
+*.pkl
+*.db
+*.log
+*.sqlite3
+*.DS_Store
+django/stockflow/static/css/tailwindcss

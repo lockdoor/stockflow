@@ -1,0 +1,57 @@
+<div class="flex items-center justify-center">
+    <div class="bg-white p-8 m-4 rounded shadow-md w-full ">
+        <!-- <div class="overflow-x-auto"> -->
+        <h2 class="text-center">Item Detail</h2>
+        <!-- table definition list style -->
+        <table class="table table-zebra table-pin-rows">
+            <tbody id="category-table-body">
+                <tr>
+                    <th class="w-10">SKU</th>
+                    <td>{{item.sku_code}}</td>
+                </tr>
+                <tr>
+                    <th class="w-10">Name</th>
+                    <td>{{ item.name }}</td>
+                </tr>
+                <tr>
+                    <th class="w-10">Type</th>
+                    <td>{{item.type}}</td>
+                </tr>
+                <tr>
+                    <th class="w-10">Status</th>
+                    <td>{{item.status}}</td>
+                </tr>
+                <tr>
+                    <th class="w-10">Unit</th>
+                    <td>{{item.unit}}</td>
+                </tr>
+                <tr>
+                    <th class="w-10">Description</th>
+                    <td>{{ item.description }}</td>
+                </tr>
+                <tr>
+                    <th class="w-10">Created by</th>
+                    <td>{{item.created_by}}: {{ item.created_at|date:"Y-m-d H:i:s" }}</td>
+                </tr>
+                <tr>
+                    <th class="w-10">Updated At</th>
+                    <td>{{item.updated_by}}: {{ item.updated_at|date:"Y-m-d H:i:s" }}</td>
+                </tr>
+
+            </tbody>
+        </table>
+        <!-- button to back -->
+        <div class="text-center mt-4">
+            <button class="btn btn-info px-24" onclick="history.back()">Go Back</button>
+        </div>
+    </div>
+</div>
+
+{% if item.type != 'RAW' %}
+    {% if not item.is_bom_locked %}
+    <div id="bom-form-container">
+        {% include 'catalog/bom/partials/bom-form.html' %}
+    </div>
+    {% endif %}
+{% include 'catalog/bom/partials/bom-list.html' %}
+{% endif %}

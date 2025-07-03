@@ -1,0 +1,14 @@
+<ul class="menu bg-base-100 shadow-md rounded-box mt-1 w-full">
+  {% for item in items %}
+    <li>
+        <button class="btn btn-ghost w-full justify-start text-left"
+            type="button"
+            data-id="{{ item.pk }}"
+            data-name="{{ item.name|escapejs }}"
+        >{{ item.name }} 
+        </button>
+    </li>
+  {% empty %}
+    <li class="text-gray-400 px-4 py-2">No items found</li>
+  {% endfor %}
+</ul>

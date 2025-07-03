@@ -1,0 +1,26 @@
+<tr {% if item.is_locked is False %} class="text-pink-400" {% endif %}
+    id="bom-row-{{ bom.id }}">
+    <td><a href="{% url 'catalog:item-detail' bom.component_sku.id %}">
+        {{ bom.component_sku.sku_code |truncatechars:20 }}</a></td>
+    <td>{{ bom.component_sku.name }}</td>
+    <td>{{ bom.component_sku.type }}</td>
+    <td>{{ bom.quantity }}</td>
+    <td>{{ bom.component_sku.unit }}</td>
+    <td>{{ bom.component_sku.category.name }}</td>
+    {% if bom.parent_sku.is_locked %}
+    <td>
+        <!-- Delete -->
+        <button class="btn btn-error" 
+            hx-delete="{% url 'catalog:bom-delete' bom.id %}"
+            hx-confirm="Are you sure you want to delete this BOM item?"
+            hx-target="closest tr"
+            hx-swap="delete"
+            >Delete</button>
+            
+        {% comment %}
+        Edit button can be added here if needed, but currently not used.
+        In this case use delete then add again with new quantity.
+        {% endcomment %}
+    </td>
+    {% endif %}
+</tr>

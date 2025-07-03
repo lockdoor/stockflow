@@ -65,12 +65,14 @@ class BOMBusinessRuleTest(TestCase):
                 quantity=2
             )
 
-    def test_bom_cannot_update(self):
+    def test_bom_cannot_update_when_is_locked(self):
         bom = BOM.objects.create(
             parent_sku=self.product,
             component_sku=self.item1,
             quantity=10
         )
+        self.product.is_bom_locked = True
+        self.product.save()
         with self.assertRaises(ValidationError):
             bom.quantity = 20
             bom.save()  # This should raise a ValidationError since BOM cannot be updated once created

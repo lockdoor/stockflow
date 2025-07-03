@@ -1,0 +1,17 @@
+<tr {% if item.is_bom_locked is False %} class="text-pink-400" {% endif %}
+    id="item-row-{{ item.id }}">
+    <td><a href="{% url 'catalog:item-detail' item.id %}">{{ item.sku_code |truncatechars:20 }}</a></td>
+    <td>{{ item.name }}</td>
+    <td>{{ item.type }}</td>
+    <td>{{ item.category.name }}</td>
+    <td>
+        <button class="btn btn-secondary" 
+            hx-get="{% url 'catalog:item-edit' item.id %}"
+            hx-target="#item-form-container" 
+            hx-swap="innerHTML" 
+            hx-trigger="click"
+            onclick="document.getElementById('item-modal').showModal()">
+            Edit
+        </button>
+    </td>
+</tr>

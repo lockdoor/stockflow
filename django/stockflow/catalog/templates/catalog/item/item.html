@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% load widget_tweaks %}
+
+{% block title %}Item List{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-center">
+  <div class="bg-white p-8 mx-5 rounded shadow-md w-full">
+    <h2 class="text-2xl font-bold mb-6 text-center">Items List</h2>
+
+    <button class="btn btn-primary mb-4" 
+      hx-get="{% url 'catalog:item-create' %}"
+      hx-target="#item-form-container" 
+      hx-swap="innerHTML" 
+      hx-trigger="click"
+      onclick="document.getElementById('item-modal').showModal()">
+      Add New Item
+    </button>
+
+    {% include './partials/item-form-modal.html' %}
+    
+    {% include './partials/item-list.html' %}
+
+  </div>
+</div>
+{% endblock %}
