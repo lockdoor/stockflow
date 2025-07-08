@@ -22,5 +22,8 @@ class Command(BaseCommand):
 
         self.stdout.write(self.style.NOTICE("Seeding items..."))
         call_command('seed_item')
+        
+        self.stdout.write(self.style.NOTICE("Seeding warehouses..."))
+        call_command('seed_warehouse')
 
         # self.stdout.write(self.style.SUCCESS("✅ Reset and seed completed!"))

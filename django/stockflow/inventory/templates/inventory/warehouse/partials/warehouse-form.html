@@ -1,0 +1,94 @@
+{% load widget_tweaks %}
+<form 
+    hx-post="{% if form.instance.id %}{% url 'inventory:warehouse-edit' form.instance.id %}{% else %}{% url 'inventory:warehouse-create' %}{% endif %}" 
+    hx-target="{% if form.instance.pk %}#warehouse-row-{{ form.instance.id }}{% else %}#warehouse-table-body{% endif %}"
+    hx-swap="{% if form.instance.pk %}outerHTML{% else %}afterbegin{% endif %}"
+    hx-encoding='multipart/form-data'
+    hx-on:success="document.getElementById('warehouse-modal').close(); this.reset();"
+    class="mb-4">
+
+    {% csrf_token %}
+
+    <h3 class="font-bold text-lg mb-4">
+            {% if form.instance.id %}
+                Edit Warehouse
+            {% else %}
+                Add New Warehouse
+            {% endif %}
+    </h3>
+
+    <div class="form-control w-full">
+        <div class="mb-4">
+            <label class="block mb-1 text-sm font-medium">Warehouse Name:</label>
+            {{ form.name|add_class:"w-full px-3 py-2 border rounded" }}
+            {% if form.name.errors %}
+            <div class="text-error text-sm mt-1">
+                {% for error in form.name.errors %}
+                <div>{{ error }}</div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="mb-4">
+            <label class="block mb-1 text-sm font-medium">Address:</label>
+            {{ form.address|add_class:"w-full px-3 py-2 border rounded" }}
+            {% if form.address.errors %}
+            <div class="text-error text-sm mt-1">
+                {% for error in form.address.errors %}
+                <div>{{ error }}</div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="mb-4">
+            <label class="block mb-1 text-sm font-medium">Note:</label>
+            {{ form.note|add_class:"w-full px-3 py-2 border rounded" }}
+            {% if form.note.errors %}
+            <div class="text-error text-sm mt-1">
+                {% for error in form.note.errors %}
+                <div>{{ error }}</div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+
+        {% comment %}
+        <div class="mb-4">
+            <label class="block mb-1 text-sm font-medium">Active:</label>
+            {{ form.is_active|add_class:"w-full px-3 py-2 border rounded" }}
+            {% if form.is_active.errors %}
+            <div class="text-error text-sm mt-1">
+                {% for error in form.is_active.errors %}
+                <div>{{ error }}</div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        {% endcomment %}
+
+        <!-- แสดง non-field errors -->
+        {% comment %}
+        {% if form.non_field_errors %}
+        <div class="text-error text-sm mb-4">
+            {% for error in form.non_field_errors %}
+            <div>{{ error }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endcomment %}
+    </div>
+
+    <div class="modal-action">
+        <button type="button" class="btn" onclick="document.getElementById('warehouse-modal').close()">Cancel</button>
+        <button type="submit" class="btn btn-primary">
+            {% if form.instance.id %}
+                Edit Warehouse
+            {% else %}
+                Add Warehouse
+            {% endif %}
+        </button>
+    </div>
+
+</form>

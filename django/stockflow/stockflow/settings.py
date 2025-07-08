@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'stockflow',  # Your main app
     'widget_tweaks',  # For customizing form widgets in templates
     'catalog',  # Your app for managing items and BOMs
+    'inventory',  # Your app for managing warehouses and stock
     'simple_history',  # For tracking changes in models
 ]
 

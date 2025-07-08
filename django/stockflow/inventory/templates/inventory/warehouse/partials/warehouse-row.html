@@ -1,0 +1,16 @@
+<tr id="warehouse-row-{{ warehouse.id }}">
+    <td><a href="{% url 'inventory:warehouse-detail' warehouse.id %}">{{ warehouse.name|truncatechars:20 }}</a></td>
+    <td>{{ warehouse.address|truncatechars:20 }}</td>
+    <td>{{ warehouse.note|truncatechars:20 }}</td>
+    <td>{{ warehouse.created_by.username }}</td>
+    <td>{{ warehouse.created_at|date:"M d, Y" }}</td>
+    <td>
+        <button class="btn btn-secondary" 
+            hx-get="{% url 'inventory:warehouse-edit' warehouse.id %}"
+            hx-target="#warehouse-form-container" 
+            hx-swap="innerHTML" 
+            hx-trigger="click"
+            onclick="document.getElementById('warehouse-modal').showModal()">
+            Edit</button>
+    </td>
+</tr>
