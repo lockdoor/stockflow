@@ -1,7 +1,7 @@
 from django.test import TestCase
 from django.contrib.auth.models import User
 from inventory.models.warehouse import Warehouse
-from inventory.models.stock_movement import StockMovement, StockMovementReferenceType, StockMovementStatus
+from inventory.models.stock_movement import StockMovement
 
 class StockMovementModelTest(TestCase):
     def setUp(self):
@@ -16,16 +16,16 @@ class StockMovementModelTest(TestCase):
 
     def test_create_draft_stock_movement_success(self):
         movement = StockMovement.objects.create(
-            reference_type=StockMovementReferenceType.PACKING_LIST,
+            reference_type=StockMovement.ReferenceType.PACKING_LIST,
             reference_id=123,
             note='Receive goods',
             warehouse=self.warehouse,
             created_by=self.user,
             updated_by=self.user,
-            status=StockMovementStatus.DRAFT
+            status=StockMovement.Status.DRAFT
         )
-        self.assertEqual(movement.status, StockMovementStatus.DRAFT)
-        self.assertEqual(movement.reference_type, StockMovementReferenceType.PACKING_LIST)
+        self.assertEqual(movement.status, StockMovement.Status.DRAFT)
+        self.assertEqual(movement.reference_type, StockMovement.ReferenceType.PACKING_LIST)
         self.assertEqual(movement.reference_id, 123)
         self.assertEqual(movement.note, 'Receive goods')
         self.assertEqual(movement.warehouse, self.warehouse)
@@ -33,11 +33,11 @@ class StockMovementModelTest(TestCase):
 
     def test_update_draft_stock_movement(self):
         movement = StockMovement.objects.create(
-            reference_type=StockMovementReferenceType.ADJUST,
+            reference_type=StockMovement.ReferenceType.ADJUST,
             warehouse=self.warehouse,
             created_by=self.user,
             updated_by=self.user,
-            status=StockMovementStatus.DRAFT
+            status=StockMovement.Status.DRAFT
         )
         movement.note = 'Update draft note'
         movement.save()
@@ -46,14 +46,14 @@ class StockMovementModelTest(TestCase):
 
     def test_confirmed_stock_movement_is_immutable(self):
         movement = StockMovement.objects.create(
-            reference_type=StockMovementReferenceType.ADJUST,
+            reference_type=StockMovement.ReferenceType.ADJUST,
             warehouse=self.warehouse,
             created_by=self.user,
             updated_by=self.user,
-            status=StockMovementStatus.DRAFT
+            status=StockMovement.Status.DRAFT
         )
         # Confirm movement
-        movement.status = StockMovementStatus.CONFIRMED
+        movement.status = StockMovement.Status.CONFIRMED
         movement.save()
         # Try to update after confirmed
         movement.note = 'Try to update after confirm'
@@ -63,11 +63,11 @@ class StockMovementModelTest(TestCase):
 
     def test_confirmed_stock_movement_cannot_be_deleted(self):
         movement = StockMovement.objects.create(
-            reference_type=StockMovementReferenceType.ADJUST,
+            reference_type=StockMovement.ReferenceType.ADJUST,
             warehouse=self.warehouse,
             created_by=self.user,
             updated_by=self.user,
-            status=StockMovementStatus.CONFIRMED
+            status=StockMovement.Status.CONFIRMED
         )
         with self.assertRaises(ValueError) as e:
             movement.delete()
@@ -75,29 +75,29 @@ class StockMovementModelTest(TestCase):
 
     def test_unique_draft_per_warehouse(self):
         StockMovement.objects.create(
-            reference_type=StockMovementReferenceType.ADJUST,
+            reference_type=StockMovement.ReferenceType.ADJUST,
             warehouse=self.warehouse,
             created_by=self.user,
             updated_by=self.user,
-            status=StockMovementStatus.DRAFT
+            status=StockMovement.Status.DRAFT
         )
         with self.assertRaises(Exception):
             StockMovement.objects.create(
-                reference_type=StockMovementReferenceType.PACKING_LIST,
+                reference_type=StockMovement.ReferenceType.PACKING_LIST,
                 warehouse=self.warehouse,
                 created_by=self.user,
-                status=StockMovementStatus.DRAFT
+                status=StockMovement.Status.DRAFT
             )
 
     # Optimistic Locking
     def test_optimistic_locking_on_draft(self):
         # สมมุติ StockMovement มี field version (integer, default=1, +1 ทุกครั้งที่ save)
         movement = StockMovement.objects.create(
-            reference_type=StockMovementReferenceType.ADJUST,
+            reference_type=StockMovement.ReferenceType.ADJUST,
             warehouse=self.warehouse,
             created_by=self.user,
             updated_by=self.user,
-            status=StockMovementStatus.DRAFT
+            status=StockMovement.Status.DRAFT
         )
         # ดึง movement สอง instance
         m1 = StockMovement.objects.get(pk=movement.pk)

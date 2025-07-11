@@ -1,7 +1,7 @@
 from inventory.signals import warehouse_signals
 from django.test import TestCase, Client
 from django.contrib.auth.models import User, Permission, Group
-from inventory.models.stock_movement import StockMovement, StockMovementStatus
+from inventory.models.stock_movement import StockMovement
 from inventory.models.warehouse import Warehouse
 
 from django.urls import reverse
@@ -17,13 +17,13 @@ class StockMovementDeleteViewTest(TestCase):
             updated_by=self.user)
         self.confirmed_movement = StockMovement.objects.create(
             warehouse=self.warehouse,
-            status=StockMovementStatus.CONFIRMED,
+            status=StockMovement.Status.CONFIRMED,
             created_by=self.user,
             updated_by=self.user
         )
         self.draft_movement = StockMovement.objects.create(
             warehouse=self.warehouse,
-            status=StockMovementStatus.DRAFT,
+            status=StockMovement.Status.DRAFT,
             created_by=self.user,
             updated_by=self.user
         )

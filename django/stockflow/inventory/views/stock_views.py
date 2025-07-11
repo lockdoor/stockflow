@@ -5,7 +5,7 @@ from django.http import HttpResponse
 from django.urls import reverse_lazy
 
 # models
-from inventory.models.stock_movement import StockMovement, StockMovementStatus
+from inventory.models.stock_movement import StockMovement
 # forms
 from inventory.forms.stock_movement_form import StockMovementForm
 
@@ -27,7 +27,7 @@ class StockMovementCreateView(LoginRequiredMixin, CreateView):
         warehouse_id = self.kwargs.get('warehouse_id')
         if warehouse_id:
             initial['warehouse'] = warehouse_id
-        initial['status'] = StockMovementStatus.DRAFT
+        initial['status'] = StockMovement.Status.DRAFT
         return initial
 
     def form_valid(self, form):
@@ -99,7 +99,7 @@ class StockMovementDeleteView(LoginRequiredMixin, View):
             perm = f'inventory.can_manage_warehouse_{stock_movement.warehouse_id}'
             if not request.user.has_perm(perm):
                 return HttpResponse(status=403)
-            if stock_movement.status == StockMovementStatus.CONFIRMED:
+            if stock_movement.status == StockMovement.Status.CONFIRMED:
                 return HttpResponse("Cannot delete confirmed movement.", status=400)
             stock_movement.delete()
             return HttpResponse(status=200)

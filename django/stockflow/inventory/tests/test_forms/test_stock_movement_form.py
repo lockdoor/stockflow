@@ -1,7 +1,7 @@
 from django.test import TestCase
 from django.contrib.auth.models import User
 from inventory.models.warehouse import Warehouse
-from inventory.models.stock_movement import StockMovementReferenceType, StockMovementStatus
+from inventory.models.stock_movement import StockMovement
 from inventory.forms.stock_movement_form import StockMovementForm
 
 class StockMovementFormTest(TestCase):
@@ -17,11 +17,11 @@ class StockMovementFormTest(TestCase):
 
     def test_valid_form(self):
         data = {
-            'reference_type': StockMovementReferenceType.PACKING_LIST,
+            'reference_type': StockMovement.ReferenceType.PACKING_LIST,
             'reference_id': 123,
             'note': 'Test note',
             'warehouse': self.warehouse.id,
-            'status': StockMovementStatus.DRAFT,
+            'status': StockMovement.Status.DRAFT,
         }
         form = StockMovementForm(data=data)
         self.assertTrue(form.is_valid())
@@ -29,8 +29,8 @@ class StockMovementFormTest(TestCase):
         movement.created_by = self.user
         movement.updated_by = self.user
         movement.save()
-        self.assertEqual(movement.reference_type, StockMovementReferenceType.PACKING_LIST)
-        self.assertEqual(movement.status, StockMovementStatus.DRAFT)
+        self.assertEqual(movement.reference_type, StockMovement.ReferenceType.PACKING_LIST)
+        self.assertEqual(movement.status, StockMovement.Status.DRAFT)
         self.assertEqual(movement.warehouse, self.warehouse)
 
     def test_invalid_form_missing_required(self):

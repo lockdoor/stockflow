@@ -1,7 +1,7 @@
 from inventory.signals import warehouse_signals
 from django.test import TestCase, Client
 from django.contrib.auth.models import User, Permission
-from inventory.models.stock_movement import StockMovement, StockMovementStatus, StockMovementReferenceType
+from inventory.models.stock_movement import StockMovement
 from inventory.models.warehouse import Warehouse
 from django.urls import reverse
 
@@ -16,7 +16,7 @@ class StockMovementUpdateViewTest(TestCase):
             updated_by=self.user)
         self.movement = StockMovement.objects.create(
             warehouse=self.warehouse,
-            status=StockMovementStatus.DRAFT,
+            status=StockMovement.Status.DRAFT,
             reference_type='INTERNAL',
             reference_id=1,
             note='original',
@@ -32,11 +32,11 @@ class StockMovementUpdateViewTest(TestCase):
         self.user.user_permissions.add(self.perm1)
         self.client.login(username='testuser', password='testpass')
         data = {
-            'reference_type': StockMovementReferenceType.PACKING_LIST,
+            'reference_type': StockMovement.ReferenceType.PACKING_LIST,
             'reference_id': 99,
             'note': 'updated1',
             'warehouse': self.warehouse.id,
-            'status': StockMovementStatus.DRAFT,
+            'status': StockMovement.Status.DRAFT,
         }
         response = self.client.post(self.update_url, data)
         self.assertEqual(response.status_code, 200)
@@ -48,11 +48,11 @@ class StockMovementUpdateViewTest(TestCase):
         self.user.user_permissions.add(self.perm2)
         self.client.login(username='testuser', password='testpass')
         data = {
-            'reference_type': StockMovementReferenceType.NONE,
+            'reference_type': StockMovement.ReferenceType.NONE,
             'reference_id': 100,
             'note': 'updated2',
             'warehouse': self.warehouse.id,
-            'status': StockMovementStatus.DRAFT,
+            'status': StockMovement.Status.DRAFT,
         }
         response = self.client.post(self.update_url, data)
         self.assertEqual(response.status_code, 200)
@@ -63,11 +63,11 @@ class StockMovementUpdateViewTest(TestCase):
     def test_update_without_permission(self):
         self.client.login(username='testuser', password='testpass')
         data = {
-            'reference_type': StockMovementReferenceType.ADJUST,
+            'reference_type': StockMovement.ReferenceType.ADJUST,
             'reference_id': 101,
             'note': 'should not update',
             'warehouse': self.warehouse.id,
-            'status': StockMovementStatus.DRAFT,
+            'status': StockMovement.Status.DRAFT,
         }
         response = self.client.post(self.update_url, data)
         self.assertEqual(response.status_code, 403)

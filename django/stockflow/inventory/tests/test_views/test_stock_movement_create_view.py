@@ -1,7 +1,7 @@
 from inventory.signals import warehouse_signals
 from django.test import TestCase, Client
 from django.contrib.auth.models import User, Permission, Group
-from inventory.models.stock_movement import StockMovement, StockMovementStatus, StockMovementReferenceType
+from inventory.models.stock_movement import StockMovement
 from inventory.models.warehouse import Warehouse
 from django.urls import reverse
 
@@ -23,11 +23,11 @@ class StockMovementCreateViewTest(TestCase):
         self.user.user_permissions.add(self.perm1)
         self.client.login(username='testuser', password='testpass')
         data = {
-            'reference_type': StockMovementReferenceType.ADJUST,
+            'reference_type': StockMovement.ReferenceType.PACKING_LIST,
             'reference_id': 1,
             'note': 'test',
             'warehouse': self.warehouse.id,
-            'status': StockMovementStatus.DRAFT,
+            'status': StockMovement.Status.DRAFT,
         }
         response = self.client.post(self.create_url, data)
         self.assertEqual(response.status_code, 200)
@@ -37,11 +37,11 @@ class StockMovementCreateViewTest(TestCase):
         self.user.user_permissions.add(self.perm2)
         self.client.login(username='testuser', password='testpass')
         data = {
-            'reference_type': StockMovementReferenceType.PACKING_LIST,
+            'reference_type': StockMovement.ReferenceType.PACKING_LIST,
             'reference_id': 2,
             'note': 'test2',
             'warehouse': self.warehouse.id,
-            'status': StockMovementStatus.DRAFT,
+            'status': StockMovement.Status.DRAFT,
         }
         response = self.client.post(self.create_url, data)
         self.assertEqual(response.status_code, 200)
@@ -54,7 +54,7 @@ class StockMovementCreateViewTest(TestCase):
             'reference_id': 3,
             'note': 'no permission',
             'warehouse': self.warehouse.id,
-            'status': StockMovementStatus.DRAFT,
+            'status': StockMovement.Status.DRAFT,
         }
         response = self.client.post(self.create_url, data)
         self.assertEqual(response.status_code, 403)

@@ -2,7 +2,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.contrib.auth.models import User
 from inventory.models.warehouse import Warehouse
-from inventory.models.stock_movement import StockMovement, StockMovementReferenceType, StockMovementStatus
+from inventory.models.stock_movement import StockMovement
 
 class StockMovementByWareHouseListViewTest(TestCase):
     def setUp(self):
@@ -23,19 +23,19 @@ class StockMovementByWareHouseListViewTest(TestCase):
         )
         for i in range(3):
             StockMovement.objects.create(
-                reference_type=StockMovementReferenceType.PACKING_LIST,
+                reference_type=StockMovement.ReferenceType.PACKING_LIST,
                 warehouse=self.warehouse1,
                 created_by=self.user,
                 updated_by=self.user,
-                status=StockMovementStatus.CONFIRMED
+                status=StockMovement.Status.CONFIRMED
             )
         for i in range(2):
             StockMovement.objects.create(
-                reference_type=StockMovementReferenceType.ADJUST,
+                reference_type=StockMovement.ReferenceType.ADJUST,
                 warehouse=self.warehouse2,
                 created_by=self.user,
                 updated_by=self.user,
-                status=StockMovementStatus.CONFIRMED
+                status=StockMovement.Status.CONFIRMED
             )
 
     def test_list_view_requires_login(self):
