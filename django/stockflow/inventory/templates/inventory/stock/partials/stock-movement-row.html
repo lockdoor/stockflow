@@ -1,5 +1,5 @@
 <tr id="stock-movement-row-{{ movement.id }}">
-    <td><a href="{#% url 'inventory:movement-detail' movement.id %#}">{{ movement.pk }}</a></td>
+    <td><a href="{% url 'inventory:stock-movement-detail' movement.id %}">{{ movement.pk }}</a></td>
     <td>{{ movement.reference_type }}</td>
     <td>{{ movement.reference_id }}</td>
     <td>{{ movement.status }}</td>

@@ -2,7 +2,7 @@
 <form 
     
     hx-post="{% if form.instance.id %}
-                {% url 'stock-movement-edit' form.instance.id %}
+                {% url 'inventory:stock-movement-edit' form.instance.id %}
             {% else %}
                 {% if form.warehouse %} 
                     {% url 'inventory:stock-movement-create' form.warehouse.value %}

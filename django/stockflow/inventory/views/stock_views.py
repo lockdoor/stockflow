@@ -1,4 +1,4 @@
-from django.views.generic import CreateView, ListView, View, UpdateView
+from django.views.generic import CreateView, ListView, View, UpdateView, DetailView
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.shortcuts import render
 from django.http import HttpResponse
@@ -64,7 +64,7 @@ class StockMovementByWareHouseListView(LoginRequiredMixin, ListView):
 class StockMovementUpdateView(LoginRequiredMixin, UpdateView):
     model = StockMovement
     form_class = StockMovementForm
-    template_name = 'inventory/stock/stock-movement-form.html'
+    template_name = 'inventory/stock/partials/stock-movement-form.html'
     
     def dispatch(self, request, *args, **kwargs):
         stock_movement = self.get_object()
@@ -79,7 +79,7 @@ class StockMovementUpdateView(LoginRequiredMixin, UpdateView):
         stock_movement = form.save(commit=False)
         stock_movement.updated_by = self.request.user
         stock_movement.save()
-        context = {'stock_movement': stock_movement}
+        context = {'movement': stock_movement}
         response = render(self.request, 'inventory/stock/partials/stock-movement-row.html', context)
         response['HX-Trigger'] = 'success'
         return response
@@ -105,3 +105,8 @@ class StockMovementDeleteView(LoginRequiredMixin, View):
             return HttpResponse(status=200)
         except StockMovement.DoesNotExist:
             return HttpResponse(status=404)
+
+class StockMovementDetailView(LoginRequiredMixin, DetailView):
+    model = StockMovement
+    template_name = 'inventory/stock/stock-movement-detail.html'
+    context_object_name = 'stock_movement'

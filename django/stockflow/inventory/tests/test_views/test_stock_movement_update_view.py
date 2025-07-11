@@ -17,7 +17,7 @@ class StockMovementUpdateViewTest(TestCase):
         self.movement = StockMovement.objects.create(
             warehouse=self.warehouse,
             status=StockMovement.Status.DRAFT,
-            reference_type='INTERNAL',
+            reference_type=StockMovement.ReferenceType.NONE,
             reference_id=1,
             note='original',
             created_by=self.user,
@@ -27,7 +27,7 @@ class StockMovementUpdateViewTest(TestCase):
         # สร้าง permission ทั้งสองแบบ
         self.perm1 = Permission.objects.get(codename='change_stockmovement')
         self.perm2 = Permission.objects.get(codename=f'can_manage_warehouse_{self.warehouse.id}')
-
+       
     def test_update_with_change_stockmovement_permission(self):
         self.user.user_permissions.add(self.perm1)
         self.client.login(username='testuser', password='testpass')
