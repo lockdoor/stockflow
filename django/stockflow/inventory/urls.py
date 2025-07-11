@@ -3,7 +3,15 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 from inventory.views.warehouse_views import (
-    WarehouseListView, WarehouseDetailView, WarehouseCreateView, WarehouseUpdateView
+    WarehouseListView, WarehouseDetailView, 
+    WarehouseCreateView, WarehouseUpdateView
+)
+
+from inventory.views.stock_views import (
+    StockMovementCreateView, 
+    StockMovementByWareHouseListView, 
+    StockMovementDeleteView, 
+    StockMovementUpdateView
 )
 
 # namespaced URL patterns for the inventory app
@@ -14,4 +22,18 @@ urlpatterns = [
     path('warehouses/<int:pk>/', WarehouseDetailView.as_view(), name='warehouse-detail'),
     path('warehouses/create/', WarehouseCreateView.as_view(), name='warehouse-create'),
     path('warehouses/edit/<int:pk>/', WarehouseUpdateView.as_view(), name='warehouse-edit'),
+    
+    path('warehouses/<int:warehouse_id>/stock-movements/', 
+        StockMovementByWareHouseListView.as_view(), 
+        name='stock-movement-list'),
+    path('stockmovement/<int:warehouse_id>/create/', 
+         StockMovementCreateView.as_view(), 
+         name='stock-movement-create'),
+    path('stockmovement/<int:pk>/delete/', 
+        StockMovementDeleteView.as_view(), 
+        name='stock-movement-delete'),
+    path('stockmovement/<int:pk>/edit/', 
+         StockMovementUpdateView.as_view(), 
+         name='stock-movement-edit'),
+
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

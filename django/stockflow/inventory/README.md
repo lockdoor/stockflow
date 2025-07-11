@@ -1,28 +1,33 @@
 ```mermaid
 erDiagram
+    %% not allow one movement to many warehouse
     StockMovement {
         int id PK
-        enum movement_type "IN, OUT"
         enum reference_type "NONE, ADJUST, PACKING_LIST, PRODUCTION, INVOICE"
         int reference_id FK
         text note
+        int warehouse_id FK
+        enum status "DRAFT, CONFIRMED"
         timestamp created_at
         int created_by FK
+        timestamp updated_at
+        int updated_at FK
+        int version
     }
     StockMovement }o--|| User : "create_by"
+    StockMovement }o--|| Warehouse : "warehouse_id"
 
     StockMovementItem {
         int id PK
         int stock_movement_id FK
         int item_id FK
+        enum movement_type "IN, OUT"
         number quantity
         text lot
         date expired
-        text note
-        int warehouse_id FK
+        text note      
     }
-    StockMovementItem }o--|| Item : "item_id"
-    StockMovementItem }o--|| Warehouse : "warehouse_id"
+    StockMovementItem }o--|| Item : "item_id" 
     StockMovementItem }o--|| StockMovement : "stock_movement_id"
 
     StockBalance {
@@ -46,7 +51,6 @@ erDiagram
 	    int updated_by FK
 	    timestamp updated_at
     }
-    ImageRef }o--|| StockMovement : "stock_movement_id"
     ImageRef }o--|| User : "created_by"
     
     Warehouse {
@@ -69,4 +73,19 @@ erDiagram
     User {
 	    int id PK
     }
+```
+
+```mermaid
+flowchart TD
+    A[User เลือก warehouse] --> I[แสดง stock movement list]
+    I --> B{ตรวจสอบว่ามี DRAFT หรือไม่}
+    B -- Yes --> C[นำ DRAFT มาแสดงร่วมกับ list ]
+    B -- No --> D[แสดง button สร้าง DRAFT ใหม่]
+    D --> C
+    C --> E[DRAFT movement item]
+    E -->|บันทึกชั่วคราว| E
+    E --> F{COMFIRM}
+    F -- Yes --> G[อัปเดต StockBalance เฉพาะ warehouse ที่เกี่ยวข้อง]
+    F -- No --> E
+    G --> H[จบกระบวนการ]
 ```
