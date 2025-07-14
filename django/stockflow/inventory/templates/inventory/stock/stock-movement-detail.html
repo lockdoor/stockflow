@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+
+{% block title %}{{stock_movement.pk}}{% endblock %}
+
+{% block content %}
+
+<div id="stock-movement-detail-container">
+    {% include 'inventory/stock/partials/stock-movement-detail.html' %}
+</div>
+
+
+
+{% endblock %}

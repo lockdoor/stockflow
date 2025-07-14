@@ -1,11 +1,12 @@
 from django.views.generic import CreateView, ListView, View, UpdateView, DetailView
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404, Http404
 from django.http import HttpResponse
 from django.urls import reverse_lazy
 
 # models
 from inventory.models.stock_movement import StockMovement
+from inventory.models.warehouse import Warehouse
 # forms
 from inventory.forms.stock_movement_form import StockMovementForm
 
@@ -25,6 +26,10 @@ class StockMovementCreateView(LoginRequiredMixin, CreateView):
     def get_initial(self):
         initial = super().get_initial()
         warehouse_id = self.kwargs.get('warehouse_id')
+        if not warehouse_id:
+            raise Http404("Warehouse ID is required to create a stock movement.")
+        warehouse = get_object_or_404(Warehouse, pk=warehouse_id)
+        initial['warehouse'] = warehouse
         if warehouse_id:
             initial['warehouse'] = warehouse_id
         initial['status'] = StockMovement.Status.DRAFT
@@ -79,15 +84,15 @@ class StockMovementUpdateView(LoginRequiredMixin, UpdateView):
         stock_movement = form.save(commit=False)
         stock_movement.updated_by = self.request.user
         stock_movement.save()
-        context = {'movement': stock_movement}
-        response = render(self.request, 'inventory/stock/partials/stock-movement-row.html', context)
+        context = {'stock_movement': stock_movement}
+        response = render(self.request, 'inventory/stock/partials/stock-movement-detail.html', context)
         response['HX-Trigger'] = 'success'
         return response
 
     def form_invalid(self, form):
         response = render(self.request, self.template_name, {'form': form})
-        response['HX-Retarget'] = '#stock-movement-form-container'
-        response['HX-Reswap'] = 'innerHTML'
+        response['HX-Retarget'] = '#stock-movement-form'
+        response['HX-Reswap'] = 'outerHTML'
         return response
     
 class StockMovementDeleteView(LoginRequiredMixin, View):
@@ -110,3 +115,4 @@ class StockMovementDetailView(LoginRequiredMixin, DetailView):
     model = StockMovement
     template_name = 'inventory/stock/stock-movement-detail.html'
     context_object_name = 'stock_movement'
+

@@ -1,20 +1,23 @@
 {% load widget_tweaks %}
-<form 
-    
+{% if form %}
+<form id="stock-movement-form"
     hx-post="{% if form.instance.id %}
                 {% url 'inventory:stock-movement-edit' form.instance.id %}
             {% else %}
-                {% if form.warehouse %} 
-                    {% url 'inventory:stock-movement-create' form.warehouse.value %}
-                {% else %}
-                    {% url 'inventory:stock-movement-create' warehouse.pk %}
-                {% endif %}
+                {% url 'inventory:stock-movement-create' form.warehouse.value %}               
             {% endif %}" 
-    hx-target="{% if form.instance.pk %}#stock-movement-row-{{ form.instance.id }}{% else %}#stock-movement-table-body{% endif %}"
-    hx-swap="{% if form.instance.pk %}outerHTML{% else %}afterbegin{% endif %}"
+    hx-target="{% if form.instance.pk %}
+                    #stock-movement-detail-container
+                {% else %}
+                    #stock-movement-table-body
+                {% endif %}"
+    hx-swap="{% if form.instance.pk %}
+                innerHTML
+            {% else %}
+                afterbegin
+            {% endif %}"
     hx-encoding='multipart/form-data'
     hx-on:success="document.getElementById('stock-movement-modal').close(); this.reset();"
-    
     class="mb-4">
 
     {% csrf_token %}
@@ -97,11 +100,12 @@
         <button type="button" class="btn" onclick="document.getElementById('stock-movement-modal').close()">Cancel</button>
         <button type="submit" class="btn btn-primary">
             {% if form.instance.id %}
-                Edit Warehouse
+                Edit Stock Movement
             {% else %}
-                Add Warehouse
+                Add Stock Movement
             {% endif %}
         </button>
     </div>
 
 </form>
+{% endif %}

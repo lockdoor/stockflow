@@ -1,0 +1,28 @@
+<tr id="item-movement-row-{{ movement.id }}">
+    <td><a href="#">{{ item.pk }}</a></td>
+    <td>{{ 'item.sku_code' }}</td>
+    <td>{{ 'item.name' }}</td>
+    <td>{{ 'item.move_type' }}</td>
+    <td>{{ 'item.quantity' }}</td>
+    <td>{{ 'item.lot' }}</td>
+    <td>{{ 'item.expried' }}</td>
+    <td>{{ 'item.note' }}</td>
+    <td>{{ item.created_by.username }}</td>
+    <td>{{ item.created_at|date:"M d, Y" }}</td>
+    
+    
+    <td>
+        {% comment %}
+        {% if movement.status == 'DRAFT' %}
+        <button class="btn btn-error" 
+            hx-delete="{% url 'inventory:stock-movement-delete' movement.id %}"
+            hx-confirm="Are you sure you want to delete this movement?"
+            hx-target="closest tr"
+            hx-swap="delete"
+            cfrf-token="{{ csrf_token }}"
+            >Delete</button>
+        {% endif %}
+        {% endcomment %}
+    </td>
+    
+</tr>
