@@ -1,10 +1,22 @@
+<h2 class="text-2xl font-bold mb-6 text-center">Warehouse List</h2>
+
+<button class="btn btn-primary mb-4" hx-get="{% url 'inventory:warehouse-create' %}"
+    hx-target="#warehouse-form-container" hx-swap="outerHTML" hx-trigger="click"
+    onclick="document.getElementById('modal-form').showModal()">
+    Add New Warehouse
+</button>
+
+{% include 'shared/modal-form.html' with form_partial='inventory/warehouse/partials/warehouse-form.html' %}
+
 <div id="warehouses-list">
     <div class="overflow-x-auto">
         <table class="table table-zebra table-pin-rows">
             <thead>
                 <tr>
                     <th>Name</th>
-                    <th><address>Address</address></th>
+                    <th>
+                        <address>Address</address>
+                    </th>
                     <th>Note</th>
                     <th>Created By</th>
                     <th>Created At</th>

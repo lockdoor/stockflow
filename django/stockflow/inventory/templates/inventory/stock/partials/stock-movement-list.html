@@ -1,6 +1,18 @@
-<div id="stock-movement-list">
-    
+<div id="stock-movement-list">  
     <div class="overflow-x-auto">
+        
+        <button class="btn btn-primary mb-4" 
+            hx-get="{% url 'inventory:stock-movement-create'  warehouse.id %}"
+            hx-target="#stock-movement-form-container" 
+            hx-swap="innerHTML" 
+            hx-trigger="click"
+            onclick="document.getElementById('modal-form').showModal()">
+            Add New DRAFT
+        </button>
+        
+
+        {% include 'shared/modal-form.html' with form_partial='inventory/stock/partials/stock-movement-form.html' %}
+        
         <table class="table table-zebra table-pin-rows">
             <thead>
                 <tr>

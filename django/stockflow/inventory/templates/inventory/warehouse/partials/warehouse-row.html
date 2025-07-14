@@ -7,10 +7,10 @@
     <td>
         <button class="btn btn-secondary" 
             hx-get="{% url 'inventory:warehouse-edit' warehouse.id %}"
-            hx-target="#warehouse-form-container" 
-            hx-swap="innerHTML" 
+            hx-target="#warehouse-form-container"
+            hx-swap="outerHTML"
             hx-trigger="click"
-            onclick="document.getElementById('warehouse-modal').showModal()">
+            onclick="document.getElementById('modal-form').showModal()">
             Edit</button>
     </td>
 </tr>

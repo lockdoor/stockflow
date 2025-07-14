@@ -39,7 +39,7 @@ urlpatterns = [
     path('warehouses/<int:warehouse_id>/stock-movements/', 
         StockMovementByWareHouseListView.as_view(), 
         name='stock-movement-list'), 
-    path('stockmovement/<int:warehouse_id>/create/', 
+    path('warehouses/<int:warehouse_id>/stock-movements/create/', 
          StockMovementCreateView.as_view(), 
          name='stock-movement-create'),
     

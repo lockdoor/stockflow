@@ -3,58 +3,19 @@
 {% block title %}{{warehouse.name}}{% endblock %}
 
 {% block content %}
+
 <div class="flex items-center justify-center">
     <div class="bg-white p-8 m-4 rounded shadow-md w-full ">
-        <!-- <div class="overflow-x-auto"> -->
-        <h2 class="text-center">Warehouse Detail</h2>
-        <!-- table definition list style -->
-        <table class="table table-zebra table-pin-rows">
-            <tbody id="warehouse-table-body">
-                <tr>
-                    <th class="w-10">Name</th>
-                    <td>{{ warehouse.name }}</td>
-                </tr>
-                <tr>
-                    <th class="w-10">Address</th>
-                    <td>{{ warehouse.address }}</td>
-                </tr>
-                <tr>
-                    <th class="w-10">Created by</th>
-                    <td>{{warehouse.created_by}}: {{ warehouse.created_at|date:"Y-m-d H:i:s" }}</td>
-                </tr>
-                <tr>
-                    <th class="w-10">Updated by</th>
-                    <td>{{warehouse.updated_by}}: {{ warehouse.updated_at|date:"Y-m-d H:i:s" }}</td>
-                </tr>
-            </tbody>
-        </table>
-        <!-- button to back -->
-        <div class="text-center mt-4">
-            <button class="btn btn-info px-24" onclick="history.back()">Go Back</button>
-        </div>
+        {% include './partials/warehouse-detail.html' %}
     </div>
 </div>
 
-<div class="flex items-center justify-center">
-    
-    <div class="bg-white p-8 m-4 rounded shadow-md w-full"
-        >
-        
-        <button class="btn btn-primary mb-4" 
-            hx-get="{% url 'inventory:stock-movement-create'  warehouse.pk %}"
-            hx-target="#stock-movement-form-container" 
-            hx-swap="innerHTML" 
-            hx-trigger="click"
-            onclick="document.getElementById('stock-movement-modal').showModal()">
-            Add New DRAFT
-        </button>
-
-        {% include 'inventory/stock/partials/stock-movement-form-modal.html' %}
-
+<div class="flex items-center justify-center"> 
+    <div class="bg-white p-8 m-4 rounded shadow-md w-full">
         <div hx-get="{% url 'inventory:stock-movement-list' warehouse.pk %}" 
-        hx-trigger="load" id="stock-movement-list">
-        {% include 'inventory/stock/partials/stock-movement-list.html' %}
-    </div>
+            hx-trigger="load" id="stock-movement-list">
+            {% include 'inventory/stock/partials/stock-movement-list.html' %}
+        </div>
     </div>
 </div>
 

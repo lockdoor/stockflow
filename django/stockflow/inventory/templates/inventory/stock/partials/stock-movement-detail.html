@@ -1,3 +1,4 @@
+{% if stock_movement %}
 <div class="flex items-center justify-center">
     <div class="bg-white p-8 m-4 rounded shadow-md w-full ">
         <!-- <div class="overflow-x-auto"> -->
@@ -48,13 +49,13 @@
         <!-- button to back -->
         <div class="text-center mt-4">
             {% if stock_movement.status == 'DRAFT' %}
-            {% include './stock-movement-form-modal.html' %}
+            {% include 'shared/modal-form.html' with form_partial='inventory/stock/partials/stock-movement-form.html'%}
             <button 
                 hx-get="{% url 'inventory:stock-movement-edit'  stock_movement.pk %}"
                 hx-target="#stock-movement-form-container" 
                 hx-swap="innerHTML" 
                 hx-trigger="click"
-                onclick="document.getElementById('stock-movement-modal').showModal()"
+                onclick="document.getElementById('modal-form').showModal()"
                 class="btn btn-primary px-24">
                 Update
             </button>
@@ -64,28 +65,21 @@
     </div>
 </div>
 
-<div class="flex items-center justify-center">
-    
+{% if stock_movement.status == 'DRAFT' %}
+
+{% endif %}
+
+<div class="flex items-center justify-center"> 
     <div class="bg-white p-8 m-4 rounded shadow-md w-full"
         >
-        {% comment %}
-        <button class="btn btn-primary mb-4" 
-            hx-get="{% url 'inventory:stock-movement-create'  warehouse.pk %}"
-            hx-target="#stock-movement-form-container" 
-            hx-swap="innerHTML" 
-            hx-trigger="click"
-            onclick="document.getElementById('stock-movement-modal').showModal()">
-            Add New DRAFT
-        </button>
-
-        {% include 'inventory/stock/partials/stock-movement-form-modal.html' %}
-        {% endcomment %}
-
-        
         <div hx-get="{% url 'inventory:stock-item-movement-list' stock_movement.pk %}" 
             hx-trigger="load" id="stock-movement-list">
             {% include 'inventory/item/partials/item-movement-list.html' %}
-        </div>
-        
+        </div>       
     </div>
 </div>
+{% else %}
+<div class="flex items-center justify-center">
+    No stock movement items found.
+</div>
+{% endif %}

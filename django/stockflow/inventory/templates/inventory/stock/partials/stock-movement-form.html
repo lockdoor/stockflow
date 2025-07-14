@@ -1,4 +1,5 @@
 {% load widget_tweaks %}
+<div id="stock-movement-form-container">
 {% if form %}
 <form id="stock-movement-form"
     hx-post="{% if form.instance.id %}
@@ -17,7 +18,7 @@
                 afterbegin
             {% endif %}"
     hx-encoding='multipart/form-data'
-    hx-on:success="document.getElementById('stock-movement-modal').close(); this.reset();"
+    hx-on:success="document.getElementById('modal-form').close(); this.reset();"
     class="mb-4">
 
     {% csrf_token %}
@@ -97,7 +98,7 @@
     </div>
 
     <div class="modal-action">
-        <button type="button" class="btn" onclick="document.getElementById('stock-movement-modal').close()">Cancel</button>
+        <button type="button" class="btn" onclick="document.getElementById('modal-form').close()">Cancel</button>
         <button type="submit" class="btn btn-primary">
             {% if form.instance.id %}
                 Edit Stock Movement
@@ -106,6 +107,8 @@
             {% endif %}
         </button>
     </div>
-
 </form>
+{% else %}
+<div class="alert alert-error"><p>No context form found</p></div>
 {% endif %}
+</div>

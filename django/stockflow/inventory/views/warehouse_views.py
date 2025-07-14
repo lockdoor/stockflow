@@ -37,8 +37,8 @@ class WarehouseCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateVie
     
     def form_invalid(self, form):
         response = render(self.request, self.template_name, {'form': form})
-        response['HX-Retarget'] = '#warehouse-form-container'
-        response['HX-Reswap'] = 'innerHTML'
+        response['HX-Retarget'] = '#warehouse-form'
+        response['HX-Reswap'] = 'outerHTML'
         return response
 
 class WarehouseUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
@@ -59,6 +59,6 @@ class WarehouseUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateVie
 
     def form_invalid(self, form):
         response = render(self.request, self.template_name, {'form': form})
-        response['HX-Retarget'] = '#warehouse-form-container'
-        response['HX-Reswap'] = 'innerHTML'
+        response['HX-Retarget'] = '#warehouse-form'
+        response['HX-Reswap'] = 'outerHTML'
         return response

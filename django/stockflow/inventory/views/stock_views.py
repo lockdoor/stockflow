@@ -47,7 +47,7 @@ class StockMovementCreateView(LoginRequiredMixin, CreateView):
 
     def form_invalid(self, form):
         response = render(self.request, self.template_name, {'form': form})
-        response['HX-Retarget'] = '#stock-movement-form-container'
+        response['HX-Retarget'] = '#stock-movement-form'
         response['HX-Reswap'] = 'innerHTML'
         return response
     
@@ -59,11 +59,14 @@ class StockMovementByWareHouseListView(LoginRequiredMixin, ListView):
 
     def get_queryset(self):
         warehouse_id = self.kwargs.get('warehouse_id')
+        if not warehouse_id:
+            raise Http404("Warehouse ID is required to list stock movements.")
+        self.warehouse = get_object_or_404(Warehouse, pk=warehouse_id)
         return StockMovement.objects.filter(warehouse_id=warehouse_id).order_by('-created_at')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['warehouse'] = self.kwargs.get('warehouse_id')
+        context['warehouse'] = self.warehouse
         return context
     
 class StockMovementUpdateView(LoginRequiredMixin, UpdateView):

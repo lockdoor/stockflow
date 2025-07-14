@@ -5,21 +5,8 @@
 {% block content %}
 <div class="flex items-center justify-center h-screen">
   <div class="bg-white p-8 mx-4 rounded shadow-md w-full ">
-    <h2 class="text-2xl font-bold mb-6 text-center">Warehouse List</h2>
-   
-    <button class="btn btn-primary mb-4" 
-      hx-get="{% url 'inventory:warehouse-create'%}"
-      hx-target="#warehouse-form-container" 
-      hx-swap="innerHTML" 
-      hx-trigger="click"
-      onclick="document.getElementById('warehouse-modal').showModal()">
-      Add New Warehouse
-    </button>
-
-    {% include './partials/warehouse-form-modal.html' %}
-     
     {% include './partials/warehouse-list.html' %}
-    
   </div>
 </div>
+
 {% endblock %}
