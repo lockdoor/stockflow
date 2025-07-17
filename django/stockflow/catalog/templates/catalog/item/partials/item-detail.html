@@ -46,12 +46,3 @@
         </div>
     </div>
 </div>
-
-{% if item.type != 'RAW' %}
-    {% if not item.is_bom_locked %}
-    <div id="bom-form-container">
-        {% include 'catalog/bom/partials/bom-form.html' %}
-    </div>
-    {% endif %}
-{% include 'catalog/bom/partials/bom-list.html' %}
-{% endif %}

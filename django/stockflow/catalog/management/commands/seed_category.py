@@ -23,7 +23,7 @@ class Command(BaseCommand):
         for i in self.CATEGORIES:
             Category.objects.create(
                 name=i, 
-                description=f"Description for {i}", 
+                note=f"note for {i}", 
                 created_by= user,
                 updated_by= user,
             )

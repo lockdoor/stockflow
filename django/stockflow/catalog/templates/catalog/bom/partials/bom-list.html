@@ -1,30 +1,59 @@
-<div id="bom-list" class="flex items-center justify-center">
+{% comment %}
+------------------------------------------------------------------------------
+  catalog/bom/partials/bom-list.html
+
+  Description:
+    - Render BOM list with auto-fetch via HTMX when included
+    - If boms context is provided, render table directly
+    - Otherwise, render HTMX loader that fetches data from view
+
+  Required context:
+    - parent_sku: ItemSKU object (ต้องมี parent_sku.id)
+    - boms: queryset ของ BOM objects (optional - จะ fetch ผ่าน HTMX ถ้าไม่มี)
+
+  Usage:
+    - include 'catalog/bom/partials/bom-list.html' with parent_sku=item
+------------------------------------------------------------------------------
+{% endcomment %}
+
+{% if boms is not None %}
+{# Case 1: มี context boms แล้ว (อาจจะเป็น empty queryset) - render table โดยตรง #}
+<div class="flex items-center justify-center">
     <div class="bg-white p-8 m-4 rounded shadow-md w-full">
+        <h2 class="text-2xl font-bold mb-6 text-center">Bill of material List</h2>
+
+        {% if not parent_sku.is_bom_locked %}
+        <button class="btn btn-primary mb-4" hx-get="{% url 'catalog:bom-create' parent_sku.id %}"
+            hx-target="#bom-form-container" hx-swap="innerHTML" hx-trigger="click"
+            onclick="document.getElementById('modal-form').showModal()">
+            Add New Bom
+        </button>
+        {% include 'shared/modal-form.html' with form_partial='catalog/bom/partials/bom-form.html' %}
+        {% endif %}
+
         <table class="table table-zebra table-pin-rows">
             <thead>
                 <tr>
-                    <!-- sku if type is raw or package can click to view or edit bom -->
                     <th>SKU</th>
                     <th>Name</th>
                     <th>Type</th>
                     <th>Quantity</th>
                     <th>Unit</th>
-                    <!-- <th>Status</th> will show color for each if INACTIVE -->
-                    <!-- show catelog for sorting in future -->
                     <th>Category</th>
-                    <!-- click for update or delete -->
-                    {% if bom.parent_sku.is_locked %}<th>Action</th>{% endif %}
+                    {% if boms and boms.0.parent_sku.is_locked %}
+                    <th>Action</th>
+                    {% endif %}
                 </tr>
             </thead>
 
             <tbody id="bom-table-body">
-                {% if bom_list %}
-                {% for bom in bom_list %}
+                {% if boms %}
+                {% for bom in boms %}
                 {% include './bom-row.html' %}
                 {% endfor %}
                 {% else %}
                 <tr class="no-contact-row">
-                    <td colspan="5">
+                    <td colspan="6">
                         <div role="alert" class="alert alert-info">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                                 class="h-6 w-6 shrink-0 stroke-current">
@@ -40,3 +69,21 @@
         </table>
     </div>
 </div>
+{% else %}
+{# Case 2: ไม่มี context boms - ใช้ HTMX fetch data #}
+<div id="bom-list-htmx" 
+    hx-get="{% url 'catalog:bom-list' parent_sku.id %}" 
+    hx-trigger="load" 
+    hx-target="this"
+    hx-swap="innerHTML">
+    <div class="flex items-center justify-center">
+        <div class="bg-white p-8 m-4 rounded shadow-md w-full">
+            <h2 class="text-2xl font-bold mb-6 text-center">Bill of material List</h2>
+            <div class="text-center">
+                <span class="loading loading-spinner loading-lg"></span>
+                <p>Loading BOM data...</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}

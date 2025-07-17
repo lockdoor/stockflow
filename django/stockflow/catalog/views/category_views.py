@@ -1,24 +1,16 @@
 # catalog/views/category_views.py
 
-from django.views.generic import ListView, CreateView, UpdateView, DetailView
+from django.views.generic import ListView, CreateView, UpdateView, DetailView, TemplateView
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
-from django.shortcuts import get_object_or_404, render
-from django.http import HttpResponse
-from django.urls import reverse_lazy
+from django.shortcuts import render
 from catalog.models.category import Category
 from catalog.forms.category_form import CategoryForm
 
 class CategoryListView(LoginRequiredMixin, ListView):
     model = Category
-    template_name = 'catalog/category/category.html'
+    template_name = 'catalog/category/partials/category-list.html'
     context_object_name = 'categories'
     ordering = ['-created_at']
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['form'] = CategoryForm()
-        return context
-
 
 class CategoryCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     model = Category
@@ -64,11 +56,15 @@ class CategoryUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView
         response['HX-Reswap'] = 'innerHTML'
         return response
 
-
 class CategoryDetailView(LoginRequiredMixin, DetailView):
     model = Category
     template_name = 'catalog/category/category-detail.html'
     context_object_name = 'category'
-    # pk_url_kwarg = 'pk'
-    # def get_object(self):
-    #     return get_object_or_404(Category, pk=self.kwargs.get('pk'))
+
+class CategoryIndexView(LoginRequiredMixin, TemplateView):
+    template_name = 'catalog/category/category-index.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['page_title'] = 'Categories'
+        return context

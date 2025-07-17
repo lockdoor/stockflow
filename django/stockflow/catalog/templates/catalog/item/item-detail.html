@@ -8,4 +8,8 @@
     {% include 'catalog/item/partials/item-detail.html' %}
 </div>
 
+{% if item.type != 'RAW' %}
+    {% include 'catalog/bom/partials/bom-list.html' with parent_sku=item %}
+{% endif %}
+
 {% endblock %}
