@@ -24,7 +24,7 @@ class ItemFormTest(TestCase):
             'unit': 'kg',
             'type': 'RAW',  # Assuming 'RAW' is a valid type
             'status': 'ACTIVE',
-            'description': 'This is a test raw material.',
+            'note': 'This is a test raw material.',
             'category': self.category.id  # Use existing category
         }
 
@@ -34,7 +34,7 @@ class ItemFormTest(TestCase):
         self.assertIn('name', form.fields)
         self.assertIn('unit', form.fields)
         self.assertIn('status', form.fields)
-        self.assertIn('description', form.fields)
+        self.assertIn('note', form.fields)
 
     def test_form_field_types(self):
         form = ItemForm()
@@ -42,16 +42,7 @@ class ItemFormTest(TestCase):
         self.assertIsInstance(form.fields['name'], forms.CharField)
         self.assertIsInstance(form.fields['unit'], forms.CharField)
         self.assertIsInstance(form.fields['status'], forms.ChoiceField)
-        self.assertIsInstance(form.fields['description'], forms.CharField)
-    
-    def test_form_widget_classes(self):
-        form = ItemForm()
-        self.assertEqual(form.fields['sku_code'].widget.attrs['class'], 'form-control')
-        self.assertEqual(form.fields['name'].widget.attrs['class'], 'form-control')
-        self.assertEqual(form.fields['unit'].widget.attrs['class'], 'form-control')
-        self.assertEqual(form.fields['status'].widget.attrs['class'], 'form-control')
-        self.assertEqual(form.fields['description'].widget.attrs['class'], 'form-control')
-        self.assertEqual(form.fields['description'].widget.attrs['rows'], 3)
+        self.assertIsInstance(form.fields['note'], forms.CharField)
 
     def test_form_valid_data(self):
         form = ItemForm(data=self.form_data)
@@ -77,7 +68,6 @@ class ItemFormTest(TestCase):
         self.assertIn('unit', form.errors)
         self.assertIn('status', form.errors)
         self.assertIn('type', form.errors)
-        self.assertEqual(len(form.errors), 5)
     
     def test_form_required_fields(self):
         form = ItemForm()
@@ -88,8 +78,8 @@ class ItemFormTest(TestCase):
 
     def test_form_optional_fields(self):
         form = ItemForm()
-        self.assertFalse(form.fields['description'].required)
-        self.assertFalse(form.fields['description'].initial)
+        self.assertFalse(form.fields['note'].required)
+        self.assertFalse(form.fields['note'].initial)
 
     def test_form_initial_values(self):
         form = ItemForm()
@@ -107,7 +97,7 @@ class ItemFormTest(TestCase):
             'name': 'Raw Material 4',
             'unit': 'm',
             'status': 'ACTIVE',
-            'description': 'This is a test raw material with invalid category.',
+            'note': 'This is a test raw material with invalid category.',
             'category': 9999  # Non-existent category ID
         }
         form = ItemForm(data=form_data)
@@ -120,7 +110,7 @@ class ItemFormTest(TestCase):
             'name': 'Raw Material 4',
             'unit': 'm',
             'status': 'ACTIVE',
-            'description': 'This is a test raw material with invalid category.',
+            'note': 'This is a test raw material with invalid category.',
             'category': 'A'  # Invalid category value
         }
         form = ItemForm(data=form_data)

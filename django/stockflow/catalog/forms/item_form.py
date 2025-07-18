@@ -4,31 +4,53 @@ from catalog.models.category import Category
 
 class ItemForm(forms.ModelForm):
     """
-    Form for creating a new ItemSKU.
+    Form for creating and updating ItemSKU instances.
+    Form validation is minimal as business logic validation is handled at the model level.
     """
+    # Override category field to use only active categories
     category = forms.ModelChoiceField(
-        queryset=Category.objects.all(),
-        widget=forms.Select(attrs={'class': 'form-control'}),
+        queryset=Category.objects.filter(is_active=True),
+        widget=forms.Select(),
         required=False,
+        label="Category",
+        help_text="Select a category for this item (optional)"
     )
 
     class Meta:
         model = ItemSKU
-        fields = ['sku_code', 'name', 'unit', "type", "status", 'description', 'category']
+        fields = ['sku_code', 'name', 'unit', 'type', 'status', 'note', 'category']
         widgets = {
-            'sku_code': forms.TextInput(attrs={'class': 'form-control'}),
-            'name': forms.TextInput(attrs={'class': 'form-control'}),
-            'unit': forms.TextInput(attrs={'class': 'form-control'}),
-            'type': forms.Select(attrs={'class': 'form-control'}),
-            'status': forms.Select(attrs={'class': 'form-control'}),
-            'category': forms.Select(attrs={'class': 'form-control'}),
-            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'sku_code': forms.TextInput(attrs={
+                'placeholder': 'Enter unique SKU code'
+            }),
+            'name': forms.TextInput(attrs={
+                'placeholder': 'Enter item name'
+            }),
+            'unit': forms.TextInput(attrs={
+                'placeholder': 'Enter unit (e.g., pcs, kg, m)'
+            }),
+            'type': forms.Select(),
+            'status': forms.Select(),
+            'note': forms.Textarea(attrs={
+                'rows': 3,
+                'placeholder': 'Enter additional notes (optional)'
+            }),
         }
-        
-    def clean_sku_code(self):
-        sku_code = self.cleaned_data.get("sku_code")
-        if self.instance.pk:
-            old = ItemSKU.objects.get(pk=self.instance.pk)
-            if sku_code != old.sku_code:
-                raise forms.ValidationError("SKU code cannot be changed.")
-        return sku_code
+        labels = {
+            'sku_code': 'SKU Code',
+            'name': 'Item Name',
+            'unit': 'Unit of Measurement',
+            'type': 'Item Type',
+            'status': 'Status',
+            'note': 'Additional Notes',
+            'category': 'Category',
+        }
+        help_texts = {
+            'sku_code': 'Unique identifier for the item',
+            'name': 'Name of the item',
+            'unit': 'Unit of measurement for this item (e.g., pcs, kg, m)',
+            'type': 'Type of item - cannot be changed once set',
+            'status': 'Current status of the item',
+            'note': 'Additional notes about the item (optional)',
+            'category': 'Select a category for this item (optional)',
+        }

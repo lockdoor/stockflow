@@ -3,6 +3,7 @@
     <td><a href="{% url 'catalog:item-detail' item.id %}">{{ item.sku_code |truncatechars:20 }}</a></td>
     <td>{{ item.name }}</td>
     <td>{{ item.type }}</td>
+    <td>{{ item.status }}</td>
     <td>{{ item.category.name }}</td>
     <td>
         <button class="btn btn-secondary" 
