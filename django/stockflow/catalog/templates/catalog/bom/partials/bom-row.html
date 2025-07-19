@@ -7,7 +7,7 @@
     <td>{{ bom.quantity }}</td>
     <td>{{ bom.component_sku.unit }}</td>
     <td>{{ bom.component_sku.category.name }}</td>
-    {% if bom.parent_sku.is_locked %}
+    
     <td>
         <!-- Delete -->
         <button class="btn btn-error" 
@@ -16,11 +16,17 @@
             hx-target="closest tr"
             hx-swap="delete"
             >Delete</button>
-            
-        {% comment %}
-        Edit button can be added here if needed, but currently not used.
-        In this case use delete then add again with new quantity.
-        {% endcomment %}
+        
+        {#% comment %#}
+        <!-- Edit -->
+        <button class="btn btn-primary"
+            hx-get="{% url 'catalog:bom-edit' bom.id %}"
+            hx-target="#bom-form-container"
+            hx-swap="innerHTML"
+            hx-trigger="click"
+            onclick="document.getElementById('modal-form').showModal()"
+            >Update</button>
+        {#% endcomment %#}
     </td>
-    {% endif %}
+    
 </tr>

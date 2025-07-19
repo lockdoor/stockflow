@@ -3,11 +3,21 @@
 <div id="bom-form-container">
     {% if form and parent_sku %}
     <h6>Bill of material</h6>
+
+
+    
     <form id="bom-form"
+        {% if form.instance.pk %}
+        hx-post="{% url 'catalog:bom-edit' form.instance.id %}" 
+        hx-target="#bom-row-{{ form.instance.id }}" 
+        hx-swap="outerHTML"
+        {% else %}
         hx-post="{% url 'catalog:bom-create' parent_sku.id %}" 
         hx-target="#bom-table-body" 
-        hx-swap="beforeend" 
-        hx-trigger="submit" 
+        hx-swap="beforeend"
+        {% endif %}
+        hx-encoding='multipart/form-data'
+        hx-trigger="submit"
         hx-on:success="document.getElementById('modal-form').close(); this.reset();"
         class="mb-4">
         {% csrf_token %}
@@ -33,12 +43,12 @@
             <input type="text" id="item-search" name="q" class="input input-bordered w-full" placeholder="Search..."
                 data-name="" hx-get="{% url 'catalog:item-bom-autocomplete' %}" hx-include="#category"
                 hx-swap="innerHTML" hx-target="#autocomplete-results" hx-trigger="keyup changed delay:300ms"
-                autocomplete="off" {% if item and item.is_bom_locked %}disabled{% endif %}>
+                autocomplete="off" {% if form.instance.pk %}disabled{% endif %}>
         </div>
         <div id="autocomplete-results"></div>
         <div class="form-control w-full">
             <label class="label" for="category">Category: </label>
-            <select class="select input input-bordered w-full" name="category" id="category" {% if item and item.is_bom_locked %}disabled{% endif %}>
+            <select class="select input input-bordered w-full" name="category" id="category" {% if form.instance.pk %}disabled{% endif %}>
                 <option selected value="0">All Category</option>
                 {% if category %}
                 {% for cat in category %}
@@ -89,38 +99,6 @@
                 }
             }
         });
-        // function validateBOMForm(event) {
-        //     const componentSku = document.getElementById('id_component_sku');
-        //     const quantity = document.getElementById('id_quantity');
-        //     const searchInput = document.getElementById('item-search');
-        //     if (!componentSku || !componentSku.value) {
-        //         event.preventDefault();
-        //         alert('Please select a component from the autocomplete list.');
-        //         return false;
-        //     }
-        //     if (!quantity || !quantity.value || isNaN(quantity.value) || parseFloat(quantity.value) <= 0) {
-        //         event.preventDefault();
-        //         alert('Please enter a valid quantity greater than zero.');
-        //         return false;
-        //     }
-        //     // Check if the selected item matches the search input
-        //     if (searchInput && searchInput.dataset.name !== searchInput.value) {
-        //         event.preventDefault();
-        //         alert('The selected component does not match the search input. Please select from the list.');
-        //         return false;
-        //     }
-        //     return true;
-        // }
-        // function clearBOMFields() {
-        //     const itemSearch = document.getElementById("item-search");
-        //     const componentSku = document.getElementById("id_component_sku");
-        //     const quantity = document.getElementById("id_quantity");
-        //     if (itemSearch) itemSearch.value = "";
-        //     if (componentSku) componentSku.value = "";
-        //     if (quantity) quantity.value = "1";
-        //     if (itemSearch) itemSearch.focus();
-        //     document.getElementById("error-field")?.remove();
-        // }
     </script>
     {% else %}
     <div class="alert alert-warning">

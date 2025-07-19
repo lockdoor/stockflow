@@ -91,7 +91,7 @@ class BOM(models.Model):
         
     def _validate_component_sku(self) -> str | None:
         """
-        Validate component SKU exists and can be used as component
+        Validate component SKU exists and can be used as component and must be active
         """
         if not self.component_sku_id:
             return "Component SKU is required"
@@ -100,6 +100,8 @@ class BOM(models.Model):
             component = ItemSKU.objects.get(pk=self.component_sku_id)
             if not component.can_be_component():
                 return "Selected component SKU cannot be used as a component"
+            if not component.is_active():
+                return "Selected component SKU must be active"
         except ItemSKU.DoesNotExist:
             return "Selected component SKU does not exist"
         

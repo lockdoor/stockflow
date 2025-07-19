@@ -119,6 +119,10 @@ class BOMModelTest(TestCase):
         
     def test_valid_bom_creation_with_product_as_component(self):
         """Test creating BOM with another product as component"""
+        # Activate the product component first
+        ItemSKU.objects.filter(pk=self.product_active.pk).update(status=ItemSKU.Status.ACTIVE)
+        self.product_active.refresh_from_db()
+        
         bom = BOM.objects.create(
             parent_sku=self.package_draft,
             component_sku=self.product_active,
@@ -154,6 +158,168 @@ class BOMModelTest(TestCase):
         with self.assertRaises(ValueError) as context:
             bom.save()
         self.assertIn("Parent SKU is required", str(context.exception))
+
+    # ==================== COMPONENT STATUS VALIDATION TESTS ====================
+    
+    def test_invalid_bom_with_inactive_component(self):
+        """Test that INACTIVE components cannot be used in BOM"""
+        # Create a component and then deactivate it
+        inactive_component = ItemSKU.objects.create(
+            sku_code='RAW003',
+            name='Inactive Raw Material',
+            unit='kg',
+            type=ItemSKU.Type.RAW,
+            category=self.category,
+            created_by=self.user,
+            updated_by=self.user,
+        )
+        
+        # Manually set to inactive after creation (since RAW materials default to ACTIVE)
+        inactive_component.status = ItemSKU.Status.INACTIVE
+        # Skip the save() validation by using update() directly
+        ItemSKU.objects.filter(pk=inactive_component.pk).update(status=ItemSKU.Status.INACTIVE)
+        inactive_component.refresh_from_db()
+        
+        with self.assertRaises(ValueError) as context:
+            BOM.objects.create(
+                parent_sku=self.product_draft,
+                component_sku=inactive_component,
+                quantity=Decimal('1.0'),
+                created_by=self.user,
+                updated_by=self.user
+            )
+        self.assertIn("Selected component SKU must be active", str(context.exception))
+        
+    def test_invalid_bom_with_draft_component(self):
+        """Test that DRAFT components cannot be used in BOM"""
+        # Create a product component and keep it as DRAFT 
+        # (PRODUCT components start as DRAFT by default)
+        draft_component = ItemSKU.objects.create(
+            sku_code='PROD999',
+            name='Draft Product Component',
+            unit='pcs',
+            type=ItemSKU.Type.PRODUCT,  # PRODUCT starts as DRAFT
+            category=self.category,
+            created_by=self.user,
+            updated_by=self.user,
+        )
+        
+        # Verify it's actually DRAFT
+        self.assertEqual(draft_component.status, ItemSKU.Status.DRAFT)
+        
+        with self.assertRaises(ValueError) as context:
+            BOM.objects.create(
+                parent_sku=self.package_draft,
+                component_sku=draft_component,
+                quantity=Decimal('1.0'),
+                created_by=self.user,
+                updated_by=self.user
+            )
+        self.assertIn("Selected component SKU must be active", str(context.exception))
+        
+    def test_valid_bom_with_active_component(self):
+        """Test that ACTIVE components can be used in BOM"""
+        # Create an active RAW component (RAW materials start as ACTIVE by default)
+        active_component = ItemSKU.objects.create(
+            sku_code='RAW005',
+            name='Active Raw Material',
+            unit='kg',
+            type=ItemSKU.Type.RAW,  # RAW starts as ACTIVE
+            category=self.category,
+            created_by=self.user,
+            updated_by=self.user,
+        )
+        
+        # Verify it's actually ACTIVE
+        self.assertEqual(active_component.status, ItemSKU.Status.ACTIVE)
+        
+        # This should work without any issues
+        bom = BOM.objects.create(
+            parent_sku=self.product_draft,
+            component_sku=active_component,
+            quantity=Decimal('1.0'),
+            created_by=self.user,
+            updated_by=self.user
+        )
+        
+        self.assertEqual(BOM.objects.count(), 1)
+        self.assertEqual(bom.component_sku, active_component)
+        self.assertTrue(bom.component_sku.is_active())
+        
+    def test_bom_becomes_invalid_when_component_deactivated(self):
+        """Test BOM validation when component is deactivated after BOM creation"""
+        # Create BOM with active component (raw_material is ACTIVE by default)
+        bom = BOM.objects.create(
+            parent_sku=self.product_draft,
+            component_sku=self.raw_material,  # Initially active
+            quantity=Decimal('1.0'),
+            created_by=self.user,
+            updated_by=self.user
+        )
+        
+        # Deactivate the component using direct update to bypass validation
+        ItemSKU.objects.filter(pk=self.raw_material.pk).update(status=ItemSKU.Status.INACTIVE)
+        self.raw_material.refresh_from_db()
+        
+        # Try to update the BOM (should fail due to inactive component)
+        bom.quantity = Decimal('2.0')
+        with self.assertRaises(ValueError) as context:
+            bom.save()
+        self.assertIn("Selected component SKU must be active", str(context.exception))
+        
+    def test_bom_creation_with_product_component_different_statuses(self):
+        """Test BOM creation with product components in different statuses"""
+        # Create products with different statuses
+        # First create a PRODUCT (starts as DRAFT) then activate it
+        active_product = ItemSKU.objects.create(
+            sku_code='PROD003',
+            name='Active Product Component',
+            unit='pcs',
+            type=ItemSKU.Type.PRODUCT,  # Starts as DRAFT
+            category=self.category,
+            created_by=self.user,
+            updated_by=self.user,
+        )
+        
+        # Manually activate it using direct update
+        ItemSKU.objects.filter(pk=active_product.pk).update(status=ItemSKU.Status.ACTIVE)
+        active_product.refresh_from_db()
+        
+        # Create a PRODUCT that stays as DRAFT
+        draft_product = ItemSKU.objects.create(
+            sku_code='PROD004',
+            name='Draft Product Component',
+            unit='pcs',
+            type=ItemSKU.Type.PRODUCT,  # Starts as DRAFT
+            category=self.category,
+            created_by=self.user,
+            updated_by=self.user,
+        )
+        
+        # Verify statuses
+        self.assertEqual(active_product.status, ItemSKU.Status.ACTIVE)
+        self.assertEqual(draft_product.status, ItemSKU.Status.DRAFT)
+        
+        # Active product component should work
+        bom1 = BOM.objects.create(
+            parent_sku=self.package_draft,
+            component_sku=active_product,
+            quantity=Decimal('1.0'),
+            created_by=self.user,
+            updated_by=self.user
+        )
+        self.assertEqual(bom1.component_sku, active_product)
+        
+        # Draft product component should fail
+        with self.assertRaises(ValueError) as context:
+            BOM.objects.create(
+                parent_sku=self.package_draft,
+                component_sku=draft_product,
+                quantity=Decimal('1.0'),
+                created_by=self.user,
+                updated_by=self.user
+            )
+        self.assertIn("Selected component SKU must be active", str(context.exception))
 
     # ==================== COMPONENT SKU VALIDATION TESTS ====================
     
@@ -225,6 +391,10 @@ class BOMModelTest(TestCase):
     
     def test_recursive_bom_two_level(self):
         """Test preventing direct recursive relationship (A -> B -> A)"""
+        # Activate the package component first
+        ItemSKU.objects.filter(pk=self.package_draft.pk).update(status=ItemSKU.Status.ACTIVE)
+        self.package_draft.refresh_from_db()
+        
         # Create A -> B
         BOM.objects.create(
             parent_sku=self.product_draft,  # A
@@ -233,6 +403,10 @@ class BOMModelTest(TestCase):
             created_by=self.user,
             updated_by=self.user
         )
+        
+        # Activate the product to be used as component
+        ItemSKU.objects.filter(pk=self.product_draft.pk).update(status=ItemSKU.Status.ACTIVE)
+        self.product_draft.refresh_from_db()
         
         # Try to create B -> A (should fail)
         with self.assertRaises(ValueError) as context:
@@ -259,29 +433,48 @@ class BOMModelTest(TestCase):
             updated_by=self.user,
         )
         
-        # Create A -> B
+        # Activate components before using them (but keep parents as DRAFT for BOM modification)
+        ItemSKU.objects.filter(pk=self.package_draft.pk).update(status=ItemSKU.Status.ACTIVE)
+        self.package_draft.refresh_from_db()
+        
+        ItemSKU.objects.filter(pk=product3.pk).update(status=ItemSKU.Status.ACTIVE)
+        product3.refresh_from_db()
+        
+        # Create A -> B (A stays DRAFT, B becomes component)
         BOM.objects.create(
-            parent_sku=self.product_draft,  # A
-            component_sku=self.package_draft,  # B
+            parent_sku=self.product_draft,  # A (still DRAFT)
+            component_sku=self.package_draft,  # B (now ACTIVE, used as component)
             quantity=Decimal('1.0'),
             created_by=self.user,
             updated_by=self.user
         )
         
-        # Create B -> C
+        # Keep package_draft as DRAFT for BOM modification, make product3 active for component use
+        ItemSKU.objects.filter(pk=self.package_draft.pk).update(status=ItemSKU.Status.DRAFT)
+        self.package_draft.refresh_from_db()
+        
+        # Create B -> C (B is DRAFT, C is component)
         BOM.objects.create(
-            parent_sku=self.package_draft,  # B
-            component_sku=product3,  # C
+            parent_sku=self.package_draft,  # B (DRAFT for modification)
+            component_sku=product3,  # C (ACTIVE, used as component)
             quantity=Decimal('1.0'),
             created_by=self.user,
             updated_by=self.user
         )
         
-        # Try to create C -> A (should fail)
+        # Activate the product to be used as component
+        ItemSKU.objects.filter(pk=self.product_draft.pk).update(status=ItemSKU.Status.ACTIVE)
+        self.product_draft.refresh_from_db()
+        
+        # Try to create C -> A (should fail due to recursion)
+        # Keep product3 as DRAFT for BOM modification
+        ItemSKU.objects.filter(pk=product3.pk).update(status=ItemSKU.Status.DRAFT)
+        product3.refresh_from_db()
+        
         with self.assertRaises(ValueError) as context:
             BOM.objects.create(
-                parent_sku=product3,  # C
-                component_sku=self.product_draft,  # A
+                parent_sku=product3,  # C (DRAFT for modification)
+                component_sku=self.product_draft,  # A (ACTIVE, used as component)
                 quantity=Decimal('1.0'),
                 created_by=self.user,
                 updated_by=self.user
@@ -290,28 +483,36 @@ class BOMModelTest(TestCase):
         
     def test_valid_bom_no_recursion(self):
         """Test valid BOM creation that doesn't create recursion"""
-        # Create A -> B
+        # Activate the package component for use as component (but keep parent as DRAFT)
+        ItemSKU.objects.filter(pk=self.package_draft.pk).update(status=ItemSKU.Status.ACTIVE)
+        self.package_draft.refresh_from_db()
+        
+        # Create A -> B (A is DRAFT parent, B is ACTIVE component)
         BOM.objects.create(
-            parent_sku=self.product_draft,  # A
-            component_sku=self.package_draft,  # B
+            parent_sku=self.product_draft,  # A (DRAFT)
+            component_sku=self.package_draft,  # B (ACTIVE component)
             quantity=Decimal('1.0'),
             created_by=self.user,
             updated_by=self.user
         )
         
-        # Create A -> C (should work)
+        # Create A -> C (should work) - raw_material is already ACTIVE
         BOM.objects.create(
-            parent_sku=self.product_draft,  # A
-            component_sku=self.raw_material,  # C
+            parent_sku=self.product_draft,  # A (DRAFT)
+            component_sku=self.raw_material,  # C (ACTIVE component)
             quantity=Decimal('2.0'),
             created_by=self.user,
             updated_by=self.user
         )
         
-        # Create B -> D (should work)
+        # Now make package_draft DRAFT again to allow BOM modifications
+        ItemSKU.objects.filter(pk=self.package_draft.pk).update(status=ItemSKU.Status.DRAFT)
+        self.package_draft.refresh_from_db()
+        
+        # Create B -> D (should work) - raw_material2 is already ACTIVE
         BOM.objects.create(
-            parent_sku=self.package_draft,  # B
-            component_sku=self.raw_material2,  # D
+            parent_sku=self.package_draft,  # B (DRAFT for modification)
+            component_sku=self.raw_material2,  # D (ACTIVE component)
             quantity=Decimal('3.0'),
             created_by=self.user,
             updated_by=self.user
