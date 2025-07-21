@@ -1,0 +1,34 @@
+{% comment %}
+------------------------------------------------------------------------------
+  inventory/item/partials/item-movement-form.html
+
+  Description:
+    - Form for creating/editing item movement using reusable autocomplete
+    - Uses item-autocomplete-form.html for item selection
+    - Supports stock movement creation and editing
+
+  Required context:
+    - form: StockMovementItemForm instance
+    - item_sku: ItemSKU object for movement (optional for create)
+    - warehouse: Warehouse object (required)
+
+  Usage:
+    - Rendered in modal dialogs for stock movement management
+------------------------------------------------------------------------------
+{% endcomment %}
+
+<div id="movement-form-container">
+    {% if form and warehouse %}
+        {% include 'catalog/item/partials/item-autocomplete-form.html' with create_url='inventory:stock-movement-item-create' update_url='inventory:stock-movement-item-edit' form=form create_target='item-movement' update_target='item-movement' autocomplete_url='catalog:item-autocomplete' field_label='Item' submit_text_create='Add Movement' submit_text_update='Edit Movement' %}
+    {% else %}
+        <div class="alert alert-warning">
+            <p>No form or warehouse provided.</p>
+            <div class="modal-action">
+                <button type="button" class="btn" 
+                    onclick="document.getElementById('modal-form').close()">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    {% endif %}
+</div>

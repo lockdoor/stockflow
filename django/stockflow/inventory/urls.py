@@ -4,7 +4,8 @@ from django.conf.urls.static import static
 
 from inventory.views.warehouse_views import (
     WarehouseListView, WarehouseDetailView, 
-    WarehouseCreateView, WarehouseUpdateView
+    WarehouseCreateView, WarehouseUpdateView,
+    WarehouseIndexView
 )
 
 from inventory.views.stock_views import (
@@ -23,6 +24,9 @@ app_name = 'inventory'
 urlpatterns = [
     # Warehouse management
     path('warehouses/', 
+         WarehouseIndexView.as_view(), 
+         name='warehouse-index'),
+    path('warehouses/list/', 
          WarehouseListView.as_view(), 
          name='warehouse-list'),
     path('warehouses/<int:pk>/', 

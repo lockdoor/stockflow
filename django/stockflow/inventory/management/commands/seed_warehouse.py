@@ -12,6 +12,7 @@ class Command(BaseCommand):
         warehouse1 = Warehouse.objects.create(
             name='Main Warehouse',
             address='123 Main St',
+            code='MAIN01',
             note='Central storage for all inventory',
             is_active=True,
             created_by=user,
@@ -23,6 +24,7 @@ class Command(BaseCommand):
         warehouse2 = Warehouse.objects.create(
             name='Secondary Warehouse',
             address='456 Secondary St',
+            code='SEC01',
             note='Backup storage for overflow inventory',
             is_active=True,
             created_by=user,

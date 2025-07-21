@@ -1,28 +1,32 @@
-<tr id="item-movement-row-{{ movement.id }}">
-    <td><a href="#">{{ item.pk }}</a></td>
-    <td>{{ 'item.sku_code' }}</td>
-    <td>{{ 'item.name' }}</td>
-    <td>{{ 'item.move_type' }}</td>
-    <td>{{ 'item.quantity' }}</td>
-    <td>{{ 'item.lot' }}</td>
-    <td>{{ 'item.expried' }}</td>
-    <td>{{ 'item.note' }}</td>
-    <td>{{ item.created_by.username }}</td>
-    <td>{{ item.created_at|date:"M d, Y" }}</td>
-    
+<tr id="item-movement-row-{{ item.id }}">
+    <td><a href="#">{{ item.item_sku.sku_code }}</a></td>
+    <td>{{ item.item_sku.name }}</td>
+    <td>
+        <span class="badge {% if item.is_inbound %}badge-success{% else %}badge-warning{% endif %}">
+            {{ item.get_movement_type_display }}
+        </span>
+    </td>
+    <td>{{ item.quantity }}</td>
+    <td>{{ item.lot_number|default:"-" }}</td>
+    <td>{{ item.expiry_date|date:"M d, Y"|default:"-" }}</td>
+    <td>{{ item.note|default:"-" }}</td>
+    <td>{{ item.created_by.username|default:"-" }}</td>
+    <td>{{ item.created_at|date:"M d, Y H:i" }}</td>
     
     <td>
         {% comment %}
-        {% if movement.status == 'DRAFT' %}
-        <button class="btn btn-error" 
-            hx-delete="{% url 'inventory:stock-movement-delete' movement.id %}"
-            hx-confirm="Are you sure you want to delete this movement?"
+        {% if item.can_modify %}
+        <button class="btn btn-sm btn-error" 
+            hx-delete="{% url 'inventory:stock-movement-item-delete' item.id %}"
+            hx-confirm="Are you sure you want to delete this movement item?"
             hx-target="closest tr"
             hx-swap="delete"
-            cfrf-token="{{ csrf_token }}"
-            >Delete</button>
+            csrf-token="{{ csrf_token }}">
+            Delete
+        </button>
+        {% else %}
+        <span class="badge badge-info">{{ item.stock_movement.status }}</span>
         {% endif %}
         {% endcomment %}
     </td>
-    
 </tr>

@@ -64,20 +64,6 @@
         </div>
     </div>
 </div>
-
-{% if stock_movement.status == 'DRAFT' %}
-
-{% endif %}
-
-<div class="flex items-center justify-center"> 
-    <div class="bg-white p-8 m-4 rounded shadow-md w-full"
-        >
-        <div hx-get="{% url 'inventory:stock-item-movement-list' stock_movement.pk %}" 
-            hx-trigger="load" id="stock-movement-list">
-            {% include 'inventory/item/partials/item-movement-list.html' %}
-        </div>       
-    </div>
-</div>
 {% else %}
 <div class="flex items-center justify-center">
     No stock movement items found.

@@ -8,6 +8,10 @@
     {% include 'inventory/stock/partials/stock-movement-detail.html' %}
 </div>
 
+{% if stock_movement.status == 'DRAFT' %}
 
+{% endif %}
+
+{% include 'inventory/item/partials/item-movement-list.html' with stock_movement=stock_movement %}
 
 {% endblock %}

@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'common',  # Shared utilities and mixins
     'stockflow',  # Your main app
     'widget_tweaks',  # For customizing form widgets in templates
     'catalog',  # Your app for managing items and BOMs

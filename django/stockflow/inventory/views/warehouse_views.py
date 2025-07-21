@@ -1,17 +1,19 @@
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
-from django.views.generic import ListView, DetailView, CreateView, UpdateView
+from django.views.generic import ListView, DetailView, CreateView, UpdateView, TemplateView
 from inventory.models.warehouse import Warehouse
 from inventory.forms.warehouse_form import WarehouseForm
 from django.shortcuts import render
 
+
+class WarehouseIndexView(LoginRequiredMixin, TemplateView):
+    template_name = 'inventory/warehouse/warehouse-index.html'
+
 class WarehouseListView(LoginRequiredMixin, ListView):
     model = Warehouse
-    template_name = 'inventory/warehouse/warehouse.html'
+    template_name = 'inventory/warehouse/partials/warehouse-list.html'
     context_object_name = 'warehouses'
     paginate_by = 20
-
-    def get_queryset(self):
-        return Warehouse.objects.all().order_by('name')
+    ordering = 'name'
 
 class WarehouseDetailView(LoginRequiredMixin, DetailView):
     model = Warehouse
