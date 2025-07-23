@@ -1,0 +1,17 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Django: Run All Tests",
+			"type": "shell",
+			"command": "./venv/bin/python",
+			"args": [
+				"manage.py",
+				"test"
+			],
+			"group": "test",
+			"isBackground": false,
+			"problemMatcher": []
+		}
+	]
+}
