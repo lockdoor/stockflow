@@ -10,13 +10,6 @@
     </div>
 </div>
 
-<div class="flex items-center justify-center"> 
-    <div class="bg-white p-8 m-4 rounded shadow-md w-full">
-        <div hx-get="{% url 'inventory:stock-movement-list' warehouse.pk %}" 
-            hx-trigger="load" id="stock-movement-list">
-            {% include 'inventory/stock/partials/stock-movement-list.html' %}
-        </div>
-    </div>
-</div>
+{% include 'inventory/stock-movement/partials/stock-movement-list.html' %}
 
 {% endblock %}

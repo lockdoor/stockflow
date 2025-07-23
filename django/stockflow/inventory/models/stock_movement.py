@@ -9,13 +9,12 @@ Created: 2025
 """
 
 from django.db import models
-from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
-from simple_history.models import HistoricalRecords
 
 from .warehouse import Warehouse
 from common.mixins import AuditableMixin, ValidatableMixin
-from inventory.mixins import StatusImmutableMixin, VersionedImmutableMixin
+from common.mixins.immutable import ImmutableMixin
+
 from inventory.validators import (
     StockMovementStatusValidator,
     StockMovementReferenceValidator,
@@ -27,8 +26,7 @@ from inventory.validators import (
 class StockMovement(
     AuditableMixin,
     ValidatableMixin, 
-    StatusImmutableMixin,
-    VersionedImmutableMixin,
+    ImmutableMixin,
     models.Model
 ):
     """
@@ -54,9 +52,6 @@ class StockMovement(
     class Status(models.TextChoices):
         DRAFT = 'DRAFT', 'Draft'
         CONFIRMED = 'CONFIRMED', 'Confirmed'
-    
-    # Immutable statuses for StatusImmutableMixin
-    IMMUTABLE_STATUSES = [Status.CONFIRMED]
 
     # Core fields
     reference_type = models.CharField(
@@ -164,7 +159,7 @@ class StockMovement(
     def delete(self, *args, **kwargs):
         """
         Delete with immutability check.
-        StatusImmutableMixin will prevent deletion if status is CONFIRMED.
+        ImmutableMixin will prevent deletion if status is CONFIRMED.
         """
         super().delete(*args, **kwargs)
     
@@ -179,8 +174,8 @@ class StockMovement(
         if self.status != self.Status.DRAFT:
             return False, "Only draft movements can be confirmed"
         
-        # Check if movement has items
-        if hasattr(self, 'stock_movement_items') and not self.stock_movement_items.exists():
+        # Check if movement has items - movement_items is the reverse relation name
+        if hasattr(self, 'movement_items') and not self.movement_items.exists():
             return False, "Cannot confirm movement without items"
         
         return True, ""
@@ -194,9 +189,17 @@ class StockMovement(
         if not can_confirm:
             raise ValidationError(reason)
         
+        # Update status and user before save
         self.status = self.Status.CONFIRMED
         self.updated_by = user
-        self.save()
+        
+        # Override immutability check for this specific save
+        # by temporarily setting a flag
+        self._confirming = True
+        try:
+            self.save()
+        finally:
+            del self._confirming
         
         # TODO: Trigger stock balance updates when Stock model is implemented
         
@@ -204,8 +207,8 @@ class StockMovement(
     
     def get_total_items_count(self):
         """Get total number of items in this movement"""
-        if hasattr(self, 'stock_movement_items'):
-            return self.stock_movement_items.count()
+        if hasattr(self, 'movement_items'):
+            return self.movement_items.count()
         return 0
     
     def get_reference_display(self):
@@ -217,3 +220,15 @@ class StockMovement(
             return f"{self.get_reference_type_display()} #{self.reference_id}"
         
         return self.get_reference_type_display()
+    
+    # ImmutableMixin implementation
+    def is_immutable(self):
+        """Return True if this stock movement is immutable (status is CONFIRMED)"""
+        # Allow confirmation process to proceed
+        if hasattr(self, '_confirming'):
+            return False
+        return self.status == self.Status.CONFIRMED
+    
+    def get_immutable_reason(self):
+        """Return reason why this record is immutable"""
+        return "Confirmed stock movements cannot be modified for audit trail integrity"

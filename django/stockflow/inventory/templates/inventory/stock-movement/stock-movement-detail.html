@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block title %}{{stock_movement.pk}}{% endblock %}
+
+{% block content %}
+
+<div id="stock-movement-detail-container">
+    {% include 'inventory/stock-movement/partials/stock-movement-detail.html' %}
+</div>
+
+{% if stock_movement.status == 'DRAFT' %}
+
+{% endif %}
+
+{% include 'inventory/item-movement/partials/item-movement-list.html' with stock_movement=stock_movement %}
+
+{% endblock %}

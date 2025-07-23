@@ -11,14 +11,26 @@ Created: 2025
 
 from django.utils import timezone
 from django.db import models
-from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
-from simple_history.models import HistoricalRecords
 
 from inventory.models.stock_movement import StockMovement
 from catalog.models.item import ItemSKU
+from common.mixins import AuditableMixin, ValidatableMixin
+from common.mixins.immutable import ImmutableMixin
+from inventory.validators import (
+    StockMovementItemQuantityValidator,
+    StockMovementItemLotValidator,
+    StockMovementItemBusinessRulesValidator,
+    StockMovementItemExpiryValidator,
+    StockMovementItemDuplicateValidator
+)
 
-class StockMovementItem(models.Model):
+class StockMovementItem(
+    AuditableMixin,
+    ValidatableMixin,
+    ImmutableMixin,
+    models.Model
+):
     """
     Represents individual items within a stock movement transaction.
     
@@ -28,7 +40,7 @@ class StockMovementItem(models.Model):
     
     Business Rules:
     - Cannot modify items in CONFIRMED stock movements
-    - Uses optimistic locking to prevent concurrent updates
+    - Uses optimistic locking via AuditableMixin
     - Unique constraint on (stock_movement, item_sku, lot_number, movement_type)
     """
     
@@ -83,32 +95,14 @@ class StockMovementItem(models.Model):
         help_text="Additional notes for this movement item"
     )
     
-    # Audit fields
-    created_by = models.ForeignKey(
-        User, 
-        on_delete=models.PROTECT, 
-        related_name='stock_movement_items_created',
-        help_text="User who created this movement item"
-    )
-    updated_by = models.ForeignKey(
-        User, 
-        on_delete=models.PROTECT, 
-        related_name='stock_movement_items_updated',
-        help_text="User who last updated this movement item"
-    )
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    # Audit fields inherited from AuditableMixin:
+    # created_by, updated_by, created_at, updated_at, version
     
-    # Optimistic locking
-    version = models.PositiveIntegerField(
-        default=0,
-        help_text="Version number for optimistic locking"
-    )
-    
-    # History tracking
-    history = HistoricalRecords()
+    # History tracking (commented out due to multiple registration issue)
+    # history = HistoricalRecords()
 
     class Meta:
+        db_table = 'inventory_stock_movement_item'
         unique_together = ('stock_movement', 'item_sku', 'lot_number', 'movement_type')
         verbose_name = 'Stock Movement Item'
         verbose_name_plural = 'Stock Movement Items'
@@ -123,226 +117,50 @@ class StockMovementItem(models.Model):
         """String representation of the movement item"""
         return f"{self.item_sku.sku_code} ({self.get_movement_type_display()}) x {self.quantity}"
 
-    def _validate_item_sku(self) -> str | None:
-        """Validate item SKU business rules"""
-        if not self.item_sku:
-            return "Item SKU is required"
-            
-        if self.item_sku.status != ItemSKU.Status.ACTIVE:
-            return f"Cannot move inactive item SKU ({self.item_sku.get_status_display()})"
-        return None
-        
-    def _get_stock_movement(self):
-        """Safely get stock_movement, returns None if not set"""
-        try:
-            return self.stock_movement
-        except StockMovement.DoesNotExist:
-            return None
-
-    def _validate_quantity(self) -> str | None:
-        """Validate quantity business rules"""
-        if self.quantity is None:
-            return "Quantity is required"
-            
-        if self.quantity <= 0:
-            return "Quantity must be greater than zero"
-            
-        # Check maximum decimal places (2)
-        if self.quantity.as_tuple().exponent < -2:
-            return "Quantity cannot have more than 2 decimal places"
-            
-        # Check reasonable maximum quantity (prevent data entry errors)
-        max_quantity = 999999.99
-        if self.quantity > max_quantity:
-            return f"Quantity cannot exceed {max_quantity:,.2f}"
-            
-        return None
-    
-    def _validate_expiry_date(self) -> str | None:
-        """Validate expiry date business rules"""
-        if self.expiry_date and self.expiry_date < timezone.now().date():
-            return "Expiry date cannot be in the past"
-            
-        # Check if expiry date is too far in the future (e.g., 50 years)
-        if self.expiry_date:
-            max_future_date = timezone.now().date().replace(year=timezone.now().year + 50)
-            if self.expiry_date > max_future_date:
-                return "Expiry date cannot be more than 50 years in the future"
-                
-        return None
-
-    def _validate_movement_type_consistency(self) -> str | None:
-        """Validate movement type consistency with parent stock movement"""
-        stock_movement_id = getattr(self, 'stock_movement_id', None)
-        if not stock_movement_id:
-            return "Stock movement is required"
-            
-        # Note: StockMovement doesn't have movement_type field in current implementation
-        # This validation can be extended if movement types are added to StockMovement
-        # For now, we just ensure stock movement exists
-        return None
-
-    def _validate_lot_number(self) -> str | None:
-        """Validate lot number business rules"""
-        if self.lot_number:
-            # Check lot number format (alphanumeric with some special chars)
-            import re
-            if not re.match(r'^[A-Za-z0-9\-_/]+$', self.lot_number):
-                return "Lot number can only contain letters, numbers, hyphens, underscores, and forward slashes"
-                
-            # Check lot number length
-            if len(self.lot_number) > 64:
-                return "Lot number cannot exceed 64 characters"
-                
-        # For certain item types, lot number might be required
-        if self.item_sku and self.item_sku.type in [ItemSKU.Type.RAW, ItemSKU.Type.PACKAGE]:
-            if not self.lot_number:
-                return f"Lot number is required for {self.item_sku.get_type_display()} items"
-                
-        return None
-
-    def _validate_outbound_quantity(self) -> str | None:
-        """Validate outbound quantity against available stock"""
-        if self.movement_type != self.MovementType.OUT:
-            return None
-            
-        # Skip validation for new stock movements (not yet confirmed)
-        stock_movement = self._get_stock_movement()
-        if not stock_movement or stock_movement.status == StockMovement.Status.DRAFT:
-            return None
-            
-        # TODO: Implement stock level checking
-        # This would require a stock level tracking system
-        # available_stock = get_available_stock(self.item_sku, stock_movement.warehouse, self.lot_number)
-        # if self.quantity > available_stock:
-        #     return f"Insufficient stock. Available: {available_stock}, Requested: {self.quantity}"
-            
-        return None
-
-    def _validate_warehouse_item_compatibility(self) -> str | None:
-        """Validate that item can be stored/moved in the warehouse"""
-        stock_movement = self._get_stock_movement()
-        if not stock_movement or not stock_movement.warehouse:
-            return None
-            
-        # Check if warehouse is active
-        if not stock_movement.warehouse.is_active:
-            return "Cannot move items to/from inactive warehouse"
-            
-        # TODO: Implement warehouse-item compatibility rules
-        # e.g., temperature controlled items, hazardous materials, etc.
-        
-        return None
-
-    def _validate_duplicate_item_in_movement(self) -> str | None:
-        """Validate no duplicate items in same movement with same lot"""
-        stock_movement = self._get_stock_movement()
-        if not stock_movement:
-            return None
-            
-        # Check for existing items in the same movement
-        existing_items = StockMovementItem.objects.filter(
-            stock_movement=stock_movement,
-            item_sku=self.item_sku,
-            movement_type=self.movement_type,
-            lot_number=self.lot_number or ''
-        )
-        
-        # Exclude current item if updating
-        if self.pk:
-            existing_items = existing_items.exclude(pk=self.pk)
-            
-        if existing_items.exists():
-            lot_info = f" with lot {self.lot_number}" if self.lot_number else " without lot number"
-            return f"Item {self.item_sku.sku_code} ({self.get_movement_type_display()}){lot_info} already exists in this movement"
-            
-        return None
-
-    def _validate_note_length(self) -> str | None:
-        """Validate note field"""
-        if self.note and len(self.note) > 500:
-            return "Note cannot exceed 500 characters"
-        return None
-
-    def _validate_business_rules(self) -> str | None:
-        """Validate complex business rules"""
-        errors = []
-        
-        # Check if item requires special handling
-        if self.item_sku and hasattr(self.item_sku, 'requires_temperature_control'):
-            if self.item_sku.requires_temperature_control and not self.expiry_date:
-                errors.append("Temperature controlled items must have expiry date")
-        
-        # Check movement date consistency
-        stock_movement = self._get_stock_movement()
-        if stock_movement and stock_movement.created_at:
-            if self.created_at and stock_movement.created_at.date() > self.created_at.date():
-                errors.append("Movement date cannot be in the future relative to creation date")
-        
-        return "; ".join(errors) if errors else None
-
-    def clean(self):
-        """
-        Model-level validation - handles business logic validation
-        Calls individual validation methods for each field
-        Raises ValidationError for business logic violations which will be converted to ValueError in save()
-        """
-        errors = []
-        
-        # Call field-specific validation methods
-        field_validations = [
-            self._validate_item_sku(),
-            self._validate_quantity(),
-            self._validate_expiry_date(),
-            self._validate_movement_type_consistency(),
-            self._validate_lot_number(),
-            self._validate_outbound_quantity(),
-            self._validate_warehouse_item_compatibility(),
-            self._validate_duplicate_item_in_movement(),
-            self._validate_note_length(),
-            self._validate_business_rules()
+    def get_validators(self):
+        """Return list of validator instances for this model"""
+        return [
+            StockMovementItemQuantityValidator(self),
+            StockMovementItemLotValidator(self),
+            StockMovementItemExpiryValidator(self),
+            StockMovementItemDuplicateValidator(self),
+            StockMovementItemBusinessRulesValidator(self)
         ]
 
-        # Add non-None validation errors
-        errors.extend([error for error in field_validations if error])
-        
-        if errors:
-            raise ValidationError("; ".join(errors))
-
     def save(self, *args, **kwargs):
-        """Save with business logic validation"""
-        # Full clean validation
-        self.full_clean()
+        """
+        Save with validation and business logic.
         
-        # Check if this is an update to existing record
-        if self.pk:
-            try:
-                current = StockMovementItem.objects.get(pk=self.pk)
-                
-                # Check if movement is confirmed
-                if current.stock_movement.status == StockMovement.Status.CONFIRMED:
-                    raise ValidationError("Cannot modify confirmed stock movement items")
-                
-                # Optimistic locking check
-                if current.version != self.version:
-                    raise ValidationError("Record has been modified by another user. Please refresh and try again")
-                
-                # Increment version
-                self.version += 1
-                
-            except StockMovementItem.DoesNotExist:
-                # Record was deleted, allow save as new
-                pass
-        
+        The order of mixins matters:
+        1. ValidatableMixin calls clean() first
+        2. ImmutableMixin handles immutability check
+        3. AuditableMixin sets audit fields and optimistic locking
+        4. Model.save() persists to database
+        """
         super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
-        """Delete with business logic validation"""
-        stock_movement = self._get_stock_movement()
-        if stock_movement and stock_movement.status == StockMovement.Status.CONFIRMED:
-            raise ValidationError("Cannot delete item from confirmed stock movement")
-        
+        """
+        Delete with immutability check.
+        ImmutableMixin will prevent deletion if parent movement is CONFIRMED.
+        """
         super().delete(*args, **kwargs)
+
+    # ImmutableMixin implementation
+    def is_immutable(self):
+        """Return True if parent stock movement is confirmed"""
+        return (hasattr(self, 'stock_movement') and 
+                self.stock_movement and 
+                self.stock_movement.status == StockMovement.Status.CONFIRMED)
+
+    def get_immutable_reason(self):
+        """Return reason why this record is immutable"""
+        return "Cannot modify items in confirmed stock movements"
+
+    # Business logic methods
+    def can_modify(self):
+        """Check if this item can be modified"""
+        return not self.is_immutable()
 
     @property
     def is_inbound(self):
@@ -353,12 +171,6 @@ class StockMovementItem(models.Model):
     def is_outbound(self):
         """Check if this is an outbound movement"""
         return self.movement_type == self.MovementType.OUT
-
-    @property
-    def can_modify(self):
-        """Check if this item can be modified"""
-        stock_movement = self._get_stock_movement()
-        return not stock_movement or stock_movement.status != StockMovement.Status.CONFIRMED
 
     def get_display_name(self):
         """Get formatted display name for this movement item"""

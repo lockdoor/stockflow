@@ -1,1 +1,0 @@
-"""Catalog Models Tests"""

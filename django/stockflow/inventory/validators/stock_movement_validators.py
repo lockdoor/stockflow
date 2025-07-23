@@ -83,6 +83,10 @@ class StockMovementWarehouseValidator:
     
     def validate(self):
         """Validate warehouse-related business rules"""
+        # Skip validation if warehouse is not set
+        if not hasattr(self.stock_movement, 'warehouse') or not self.stock_movement.warehouse:
+            return None
+            
         warehouse = self.stock_movement.warehouse
         
         # Warehouse must be active for new stock movements

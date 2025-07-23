@@ -1,68 +1,57 @@
-# catalog/models/bom.py
-
 from django.db import models
-from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from catalog.models.item import ItemSKU
 from simple_history.models import HistoricalRecords
+from django.contrib.auth.models import User
+from decimal import Decimal
 
 
 class BOM(models.Model):
     """
-    Bill of Materials (BOM) model for managing component relationships.
-    Defines what components are needed to build a finished product or package.
-    Includes business logic for validation and state management.
+    Bill of Materials model representing the components needed to build an item.
+    Provides full business logic validation and state management.
     """
-    
-    # Core fields
     parent_sku = models.ForeignKey(
         ItemSKU, 
         on_delete=models.CASCADE, 
         related_name='bom_parent',
-        help_text="Parent item that contains the components"
+        help_text="The item that this BOM belongs to"
     )
     component_sku = models.ForeignKey(
         ItemSKU, 
         on_delete=models.PROTECT, 
         related_name='bom_component',
-        help_text="Component item used in the parent"
+        help_text="The component used in this BOM"
     )
     quantity = models.DecimalField(
         max_digits=10, 
         decimal_places=2,
-        help_text="Quantity of component needed for one unit of parent"
+        help_text="Quantity of the component required"
     )
-    
-    # Versioning for concurrency control
+    created_by = models.ForeignKey(
+        User, 
+        on_delete=models.PROTECT, 
+        related_name='bom_created_by',
+        help_text="User who created this BOM"
+    )
+    updated_by = models.ForeignKey(
+        User, 
+        on_delete=models.PROTECT, 
+        related_name='bom_updated_by',
+        help_text="User who last updated this BOM"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
     version = models.PositiveIntegerField(
         default=0,
         help_text="Version number for optimistic locking"
     )
-    
-    # Audit fields
-    created_by = models.ForeignKey(
-        User, 
-        on_delete=models.PROTECT, 
-        related_name='bom_created',
-        help_text="User who created this BOM entry"
-    )
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_by = models.ForeignKey(
-        User, 
-        on_delete=models.PROTECT, 
-        related_name='bom_updated',
-        help_text="User who last updated this BOM entry"
-    )
-    updated_at = models.DateTimeField(auto_now=True)
-    
-    # History tracking
     history = HistoricalRecords()
-
+    
     class Meta:
         db_table = 'catalog_bom'
-        verbose_name = 'Bill of Materials'
-        verbose_name_plural = 'Bills of Materials'
-        ordering = ['parent_sku__sku_code', 'component_sku__sku_code']
+        verbose_name = 'BOM'
+        verbose_name_plural = 'BOMs'
         unique_together = [['parent_sku', 'component_sku']]
         indexes = [
             models.Index(fields=['parent_sku']),
@@ -72,133 +61,63 @@ class BOM(models.Model):
 
     def __str__(self):
         return f"{self.parent_sku.sku_code} needs {self.quantity} x {self.component_sku.sku_code}"
-    
+
+    # Private validation methods
     def _validate_parent_sku(self) -> str | None:
         """
-        Validate parent SKU can have a BOM
+        Validate parent SKU is suitable for a BOM (not a raw material)
         """
         if not self.parent_sku_id:
             return "Parent SKU is required"
             
-        try:
-            parent = ItemSKU.objects.get(pk=self.parent_sku_id)
-            if not parent.can_have_bom():
-                return f"Parent SKU type '{parent.get_display_type()}' cannot have a BOM"
-        except ItemSKU.DoesNotExist:
-            return "Selected parent SKU does not exist"
+        if self.parent_sku.type == ItemSKU.Type.RAW:
+            return "Cannot create BOM with parent SKU as a raw material"
+            
+        if self.parent_sku.is_bom_locked():
+            return "Cannot modify BOM when parent item is not in DRAFT status"
         
         return None
         
     def _validate_component_sku(self) -> str | None:
         """
-        Validate component SKU exists and can be used as component and must be active
+        Validate component SKU
         """
         if not self.component_sku_id:
             return "Component SKU is required"
             
-        try:
-            component = ItemSKU.objects.get(pk=self.component_sku_id)
-            if not component.can_be_component():
-                return "Selected component SKU cannot be used as a component"
-            if not component.is_active():
-                return "Selected component SKU must be active"
-        except ItemSKU.DoesNotExist:
-            return "Selected component SKU does not exist"
-        
+        if self.parent_sku_id and self.component_sku_id:
+            if self.parent_sku_id == self.component_sku_id:
+                return "Parent SKU and component SKU cannot be the same"
+                
         return None
         
     def _validate_quantity(self) -> str | None:
         """
         Validate quantity is positive
         """
-        if self.quantity is None:
+        if not self.quantity:
             return "Quantity is required"
-        if self.quantity <= 0:
+            
+        if self.quantity <= Decimal('0'):
             return "Quantity must be greater than zero"
-        return None
-        
-    def _validate_self_reference(self) -> str | None:
-        """
-        Validate parent and component are not the same
-        """
-        if self.parent_sku_id and self.component_sku_id and self.parent_sku_id == self.component_sku_id:
-            return "Parent SKU and component SKU cannot be the same"
-        
-        return None
-  
-    def _validate_self_reference_recursive(self) -> str | None:
-        """
-        Validate that the BOM does not create a recursive relationship
-        """
-        def _check_recursive_target(parent_sku, target_sku_id, visited=None) -> bool:
-            """
-            Recursively check if target_sku_id appears in any component hierarchy
-            """
-            if visited is None:
-                visited = set()
-                
-            # Prevent infinite loops
-            if parent_sku.id in visited:
-                return False
-            visited.add(parent_sku.id)
             
-            # Get all components for this parent
-            components = BOM.objects.filter(parent_sku=parent_sku).select_related('component_sku')
-            
-            for component in components:
-                # If we find the target in components, it's a cycle
-                if component.component_sku.id == target_sku_id:
-                    return True
-                    
-                # If component can have BOM, check its components recursively
-                if component.component_sku.can_have_bom():
-                    if _check_recursive_target(component.component_sku, target_sku_id, visited.copy()):
-                        return True
-            
-            return False
-            
-        if self.parent_sku_id and self.component_sku_id:
-            try:
-                # For new BOM entries, check if adding this component would create a cycle
-                # We need to check if the component (when it becomes a parent) 
-                # would eventually contain the current parent as a component
-                component = ItemSKU.objects.get(pk=self.component_sku_id)
-                if component.can_have_bom():
-                    if _check_recursive_target(component, self.parent_sku_id):
-                        return "Recursive relationship detected in BOM structure"
-                        
-            except ItemSKU.DoesNotExist:
-                return "Component SKU does not exist"
-                
         return None
         
     def _validate_duplicate_component(self) -> str | None:
         """
-        Validate component is not already in this parent's BOM
+        Validate no duplicate components in the same BOM
         """
         if not self.pk and self.parent_sku_id and self.component_sku_id:
-            if BOM.objects.filter(parent_sku_id=self.parent_sku_id, component_sku_id=self.component_sku_id).exists():
+            if BOM.objects.filter(parent_sku=self.parent_sku, component_sku=self.component_sku).exists():
                 return "This component already exists in the BOM"
-        return None
-        
-    def _validate_bom_locked(self) -> str | None:
-        """
-        Validate BOM is not locked for editing
-        """
-        if self.parent_sku_id:
-            try:
-                parent = ItemSKU.objects.get(pk=self.parent_sku_id)
-                if parent.is_bom_locked():
-                    return "Cannot modify BOM when parent item is locked (not in DRAFT status)"
-            except ItemSKU.DoesNotExist:
-                return "Parent SKU does not exist"
+                
         return None
 
     def clean(self):
         """
         Model-level validation - handles business logic validation
         Calls individual validation methods for each field
-        Raises ValidationError for business logic violations which will be converted to ValueError in save()
+        Raises ValidationError for business logic violations
         """
         errors = []
         
@@ -207,10 +126,7 @@ class BOM(models.Model):
             self._validate_parent_sku(),
             self._validate_component_sku(),
             self._validate_quantity(),
-            self._validate_self_reference(),
-            self._validate_self_reference_recursive(),
-            self._validate_duplicate_component(),
-            self._validate_bom_locked()
+            self._validate_duplicate_component()
         ]
         
         # Add non-None validation errors
@@ -228,9 +144,8 @@ class BOM(models.Model):
             self.full_clean()
 
             if self.pk:  # Updating existing BOM
-                self._validate_update()
                 self._handle_optimistic_locking()
-                
+            
             super().save(*args, **kwargs)
             
         except ValidationError as e:
@@ -248,25 +163,10 @@ class BOM(models.Model):
             else:
                 raise ValueError(str(e))
             
-        except ValueError as e:
-            # Handle business logic validation errors
+        except Exception as e:
+            # Handle other exceptions
             raise ValueError(str(e))
-
-    def _validate_update(self):
-        """
-        Validate update operations - business logic for existing BOM entries
-        """
-        try:
-            old = BOM.objects.get(pk=self.pk)
-        except BOM.DoesNotExist:
-            raise ValueError("BOM entry no longer exists")
-        
-        # Prevent changing parent/component relationship once set
-        if self.parent_sku_id != old.parent_sku_id:
-            raise ValueError("Parent SKU cannot be changed once set")
-        if self.component_sku_id != old.component_sku_id:
-            raise ValueError("Component SKU cannot be changed once set")
-
+            
     def _handle_optimistic_locking(self):
         """
         Handle optimistic locking to prevent concurrent updates
@@ -274,35 +174,75 @@ class BOM(models.Model):
         try:
             current = BOM.objects.get(pk=self.pk)
             if current.version != self.version:
-                raise ValueError("The BOM entry has been modified by another user. Please refresh and try again")
+                raise ValueError("Optimistic locking failed: BOM record has been modified by another user")
             self.version += 1
         except BOM.DoesNotExist:
-            raise ValueError("BOM entry no longer exists")
-
+            raise ValueError("BOM record no longer exists")
+            
     # Business logic methods
-    def can_modify(self):
+    def is_active(self):
         """
-        Check if this BOM entry can be modified
+        Check if both parent and component are active
+        """
+        return self.parent_sku.is_active() and self.component_sku.is_active()
+    
+    def can_be_modified(self):
+        """
+        Check if this BOM can be modified
+        BOM can only be modified if the parent item is in DRAFT status
         """
         return not self.parent_sku.is_bom_locked()
         
-    def can_delete(self):
+    def can_be_deleted(self):
         """
-        Check if this BOM entry can be deleted
+        Check if this BOM can be deleted
+        BOM can only be deleted if the parent item is in DRAFT status
         """
         return not self.parent_sku.is_bom_locked()
+    
+    # Manager methods
+    @classmethod
+    def get_components_for_item(cls, item_sku):
+        """
+        Get all BOM components for a given item
+        """
+        return cls.objects.filter(parent_sku=item_sku).select_related('component_sku')
+    
+    @classmethod
+    def get_items_using_component(cls, component_sku):
+        """
+        Get all items that use a specific component in their BOM
+        """
+        return cls.objects.filter(component_sku=component_sku).select_related('parent_sku')
         
-    def get_total_cost(self):
+    @classmethod
+    def has_circular_reference(cls, parent_sku, component_sku):
         """
-        Calculate total cost for this BOM line item
-        Note: This would require a cost field on ItemSKU in a real implementation
+        Check for circular references in BOM structure
+        Returns True if adding component_sku to parent_sku's BOM would create a circular reference
         """
-        # In a real implementation, you would calculate:
-        # return self.quantity * self.component_sku.unit_cost
-        return None
+        # If they are the same, it's definitely circular
+        if parent_sku.id == component_sku.id:
+            return True
+            
+        # Check if the component uses the parent in its own BOM (recursively)
+        visited = set()
+        to_check = [component_sku.id]
         
-    def get_component_display(self):
-        """
-        Get formatted display string for the component
-        """
-        return f"{self.quantity} x {self.component_sku.sku_code} ({self.component_sku.name})"
+        while to_check:
+            current_id = to_check.pop()
+            
+            if current_id in visited:
+                continue
+                
+            visited.add(current_id)
+            
+            # If we find the parent in the component's BOM tree, it's circular
+            if current_id == parent_sku.id:
+                return True
+                
+            # Add all components of the current item to check
+            component_parents = cls.objects.filter(component_sku_id=current_id).values_list('parent_sku_id', flat=True)
+            to_check.extend([pid for pid in component_parents if pid not in visited])
+            
+        return False

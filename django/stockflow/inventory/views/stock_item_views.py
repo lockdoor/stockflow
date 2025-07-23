@@ -6,7 +6,7 @@ from django.http import Http404, HttpResponse
 
 class StockItemMovementListView(LoginRequiredMixin, ListView):
     model = StockMovementItem
-    template_name = 'inventory/item/partials/item-movement-list.html'
+    template_name = 'inventory/item-movement/partials/item-movement-list.html'
     context_object_name = 'movement_items'
     paginate_by = 20
 

@@ -1,1 +1,0 @@
-"""Inventory Forms Tests"""

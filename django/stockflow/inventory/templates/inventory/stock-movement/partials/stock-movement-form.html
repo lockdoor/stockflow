@@ -1,0 +1,108 @@
+{% load widget_tweaks %}
+<div id="stock-movement-form-container">
+{% if form %}
+<form id="stock-movement-form"
+    hx-post="{% if form.instance.id %}
+                {% url 'inventory:stock-movement-edit' form.instance.id %}
+            {% else %}
+                {% if form.warehouse.value %}
+                    {% url 'inventory:stock-movement-create' form.warehouse.value %}
+                {% else %}
+                    {% url 'inventory:stock-movement-create' warehouse.id %}
+                {% endif %}               
+            {% endif %}" 
+    hx-target="{% if form.instance.pk %}
+                    #stock-movement-detail-container
+                {% else %}
+                    #stock-movement-table-body
+                {% endif %}"
+    hx-swap="{% if form.instance.pk %}
+                innerHTML
+            {% else %}
+                afterbegin
+            {% endif %}"
+    hx-encoding='multipart/form-data'
+    hx-on:success="document.getElementById('modal-form').close(); this.reset();"
+    class="mb-4">
+
+    {% csrf_token %}
+
+    <h3 class="font-bold text-lg mb-4">
+            {% if form.instance.id %}
+                Update Stock Movement
+            {% else %}
+                Add New Draft Stock Movement
+            {% endif %}
+    </h3>
+
+    <!-- Hidden warehouse field -->
+    {{ form.warehouse|add_class:"form-select hidden" }}
+
+    <div class="form-control w-full">
+        <div class="mb-4">
+            <label class="block mb-1 text-sm font-medium">reference_type:</label>
+            {{ form.reference_type|add_class:"form-select w-full px-3 py-2 border rounded" }}
+            {% if form.reference_type.errors %}
+            <div class="text-error text-sm mt-1">
+                {% for error in form.reference_type.errors %}
+                <div>{{ error }}</div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="mb-4">
+            <label class="block mb-1 text-sm font-medium">reference_id:</label>
+            {{ form.reference_id|add_class:"form-control w-full px-3 py-2 border rounded" }}
+            {% if form.reference_id.errors %}
+            <div class="text-error text-sm mt-1">
+                {% for error in form.reference_id.errors %}
+                <div>{{ error }}</div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="mb-4">
+            <label class="block mb-1 text-sm font-medium">Note:</label>
+            {{ form.note|add_class:"form-control w-full px-3 py-2 border rounded" }}
+            {% if form.note.errors %}
+            <div class="text-error text-sm mt-1">
+                {% for error in form.note.errors %}
+                <div>{{ error }}</div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- แสดง non-field errors -->
+        {% if form.non_field_errors %}
+        <div class="text-error text-sm mb-4">
+            {% for error in form.non_field_errors %}
+            <div>{{ error }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
+    </div>
+
+    <div class="modal-action">
+        <button type="button" class="btn" onclick="document.getElementById('modal-form').close()">Cancel</button>
+        <button type="submit" class="btn btn-primary">
+            {% if form.instance.id %}
+                Update Stock Movement
+            {% else %}
+                Add Stock Movement
+            {% endif %}
+        </button>
+    </div>
+</form>
+{% else %}
+<div role="alert" class="alert alert-error">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 shrink-0 stroke-current" fill="none" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+    <span>Error: Form context is required to display the stock movement form.</span>
+</div>
+{% endif %}
+</div>

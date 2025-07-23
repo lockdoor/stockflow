@@ -8,9 +8,9 @@ from inventory.views.warehouse_views import (
     WarehouseIndexView
 )
 
-from inventory.views.stock_views import (
+from inventory.views.stock_movement_views import (
     StockMovementCreateView, 
-    StockMovementByWareHouseListView, 
+    StockMovementByWarehouseListView, 
     StockMovementDeleteView, 
     StockMovementUpdateView,
     StockMovementDetailView
@@ -41,7 +41,7 @@ urlpatterns = [
     
     # Warehouse stock movements
     path('warehouses/<int:warehouse_id>/stock-movements/', 
-        StockMovementByWareHouseListView.as_view(), 
+        StockMovementByWarehouseListView.as_view(), 
         name='stock-movement-list'), 
     path('warehouses/<int:warehouse_id>/stock-movements/create/', 
          StockMovementCreateView.as_view(), 
