@@ -10,7 +10,11 @@ class StockMovementDetailViewTest(TestCase):
         self.client = Client()
         self.user = User.objects.create_user(username='tester', password='testpass')
         self.warehouse = Warehouse.objects.create(
-            name='Main', address='123', note='test', created_by=self.user, updated_by=self.user
+            name='Main', 
+            address='123', 
+            code='CODE123', 
+            created_by=self.user, 
+            updated_by=self.user
         )
         self.movement = StockMovement.objects.create(
             warehouse=self.warehouse,

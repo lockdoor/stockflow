@@ -11,7 +11,7 @@
 
 <div id="bom-form-container">
     {% if form and parent_sku %}
-        {% include 'catalog/item/partials/item-autocomplete-form.html' with create_url='catalog:bom-create' update_url='catalog:bom-edit' form=form create_target='bom' update_target='bom' autocomplete_url='catalog:item-bom-autocomplete' field_label='Component' submit_text_create='Add Component' submit_text_update='Edit Component' %}
+        {% include 'shared/item-autocomplete-form.html' with create_url='catalog:bom-create' update_url='catalog:bom-edit' form=form create_target='bom' update_target='bom' autocomplete_url='catalog:item-bom-autocomplete' field_label='Component' submit_text_create='Add Component' submit_text_update='Edit Component' %}
     {% else %}
         <div class="alert alert-warning">
             <p>No form provided.</p>

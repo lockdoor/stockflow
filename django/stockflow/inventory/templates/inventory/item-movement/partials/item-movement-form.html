@@ -3,13 +3,12 @@
   inventory/item/partials/item-movement-form.html
 
   Description:
-    - Form for creating/editing item movement using reusable autocomplete
-    - Uses item-autocomplete-form.html for item selection
-    - Supports stock movement creation and editing
+    - Form for creating/editing stock movement items
+    - Simple form without autocomplete features
+    - Used for stock movement item creation
 
   Required context:
     - form: StockMovementItemForm instance
-    - item_sku: ItemSKU object for movement (optional for create)
     - warehouse: Warehouse object (required)
 
   Usage:
@@ -17,15 +16,136 @@
 ------------------------------------------------------------------------------
 {% endcomment %}
 
+{% load widget_tweaks %}
+
 <div id="movement-form-container">
-    {% if form and warehouse %}
-        {% include 'catalog/item/partials/item-autocomplete-form.html' with create_url='inventory:stock-movement-item-create' update_url='inventory:stock-movement-item-edit' form=form create_target='item-movement' update_target='item-movement' autocomplete_url='catalog:item-autocomplete' field_label='Item' submit_text_create='Add Movement' submit_text_update='Edit Movement' %}
+    {% if form and stock_movement %}
+        <form id="movement-item-form"
+            hx-post="{% url 'inventory:stock-item-movement-create' stock_movement.id %}"
+            hx-target="#item-movement-table-body"
+            hx-swap="beforeend"
+            hx-encoding='multipart/form-data'
+            hx-trigger="submit"
+            hx-on:success="document.getElementById('modal-form').close(); this.reset();"
+            class="mb-4">
+            {% csrf_token %}
+            
+            {% if form.errors %}
+            <div id="error-field" class="alert alert-error mb-4">
+                <strong>Error:</strong>
+                <ul>
+                    {% for field in form %}
+                    {% for error in field.errors %}
+                    <li>{{ error }}</li>
+                    {% endfor %}
+                    {% endfor %}
+                    {% for error in form.non_field_errors %}
+                    <li>{{ error }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+            
+            <!-- Hidden stock_movement field -->
+            {% if form.stock_movement %}
+                {{ form.stock_movement|add_class:"hidden" }}
+            {% endif %}
+            
+            <!-- Item selection -->
+            <div class="form-control mb-4">
+                <label class="label">
+                    <span class="label-text">{{ form.item_sku.label }}</span>
+                </label>
+                {{ form.item_sku|add_class:"select select-bordered w-full" }}
+                {% if form.item_sku.help_text %}
+                <div class="label">
+                    <span class="label-text-alt">{{ form.item_sku.help_text }}</span>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Movement type -->
+            <div class="form-control mb-4">
+                <label class="label">
+                    <span class="label-text">{{ form.movement_type.label }}</span>
+                </label>
+                {{ form.movement_type|add_class:"select select-bordered w-full" }}
+                {% if form.movement_type.help_text %}
+                <div class="label">
+                    <span class="label-text-alt">{{ form.movement_type.help_text }}</span>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Quantity -->
+            <div class="form-control mb-4">
+                <label class="label">
+                    <span class="label-text">{{ form.quantity.label }}</span>
+                </label>
+                {{ form.quantity|add_class:"input input-bordered w-full" }}
+                {% if form.quantity.help_text %}
+                <div class="label">
+                    <span class="label-text-alt">{{ form.quantity.help_text }}</span>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Lot number -->
+            <div class="form-control mb-4">
+                <label class="label">
+                    <span class="label-text">{{ form.lot_number.label }}</span>
+                </label>
+                {{ form.lot_number|add_class:"input input-bordered w-full" }}
+                {% if form.lot_number.help_text %}
+                <div class="label">
+                    <span class="label-text-alt">{{ form.lot_number.help_text }}</span>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Expiry date -->
+            <div class="form-control mb-4">
+                <label class="label">
+                    <span class="label-text">{{ form.expiry_date.label }}</span>
+                </label>
+                {{ form.expiry_date|add_class:"input input-bordered w-full" }}
+                {% if form.expiry_date.help_text %}
+                <div class="label">
+                    <span class="label-text-alt">{{ form.expiry_date.help_text }}</span>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Note -->
+            <div class="form-control mb-4">
+                <label class="label">
+                    <span class="label-text">{{ form.note.label }}</span>
+                </label>
+                {{ form.note|add_class:"textarea textarea-bordered w-full" }}
+                {% if form.note.help_text %}
+                <div class="label">
+                    <span class="label-text-alt">{{ form.note.help_text }}</span>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Submit buttons -->
+            <div class="modal-action">
+                <button type="submit" class="btn btn-primary">
+                    Add Movement Item
+                </button>
+                <button type="button" class="btn" 
+                    onclick="document.getElementById('modal-item-movement').close()">
+                    Cancel
+                </button>
+            </div>
+        </form>
     {% else %}
         <div class="alert alert-warning">
             <p>No form or warehouse provided.</p>
             <div class="modal-action">
                 <button type="button" class="btn" 
-                    onclick="document.getElementById('modal-form').close()">
+                    onclick="document.getElementById('modal-item-movement').close()">
                     Cancel
                 </button>
             </div>

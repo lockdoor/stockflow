@@ -78,6 +78,9 @@ class StockMovementItemForm(forms.ModelForm):
     
     def __init__(self, *args, **kwargs):
         """Initialize form with custom logic"""
+        # Extract stock_movement_id from kwargs if provided
+        self.stock_movement_id = kwargs.pop('stock_movement_id', None)
+        
         super().__init__(*args, **kwargs)
         
         # Limit item choices to active items only
@@ -86,6 +89,10 @@ class StockMovementItemForm(forms.ModelForm):
         # Set default movement type to IN for new items
         if not self.instance.pk:
             self.fields['movement_type'].initial = StockMovementItem.MovementType.IN
+        
+        # Set stock_movement initial value if provided
+        if self.stock_movement_id and not self.instance.pk:
+            self.fields['stock_movement'].initial = self.stock_movement_id
         
         # Make expiry_date optional by default
         self.fields['expiry_date'].required = False

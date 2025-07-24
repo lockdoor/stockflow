@@ -13,7 +13,7 @@
     - movement_items: queryset ของ StockMovementItem objects (optional - จะ fetch ผ่าน HTMX ถ้าไม่มี)
 
   Usage:
-    - include 'inventory/item/partials/item-movement-list.html' with stock_movement=movement warehouse=warehouse
+    - include 'inventory/item/partials/item-movement-list.html' with stock_movement=stock_movement warehouse=warehouse
 ------------------------------------------------------------------------------
 {% endcomment %}
 
@@ -23,14 +23,14 @@
     <div class="bg-white p-8 m-4 rounded shadow-md w-full">
         <h2 class="text-2xl font-bold mb-6 text-center">Item Movement List</h2>
 
-        {% comment %}
-        <button class="btn btn-primary mb-4" hx-get="{% url 'inventory:stock-movement-create' warehouse.id %}"
+        {% if not stock_movement.is_confirmed %}
+        <button class="btn btn-primary mb-4" hx-get="{% url 'inventory:stock-item-movement-create' stock_movement.id %}"
             hx-target="#movement-form-container" hx-swap="innerHTML" hx-trigger="click"
-            onclick="document.getElementById('modal-form').showModal()">
+            onclick="document.getElementById('modal-item-movement').showModal()">
             Add New Movement
         </button>
-        {% include 'shared/modal-form.html' with form_partial='inventory/item-movement/partials/item-movement-form.html' %}
-        {% endcomment %}
+        {% include 'shared/modal-form.html' with form_partial='inventory/item-movement/partials/item-movement-form.html' modal_id='modal-item-movement' %}
+        {% endif %}
 
         <div class="overflow-x-auto">
             <table class="table table-zebra table-pin-rows">
@@ -51,8 +51,8 @@
 
                 <tbody id="item-movement-table-body">
                     {% if movement_items %}
-                    {% for item in movement_items %}
-                    {% include './item-movement-row.html' with item=item %}
+                    {% for movement_item in movement_items %}
+                    {% include './item-movement-row.html' with movement_item=movement_item %}
                     {% endfor %}
                     {% else %}
                     <tr class="no-contact-row">

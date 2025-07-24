@@ -1,4 +1,5 @@
 from django.views.generic import CreateView, ListView, View, UpdateView, DetailView
+from ..mixins.warehouse import WarehousePermissionMixin
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import render, get_object_or_404, Http404
 from django.http import HttpResponse
@@ -10,84 +11,18 @@ from inventory.models.warehouse import Warehouse
 # forms
 from inventory.forms.stock_movement_form import StockMovementForm
 
-
-class WarehousePermissionMixin:
-    """Mixin to check warehouse-specific permissions"""
-    
-    def _check_warehouse_permission(self, warehouse_id, base_permission):
-        """Check if user has either base permission or warehouse-specific permission"""
-        if not self.request.user.is_authenticated:
-            return False
-            
-        perm1 = f'inventory.{base_permission}'
-        perm2 = f'inventory.can_manage_warehouse_{warehouse_id}'
-        return self.request.user.has_perm(perm1) or self.request.user.has_perm(perm2)
-    
-    def _get_warehouse_id(self):
-        """Get warehouse ID from URL kwargs or from object"""
-        # First try to get from URL kwargs (for create/list views)
-        warehouse_id = self.kwargs.get('warehouse_id')
-        if warehouse_id:
-            return warehouse_id
-            
-        # For update views, get from the object
-        if hasattr(self, 'get_object'):
-            obj = self.get_object()
-            if hasattr(obj, 'warehouse'):
-                return obj.warehouse.id
-        
-        return None
-    
-    def dispatch(self, request, *args, **kwargs):
-        # Let parent handle authentication first (LoginRequiredMixin)
-        response = super().dispatch(request, *args, **kwargs)
-        
-        # If response is a redirect (like login redirect), return it
-        if hasattr(response, 'status_code') and response.status_code == 302:
-            return response
-            
-        # Check warehouse permissions
-        warehouse_id = self._get_warehouse_id()
-        if warehouse_id and hasattr(self, 'permission_required_base'):
-            if not self._check_warehouse_permission(warehouse_id, self.permission_required_base):
-                raise PermissionDenied("You don't have permission to access this warehouse.")
-                
-        return response
-
-
-class WarehousePermissionBaseMixin:
-    """Base mixin with permission methods but no dispatch check"""
-    
-    def _check_warehouse_permission(self, warehouse_id, base_permission):
-        """Check if user has either base permission or warehouse-specific permission"""
-        if not self.request.user.is_authenticated:
-            return False
-            
-        perm1 = f'inventory.{base_permission}'
-        perm2 = f'inventory.can_manage_warehouse_{warehouse_id}'
-        return self.request.user.has_perm(perm1) or self.request.user.has_perm(perm2)
-    
-    def _get_warehouse_id(self):
-        """Get warehouse ID from URL kwargs or from object"""
-        # First try to get from URL kwargs (for create/list views)
-        warehouse_id = self.kwargs.get('warehouse_id')
-        if warehouse_id:
-            return warehouse_id
-            
-        # For update views, get from the object
-        if hasattr(self, 'get_object'):
-            obj = self.get_object()
-            if hasattr(obj, 'warehouse'):
-                return obj.warehouse.id
-        
-        return None
-
-
-class StockMovementCreateView(LoginRequiredMixin, WarehousePermissionMixin, CreateView):
+class StockMovementCreateView(LoginRequiredMixin, WarehousePermissionMixin,CreateView):
     model = StockMovement
     form_class = StockMovementForm
     template_name = 'inventory/stock-movement/partials/stock-movement-form.html'
     permission_required_base = 'add_stockmovement'
+    
+    def get(self, request, *args, **kwargs):
+        # Check permissions for GET request
+        warehouse_id = self.get_warehouse_id()
+        if warehouse_id and not self.check_warehouse_permission(warehouse_id, self.permission_required_base):
+            raise PermissionDenied("You don't have permission to access this warehouse.")
+        return super().get(request, *args, **kwargs)
     
     def get_initial(self):
         initial = super().get_initial()
@@ -100,7 +35,7 @@ class StockMovementCreateView(LoginRequiredMixin, WarehousePermissionMixin, Crea
     def form_valid(self, form):
         # Check permissions before saving
         warehouse_id = self.kwargs.get('warehouse_id')
-        if warehouse_id and not self._check_warehouse_permission(warehouse_id, self.permission_required_base):
+        if warehouse_id and not self.check_warehouse_permission(warehouse_id, self.permission_required_base):
             raise PermissionDenied("You don't have permission to access this warehouse.")
             
         try:
@@ -153,7 +88,7 @@ class StockMovementByWarehouseListView(LoginRequiredMixin, ListView):
         context['warehouse'] = self.warehouse
         return context
     
-class StockMovementUpdateView(LoginRequiredMixin, WarehousePermissionBaseMixin, UpdateView):
+class StockMovementUpdateView(LoginRequiredMixin, WarehousePermissionMixin, UpdateView):
     model = StockMovement
     form_class = StockMovementForm
     template_name = 'inventory/stock-movement/partials/stock-movement-form.html'
@@ -161,15 +96,15 @@ class StockMovementUpdateView(LoginRequiredMixin, WarehousePermissionBaseMixin, 
 
     def get(self, request, *args, **kwargs):
         # Check permissions for GET request
-        warehouse_id = self._get_warehouse_id()
-        if warehouse_id and not self._check_warehouse_permission(warehouse_id, self.permission_required_base):
+        warehouse_id = self.get_warehouse_id()
+        if warehouse_id and not self.check_warehouse_permission(warehouse_id, self.permission_required_base):
             raise PermissionDenied("You don't have permission to access this warehouse.")
         return super().get(request, *args, **kwargs)
 
     def form_valid(self, form):
         # Check permissions before saving
-        warehouse_id = self._get_warehouse_id()
-        if warehouse_id and not self._check_warehouse_permission(warehouse_id, self.permission_required_base):
+        warehouse_id = self.get_warehouse_id()
+        if warehouse_id and not self.check_warehouse_permission(warehouse_id, self.permission_required_base):
             raise PermissionDenied("You don't have permission to access this warehouse.")
             
         try:
@@ -190,7 +125,7 @@ class StockMovementUpdateView(LoginRequiredMixin, WarehousePermissionBaseMixin, 
         response['HX-Reswap'] = 'innerHTML'
         return response
     
-class StockMovementDeleteView(LoginRequiredMixin, WarehousePermissionBaseMixin, View):
+class StockMovementDeleteView(LoginRequiredMixin, WarehousePermissionMixin, View):
     permission_required_base = 'delete_stockmovement'
 
     def dispatch(self, request, *args, **kwargs):
@@ -206,7 +141,7 @@ class StockMovementDeleteView(LoginRequiredMixin, WarehousePermissionBaseMixin, 
             
             # Check warehouse permissions before deletion
             warehouse_id = stock_movement.warehouse.id
-            if not self._check_warehouse_permission(warehouse_id, self.permission_required_base):
+            if not self.check_warehouse_permission(warehouse_id, self.permission_required_base):
                 raise PermissionDenied("You don't have permission to delete stock movements in this warehouse.")
             
             # Check business rules

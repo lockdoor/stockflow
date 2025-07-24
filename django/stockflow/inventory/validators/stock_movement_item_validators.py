@@ -8,6 +8,7 @@ Created: 2025
 """
 
 import re
+import uuid
 from decimal import Decimal
 from django.utils import timezone
 from django.core.exceptions import ValidationError
@@ -40,13 +41,56 @@ class StockMovementItemQuantityValidator:
 
 
 class StockMovementItemLotValidator:
-    """Validator for lot number business rules"""
+    """Validator for lot number business rules with auto-generation and uniqueness"""
     
     def __init__(self, stock_movement_item):
         self.item = stock_movement_item
     
+    def generate_lot_number(self):
+        """Generate a unique lot number if not provided"""
+        if self.item.lot_number:
+            return  # Already has a lot number
+        
+        # Import here to avoid circular import
+        from inventory.models.stock_movement_item import StockMovementItem
+        
+        # Generate format: {YYYYMMDD}-{HHMMSS}-{SHORT_UUID}
+        now = timezone.now()
+        base_format = now.strftime("%Y%m%d-%H%M%S")
+        
+        # Generate unique lot number
+        max_attempts = 10
+        for attempt in range(max_attempts):
+            # Use first 8 characters of UUID for uniqueness
+            short_uuid = str(uuid.uuid4())[:8].upper()
+            potential_lot = f"{base_format}-{short_uuid}"
+            
+            # Check if this lot number already exists in the same movement
+            existing = StockMovementItem.objects.filter(
+                stock_movement=self.item.stock_movement,
+                item_sku=self.item.item_sku,
+                movement_type=self.item.movement_type,
+                lot_number=potential_lot
+            )
+            
+            # Exclude current item if updating
+            if self.item.pk:
+                existing = existing.exclude(pk=self.item.pk)
+            
+            if not existing.exists():
+                self.item.lot_number = potential_lot
+                return
+        
+        # Fallback if all attempts failed (very unlikely)
+        self.item.lot_number = f"{base_format}-{uuid.uuid4()}"
+    
     def validate(self):
-        """Validate lot number business rules"""
+        """Validate lot number business rules and generate if needed"""
+        # Auto-generate lot number if not provided
+        if not self.item.lot_number:
+            self.generate_lot_number()
+        
+        # Validate lot number format
         if self.item.lot_number:
             # Check lot number format (alphanumeric with some special chars)
             if not re.match(r'^[A-Za-z0-9\-_/]+$', self.item.lot_number):
@@ -55,8 +99,26 @@ class StockMovementItemLotValidator:
             # Check lot number length
             if len(self.item.lot_number) > 64:
                 return "Lot number cannot exceed 64 characters"
-                
-        # For certain item types, lot number might be required
+        
+        # Check uniqueness within the same movement, item, and movement type
+        if self.item.lot_number and self.item.stock_movement and self.item.item_sku:
+            from inventory.models.stock_movement_item import StockMovementItem
+            
+            existing_items = StockMovementItem.objects.filter(
+                stock_movement=self.item.stock_movement,
+                item_sku=self.item.item_sku,
+                movement_type=self.item.movement_type,
+                lot_number=self.item.lot_number
+            )
+            
+            # Exclude current item if updating
+            if self.item.pk:
+                existing_items = existing_items.exclude(pk=self.item.pk)
+            
+            if existing_items.exists():
+                return f"Lot number '{self.item.lot_number}' already exists for this item in this movement"
+        
+        # For certain item types, lot number might be required (now always generated)
         if (self.item.item_sku and 
             hasattr(self.item.item_sku, 'type') and
             self.item.item_sku.type in ['RAW', 'PACKAGE']):
@@ -87,7 +149,7 @@ class StockMovementItemExpiryValidator:
 
 
 class StockMovementItemDuplicateValidator:
-    """Validator for duplicate items in same movement"""
+    """Validator for duplicate items in same movement (fallback check)"""
     
     def __init__(self, stock_movement_item):
         self.item = stock_movement_item
@@ -96,25 +158,28 @@ class StockMovementItemDuplicateValidator:
         """Validate no duplicate items in same movement with same lot"""
         if not self.item.stock_movement:
             return "Stock movement is required"
-            
+        
+        # This is now primarily a fallback check since lot numbers are auto-generated
+        # and uniqueness is handled in StockMovementItemLotValidator
+        
         # Import here to avoid circular import
         from inventory.models.stock_movement_item import StockMovementItem
         
-        # Check for existing items in the same movement
-        existing_items = StockMovementItem.objects.filter(
-            stock_movement=self.item.stock_movement,
-            item_sku=self.item.item_sku,
-            movement_type=self.item.movement_type,
-            lot_number=self.item.lot_number or ''
-        )
-        
-        # Exclude current item if updating
-        if self.item.pk:
-            existing_items = existing_items.exclude(pk=self.item.pk)
+        # Only check if lot_number is explicitly empty/None (rare case)
+        if self.item.lot_number is None or self.item.lot_number == '':
+            existing_items = StockMovementItem.objects.filter(
+                stock_movement=self.item.stock_movement,
+                item_sku=self.item.item_sku,
+                movement_type=self.item.movement_type,
+                lot_number__isnull=True
+            )
             
-        if existing_items.exists():
-            lot_info = f" with lot {self.item.lot_number}" if self.item.lot_number else " without lot number"
-            return f"Item {self.item.item_sku.sku_code} ({self.item.get_movement_type_display()}){lot_info} already exists in this movement"
+            # Exclude current item if updating
+            if self.item.pk:
+                existing_items = existing_items.exclude(pk=self.item.pk)
+                
+            if existing_items.exists():
+                return f"Item {self.item.item_sku.sku_code} ({self.item.get_movement_type_display()}) without lot number already exists in this movement"
             
         return None
 

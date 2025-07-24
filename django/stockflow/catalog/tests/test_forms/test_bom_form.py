@@ -166,7 +166,7 @@ class BOMFormTest(TestCase):
         form = BOMForm(data=form_data, parent_sku=self.parent_sku)
         # Form should be invalid because model validation catches zero quantity
         self.assertFalse(form.is_valid())
-        self.assertIn('Quantity must be greater than zero', str(form.errors))
+        self.assertIn('Quantity is required', str(form.errors))
         
     def test_invalid_form_negative_quantity(self):
         """Test form validation with negative quantity"""

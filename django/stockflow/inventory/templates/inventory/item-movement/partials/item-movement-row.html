@@ -1,23 +1,23 @@
-<tr id="item-movement-row-{{ item.id }}">
-    <td><a href="#">{{ item.item_sku.sku_code }}</a></td>
-    <td>{{ item.item_sku.name }}</td>
+<tr id="item-movement-row-{{ movement_item.id }}">
+    <td><a href="#">{{ movement_item.item_sku.sku_code }}</a></td>
+    <td>{{ movement_item.item_sku.name }}</td>
     <td>
-        <span class="badge {% if item.is_inbound %}badge-success{% else %}badge-warning{% endif %}">
-            {{ item.get_movement_type_display }}
+        <span class="badge {% if movement_item.is_inbound %}badge-success{% else %}badge-warning{% endif %}">
+            {{ movement_item.get_movement_type_display }}
         </span>
     </td>
-    <td>{{ item.quantity }}</td>
-    <td>{{ item.lot_number|default:"-" }}</td>
-    <td>{{ item.expiry_date|date:"M d, Y"|default:"-" }}</td>
-    <td>{{ item.note|default:"-" }}</td>
-    <td>{{ item.created_by.username|default:"-" }}</td>
-    <td>{{ item.created_at|date:"M d, Y H:i" }}</td>
+    <td>{{ movement_item.quantity }}</td>
+    <td>{{ movement_item.lot_number|default:"-" }}</td>
+    <td>{{ movement_item.expiry_date|date:"M d, Y"|default:"-" }}</td>
+    <td>{{ movement_item.note|default:"-" }}</td>
+    <td>{{ movement_item.created_by.username|default:"-" }}</td>
+    <td>{{ movement_item.created_at|date:"M d, Y H:i" }}</td>
     
     <td>
         {% comment %}
-        {% if item.can_modify %}
+        {% if movement_item.can_modify %}
         <button class="btn btn-sm btn-error" 
-            hx-delete="{% url 'inventory:stock-movement-item-delete' item.id %}"
+            hx-delete="{% url 'inventory:stock-movement-item-delete' movement_item.id %}"
             hx-confirm="Are you sure you want to delete this movement item?"
             hx-target="closest tr"
             hx-swap="delete"
@@ -25,7 +25,7 @@
             Delete
         </button>
         {% else %}
-        <span class="badge badge-info">{{ item.stock_movement.status }}</span>
+        <span class="badge badge-info">{{ movement_item.stock_movement.status }}</span>
         {% endif %}
         {% endcomment %}
     </td>

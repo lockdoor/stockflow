@@ -77,8 +77,8 @@ class StockMovementItem(
     # Lot tracking
     lot_number = models.CharField(
         max_length=64, 
-        blank=True, 
-        null=True,
+        blank=False, 
+        null=False,
         help_text="Lot or batch number for traceability"
     )
     expiry_date = models.DateField(

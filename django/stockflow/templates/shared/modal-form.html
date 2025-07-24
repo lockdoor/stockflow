@@ -1,5 +1,5 @@
-<dialog id="modal-form" class="modal">
-    <div id="modal-form-box" class="modal-box">  
+<dialog id="{% if modal_id %}{{ modal_id }}{% else %}modal-form{% endif %}" class="modal">
+    <div id="{% if modal_id %}{{ modal_id }}-box{% else %}modal-form-box{% endif %}" class="modal-box">  
         {% if form_partial %}
             {% include form_partial %}
         {% endif %}

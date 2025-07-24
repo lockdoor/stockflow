@@ -84,10 +84,13 @@ class BOM(models.Model):
         """
         if not self.component_sku_id:
             return "Component SKU is required"
-            
+               
         if self.parent_sku_id and self.component_sku_id:
             if self.parent_sku_id == self.component_sku_id:
                 return "Parent SKU and component SKU cannot be the same"
+
+        if not self.component_sku.is_active():
+            return "Component SKU must be active"
                 
         return None
         
