@@ -5,7 +5,7 @@
             type="button"
             data-id="{{ item.pk }}"
             data-name="{{ item.name|escapejs }}"
-        >{{ item.name }} 
+        >{{ item.sku_code }} - {{ item.name }} - {{ item.type }}
         </button>
     </li>
   {% empty %}

@@ -9,7 +9,7 @@
 
   Required context:
     - form: StockMovementItemForm instance
-    - warehouse: Warehouse object (required)
+    - stock_movement: StockMovement object (ต้องมี stock_movement.id)
 
   Usage:
     - Rendered in modal dialogs for stock movement management
@@ -26,7 +26,7 @@
             hx-swap="beforeend"
             hx-encoding='multipart/form-data'
             hx-trigger="submit"
-            hx-on:success="document.getElementById('modal-form').close(); this.reset();"
+            hx-on:success="document.getElementById('modal-item-movement').close(); this.reset();"
             class="mb-4">
             {% csrf_token %}
             
@@ -52,17 +52,8 @@
             {% endif %}
             
             <!-- Item selection -->
-            <div class="form-control mb-4">
-                <label class="label">
-                    <span class="label-text">{{ form.item_sku.label }}</span>
-                </label>
-                {{ form.item_sku|add_class:"select select-bordered w-full" }}
-                {% if form.item_sku.help_text %}
-                <div class="label">
-                    <span class="label-text-alt">{{ form.item_sku.help_text }}</span>
-                </div>
-                {% endif %}
-            </div>
+            {{ form.item_sku|add_class:"hidden" }}
+            {% include 'shared/item-autocomplete.html' with form=form field_label=form.item_sku.label item_id='id_item_sku' %}
             
             <!-- Movement type -->
             <div class="form-control mb-4">
@@ -70,11 +61,6 @@
                     <span class="label-text">{{ form.movement_type.label }}</span>
                 </label>
                 {{ form.movement_type|add_class:"select select-bordered w-full" }}
-                {% if form.movement_type.help_text %}
-                <div class="label">
-                    <span class="label-text-alt">{{ form.movement_type.help_text }}</span>
-                </div>
-                {% endif %}
             </div>
             
             <!-- Quantity -->
@@ -83,11 +69,6 @@
                     <span class="label-text">{{ form.quantity.label }}</span>
                 </label>
                 {{ form.quantity|add_class:"input input-bordered w-full" }}
-                {% if form.quantity.help_text %}
-                <div class="label">
-                    <span class="label-text-alt">{{ form.quantity.help_text }}</span>
-                </div>
-                {% endif %}
             </div>
             
             <!-- Lot number -->
@@ -96,11 +77,6 @@
                     <span class="label-text">{{ form.lot_number.label }}</span>
                 </label>
                 {{ form.lot_number|add_class:"input input-bordered w-full" }}
-                {% if form.lot_number.help_text %}
-                <div class="label">
-                    <span class="label-text-alt">{{ form.lot_number.help_text }}</span>
-                </div>
-                {% endif %}
             </div>
             
             <!-- Expiry date -->
@@ -109,11 +85,6 @@
                     <span class="label-text">{{ form.expiry_date.label }}</span>
                 </label>
                 {{ form.expiry_date|add_class:"input input-bordered w-full" }}
-                {% if form.expiry_date.help_text %}
-                <div class="label">
-                    <span class="label-text-alt">{{ form.expiry_date.help_text }}</span>
-                </div>
-                {% endif %}
             </div>
             
             <!-- Note -->
@@ -122,11 +93,6 @@
                     <span class="label-text">{{ form.note.label }}</span>
                 </label>
                 {{ form.note|add_class:"textarea textarea-bordered w-full" }}
-                {% if form.note.help_text %}
-                <div class="label">
-                    <span class="label-text-alt">{{ form.note.help_text }}</span>
-                </div>
-                {% endif %}
             </div>
             
             <!-- Submit buttons -->
