@@ -50,6 +50,12 @@
         <div class="mt-4 flex justify-center gap-4">
             {% if stock_movement.status == 'DRAFT' %}
             {% include 'shared/modal-form.html' with form_partial='inventory/stock-movement/partials/stock-movement-form.html'%}
+            <button
+                hx-post="{% url 'inventory:stock-movement-confirm' stock_movement.pk %}"
+                hx-confirm="Are you sure you want to confirm this stock movement?"
+                hx-on:htmx:after-request="if(event.detail.xhr.status === 200) { window.location.reload(); }"
+                class="btn btn-secondary px-24"
+            >Confirm</button>
             <button 
                 hx-get="{% url 'inventory:stock-movement-edit'  stock_movement.pk %}"
                 hx-target="#stock-movement-form-container" 

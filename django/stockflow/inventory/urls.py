@@ -13,7 +13,8 @@ from inventory.views.stock_movement_views import (
     StockMovementByWarehouseListView, 
     StockMovementDeleteView, 
     StockMovementUpdateView,
-    StockMovementDetailView
+    StockMovementDetailView,
+    StockMovementConfirmView
 )
 
 from inventory.views.stock_item_views import (
@@ -62,6 +63,9 @@ urlpatterns = [
     path('stockmovement/<int:pk>/edit/', 
          StockMovementUpdateView.as_view(), 
          name='stock-movement-edit'),
+     path('stockmovement/<int:pk>/confirm/', 
+          StockMovementConfirmView.as_view(), 
+          name='stock-movement-confirm'),
     
     # Stock item movements
     path('stockmovement/<int:stock_movement_id>/items/', 

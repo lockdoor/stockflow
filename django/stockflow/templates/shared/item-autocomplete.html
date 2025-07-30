@@ -39,7 +39,8 @@ Features:
 <div class="form-control w-full mb-4">
     <label for="item-search" class="label">{{ field_label|default:"Component" }}:</label>
     <input type="text" id="item-search" name="q" class="input input-bordered w-full" placeholder="Search..."
-        data-name="" hx-get="{% url autocomplete_url|default:'catalog:item-bom-autocomplete' %}" hx-include="#category"
+        data-name="" hx-get="{% url autocomplete_url|default:'catalog:item-bom-autocomplete' %}" 
+        {% if category %}hx-include="#category"{% endif %}
         hx-swap="innerHTML" hx-target="#autocomplete-results" hx-trigger="keyup changed delay:300ms"
         autocomplete="off" {% if form.instance.pk %}disabled{% endif %}>
 </div>

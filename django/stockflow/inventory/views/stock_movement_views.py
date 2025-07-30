@@ -1,9 +1,9 @@
 from django.views.generic import CreateView, ListView, View, UpdateView, DetailView
 from ..mixins.warehouse import WarehousePermissionMixin
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.shortcuts import render, get_object_or_404, Http404
+from django.shortcuts import render, get_object_or_404, Http404, redirect, reverse
 from django.http import HttpResponse
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
 
 # models
 from inventory.models.stock_movement import StockMovement
@@ -162,3 +162,45 @@ class StockMovementDetailView(LoginRequiredMixin, DetailView):
     model = StockMovement
     template_name = 'inventory/stock-movement/stock-movement-detail.html'
     context_object_name = 'stock_movement'
+
+class StockMovementConfirmView(LoginRequiredMixin, WarehousePermissionMixin, View):
+    
+    permission_required_base = 'change_stockmovement'
+    http_method_names = ['post']
+
+    def post(self, request, pk):
+        try:
+            stock_movement = get_object_or_404(StockMovement, pk=pk)
+            
+            # Check warehouse permissions before confirmation
+            warehouse_id = stock_movement.warehouse.id
+            if not self.check_warehouse_permission(warehouse_id, self.permission_required_base):
+                raise PermissionDenied("You don't have permission to confirm stock movements in this warehouse.")
+            
+            # Check if already confirmed
+            if stock_movement.status == StockMovement.Status.CONFIRMED:
+                return HttpResponse("Stock movement is already confirmed.", status=400)
+            
+            # Use the model's confirm method which handles immutability correctly
+            stock_movement.confirm(request.user)
+            
+            # For HTMX requests, use HX-Redirect header
+            if request.headers.get('HX-Request'):
+                detail_url = reverse('inventory:stock-movement-detail', kwargs={'pk': stock_movement.pk})
+                response = HttpResponse()
+                response['HX-Redirect'] = detail_url
+                return response
+            else:
+                # For regular requests, use normal redirect
+                return redirect(reverse('inventory:stock-movement-detail', kwargs={'pk': stock_movement.pk}))
+            
+        except PermissionDenied as e:
+            return HttpResponse(str(e), status=403)
+        except ValidationError as e:
+            return HttpResponse(f"Validation error: {str(e)}", status=400)
+        except Http404:
+            # Re-raise Http404 to let Django handle it properly
+            raise
+        except Exception as e:
+            return HttpResponse(f"Error confirming stock movement: {str(e)}", status=500)
+        
