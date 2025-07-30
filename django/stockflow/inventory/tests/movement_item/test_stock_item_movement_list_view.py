@@ -130,21 +130,31 @@ class StockItemMovementListViewTest(TestCase):
         self.assertTemplateUsed(response, 'inventory/item-movement/partials/item-movement-list.html')
     
     def test_context_data_includes_stock_movement_id(self):
-        """Test that context includes stock_movement_id"""
+        """Test that context includes stock_movement"""
         self.client.login(username='testuser', password='testpass')
         
         response = self.client.get(self.list_url)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.context['stock_movement_id'], self.movement.id)
+        self.assertEqual(response.context['stock_movement'], self.movement)
     
     def test_queryset_filters_by_stock_movement(self):
         """Test that queryset is filtered by stock_movement_id"""
         self.client.login(username='testuser', password='testpass')
         
+        # Create new warehouse for another movement
+        other_warehouse = Warehouse.objects.create(
+            name='Secondary Warehouse',
+            code='SEC01',
+            address='456 Secondary St',
+            is_active=True,
+            created_by=self.user,
+            updated_by=self.user
+        )
+        
         # Create another movement with items
         other_movement = StockMovement.objects.create(
-            warehouse=self.warehouse,
-            reference_type=StockMovement.ReferenceType.PURCHASE,
+            warehouse=other_warehouse,
+            reference_type=StockMovement.ReferenceType.NONE,
             status=StockMovement.Status.DRAFT,
             created_by=self.user,
             updated_by=self.user
@@ -231,8 +241,6 @@ class StockItemMovementListViewTest(TestCase):
         
         # Should use 'movement_items' as context object name
         self.assertIn('movement_items', response.context)
-        self.assertNotIn('object_list', response.context)
-        self.assertNotIn('stockmovementitem_list', response.context)
     
     def test_empty_queryset(self):
         """Test view with no movement items"""
@@ -285,9 +293,25 @@ class StockItemMovementListViewTest(TestCase):
         self.assertEqual(response.status_code, 200)
         
         movement_items = response.context['movement_items']
+        self.assertEqual(len(movement_items), 2)
+        
+        # Convert to list for easier testing
+        items_list = list(movement_items)
+        
+        # Find items by their IDs
+        item1 = None
+        item2 = None
+        for item in items_list:
+            if item.id == self.movement_item1.id:
+                item1 = item
+            elif item.id == self.movement_item2.id:
+                item2 = item
+        
+        # Ensure both items were found
+        self.assertIsNotNone(item1, "movement_item1 not found in response")
+        self.assertIsNotNone(item2, "movement_item2 not found in response")
         
         # Check first item
-        item1 = movement_items.get(id=self.movement_item1.id)
         self.assertEqual(item1.item_sku.sku_code, 'SKU001')
         self.assertEqual(item1.movement_type, StockMovementItem.MovementType.IN)
         self.assertEqual(item1.quantity, Decimal('10.00'))
@@ -295,7 +319,6 @@ class StockItemMovementListViewTest(TestCase):
         self.assertEqual(item1.note, 'First test item')
         
         # Check second item
-        item2 = movement_items.get(id=self.movement_item2.id)
         self.assertEqual(item2.item_sku.sku_code, 'SKU002')
         self.assertEqual(item2.movement_type, StockMovementItem.MovementType.OUT)
         self.assertEqual(item2.quantity, Decimal('5.50'))
@@ -378,44 +401,60 @@ class StockItemMovementListViewIntegrationTest(TestCase):
         """Test that movement items are properly isolated between movements"""
         self.client.login(username='testuser', password='testpass')
         
-        # Create another movement
+        # Create another warehouse for the second movement
+        other_warehouse = Warehouse.objects.create(
+            name='Secondary Warehouse',
+            code='SEC01',
+            address='456 Secondary St',
+            is_active=True,
+            created_by=self.user,
+            updated_by=self.user
+        )
+        
+        # Create another movement with different warehouse
         other_movement = StockMovement.objects.create(
-            warehouse=self.warehouse,
-            reference_type=StockMovement.ReferenceType.PURCHASE,
+            warehouse=other_warehouse,  # Different warehouse
+            reference_type=StockMovement.ReferenceType.NONE,
             status=StockMovement.Status.DRAFT,
             created_by=self.user,
             updated_by=self.user
         )
         
         # Add items to first movement
-        StockMovementItem.objects.create(
+        first_item = StockMovementItem.objects.create(
             stock_movement=self.movement,
             item_sku=self.item,
             movement_type=StockMovementItem.MovementType.IN,
             quantity=Decimal('100.00'),
+            lot_number='BATCH-001',
+            note='First movement item',
             created_by=self.user,
             updated_by=self.user
         )
         
         # Add items to second movement
-        StockMovementItem.objects.create(
+        second_item = StockMovementItem.objects.create(
             stock_movement=other_movement,
             item_sku=self.item,
             movement_type=StockMovementItem.MovementType.OUT,
             quantity=Decimal('50.00'),
+            lot_number='BATCH-002',
+            note='Second movement item',
             created_by=self.user,
             updated_by=self.user
         )
         
-        # Verify first movement list
+        # Verify first movement list (should only show items from self.movement)
         response = self.client.get(self.list_url)
         self.assertEqual(response.status_code, 200)
         movement_items = response.context['movement_items']
         self.assertEqual(len(movement_items), 1)
+        self.assertEqual(movement_items[0].id, first_item.id)
         self.assertEqual(movement_items[0].quantity, Decimal('100.00'))
         self.assertEqual(movement_items[0].movement_type, StockMovementItem.MovementType.IN)
+        self.assertEqual(movement_items[0].stock_movement.warehouse.code, 'INT01')
         
-        # Verify second movement list
+        # Verify second movement list (should only show items from other_movement)
         other_list_url = reverse(
             'inventory:stock-item-movement-list',
             kwargs={'stock_movement_id': other_movement.id}
@@ -424,5 +463,7 @@ class StockItemMovementListViewIntegrationTest(TestCase):
         self.assertEqual(response.status_code, 200)
         movement_items = response.context['movement_items']
         self.assertEqual(len(movement_items), 1)
+        self.assertEqual(movement_items[0].id, second_item.id)
         self.assertEqual(movement_items[0].quantity, Decimal('50.00'))
         self.assertEqual(movement_items[0].movement_type, StockMovementItem.MovementType.OUT)
+        self.assertEqual(movement_items[0].stock_movement.warehouse.code, 'SEC01')

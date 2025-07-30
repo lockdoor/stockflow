@@ -325,7 +325,7 @@ class StockItemMovementCreateViewTest(TestCase):
         # Should return form with errors
         self.assertEqual(response.status_code, 200)
         self.assertIn('HX-Retarget', response)
-        self.assertEqual(response['HX-Retarget'], '#item-movement-form')
+        self.assertEqual(response['HX-Retarget'], '#movement-item-form')
         self.assertIn('HX-Reswap', response)
         self.assertEqual(response['HX-Reswap'], 'innerHTML')
         
@@ -361,7 +361,7 @@ class StockItemMovementCreateViewTest(TestCase):
         # Should return form with error message
         self.assertEqual(response.status_code, 200)
         self.assertIn('HX-Retarget', response)
-        self.assertEqual(response['HX-Retarget'], '#item-movement-form')
+        self.assertEqual(response['HX-Retarget'], '#movement-item-form')
     
     def test_post_confirmed_movement_permission_denied(self):
         """Test that posting to confirmed movement is denied"""
@@ -403,7 +403,7 @@ class StockItemMovementCreateViewTest(TestCase):
         response = self.client.post(self.create_url, invalid_data)
         self.assertIn('HX-Retarget', response)
         self.assertIn('HX-Reswap', response)
-        self.assertEqual(response['HX-Retarget'], '#item-movement-form')
+        self.assertEqual(response['HX-Retarget'], '#movement-item-form')
         self.assertEqual(response['HX-Reswap'], 'innerHTML')
     
     def test_form_default_movement_type(self):

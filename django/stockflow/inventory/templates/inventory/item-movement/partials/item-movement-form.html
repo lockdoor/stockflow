@@ -29,6 +29,8 @@
             hx-on:success="document.getElementById('modal-item-movement').close(); this.reset();"
             class="mb-4">
             {% csrf_token %}
+
+            <h3 class="font-bold text-lg mb-4">Add New Stock Movement Item</h3>
             
             {% if form.errors %}
             <div id="error-field" class="alert alert-error mb-4">

@@ -1,3 +1,21 @@
+{% comment %}
+------------------------------------------------------------------------------
+  inventory/item-movement/partials/item-movement-row.html
+
+  Description:
+    - Render a single row of item movement data
+    - Used in item movement lists and HTMX updates
+
+  Required context:
+    - stock_movement_id: ID of the stock movement (required, for checking permissions)
+    - movement_item: StockMovementItem object (ต้องมี movement_item.id)
+    - csrf_token: CSRF token for form submission
+
+  Usage:
+    - Include this partial in item movement list templates
+------------------------------------------------------------------------------
+{% endcomment %}
+
 <tr id="item-movement-row-{{ movement_item.id }}">
     <td><a href="#">{{ movement_item.item_sku.sku_code }}</a></td>
     <td>{{ movement_item.item_sku.name }}</td>
@@ -14,19 +32,24 @@
     <td>{{ movement_item.created_at|date:"M d, Y H:i" }}</td>
     
     <td>
-        {% comment %}
         {% if movement_item.can_modify %}
         <button class="btn btn-sm btn-error" 
-            hx-delete="{% url 'inventory:stock-movement-item-delete' movement_item.id %}"
+            hx-delete="{% url 'inventory:stock-item-movement-delete' movement_item.stock_movement.id movement_item.id %}"
             hx-confirm="Are you sure you want to delete this movement item?"
             hx-target="closest tr"
             hx-swap="delete"
-            csrf-token="{{ csrf_token }}">
+            hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
             Delete
         </button>
-        {% else %}
+        <button class="btn btn-sm btn-primary" 
+            hx-get="{% url 'inventory:stock-item-movement-edit' movement_item.stock_movement.id movement_item.id %}"
+            hx-target="#item-movement-row-{{ movement_item.id }}"
+            hx-swap="outerHTML">
+            Edit
+        </button>
+        {% comment %}
         <span class="badge badge-info">{{ movement_item.stock_movement.status }}</span>
-        {% endif %}
         {% endcomment %}
+        {% endif %}
     </td>
 </tr>

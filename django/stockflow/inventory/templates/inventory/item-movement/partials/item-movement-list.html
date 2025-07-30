@@ -52,7 +52,7 @@
                 <tbody id="item-movement-table-body">
                     {% if movement_items %}
                     {% for movement_item in movement_items %}
-                    {% include './item-movement-row.html' with movement_item=movement_item %}
+                    {% include './item-movement-row.html' with stock_movement_id=stock_movement.id movement_item=movement_item %}
                     {% endfor %}
                     {% else %}
                     <tr class="no-contact-row">
