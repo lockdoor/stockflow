@@ -47,7 +47,17 @@ class ValidatableMixin:
             if hasattr(validator, 'validate'):
                 error = validator.validate()
                 if error:
-                    errors.append(error)
+                    # Handle both string and dict errors
+                    if isinstance(error, str):
+                        errors.append(error)
+                    elif isinstance(error, dict):
+                        # Convert dict errors to string format
+                        for field, messages in error.items():
+                            if isinstance(messages, list):
+                                for message in messages:
+                                    errors.append(f"{field}: {message}")
+                            else:
+                                errors.append(f"{field}: {messages}")
         
         if errors:
             raise ValidationError("; ".join(errors))

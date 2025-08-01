@@ -29,6 +29,13 @@ from .stock_movement_item_validators import (
     StockMovementItemBusinessRulesValidator
 )
 
+from .stock_validators import (
+    StockQuantityValidator,
+    StockLotNumberValidator,
+    StockExpiryDateValidator,
+    StockBusinessRulesValidator
+)
+
 __all__ = [
     # Warehouse validators
     'WarehouseNameValidator',
@@ -47,5 +54,11 @@ __all__ = [
     'StockMovementItemLotValidator',
     'StockMovementItemExpiryValidator',
     'StockMovementItemDuplicateValidator',
-    'StockMovementItemBusinessRulesValidator'
+    'StockMovementItemBusinessRulesValidator',
+    
+    # Stock validators
+    'StockQuantityValidator',
+    'StockLotNumberValidator',
+    'StockExpiryDateValidator',
+    'StockBusinessRulesValidator'
 ]

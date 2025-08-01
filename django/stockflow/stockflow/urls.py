@@ -17,9 +17,14 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from django.contrib.auth import views as auth_views
+from django.shortcuts import redirect
 from stockflow import views
 
+def redirect_to_dashboard(request):
+    return redirect('dashboard')
+
 urlpatterns = [
+    path('', redirect_to_dashboard, name='home'),
     path('admin/', admin.site.urls),
     path('catalog/', include('catalog.urls')),
     path('inventory/', include('inventory.urls')),

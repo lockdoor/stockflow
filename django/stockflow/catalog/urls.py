@@ -17,10 +17,14 @@ from catalog.views.bom_views import (
     BomListByParentIDView, BomCreateView, BomUpdateView, BomDeleteView
 )
 
+from catalog.views.dashboard import catalog_dashboard_view
+
 # namespaced URL patterns for the catalog app
 app_name = 'catalog'
 
 urlpatterns = [
+    path('dashboard/', catalog_dashboard_view, name='dashboard'),
+    
     path('items/', ItemIndexView.as_view(), name='item-index'),
     path('items/list/', ItemListView.as_view(), name='item-list'),
     path('items/create/', ItemCreateView.as_view(), name='item-create'),

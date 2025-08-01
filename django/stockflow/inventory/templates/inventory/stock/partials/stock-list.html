@@ -1,0 +1,81 @@
+{% comment %}
+------------------------------------------------------------------------------
+  inventory/stock/partials/stock_list.html
+
+  Description:
+    - Render stock list with auto-fetch via HTMX when included
+    - If stock_items and warehouse context are provided, render table directly
+    - Otherwise, render HTMX loader that fetches data from view
+
+  Required context:
+    - stock: queryset ของ Stock objects (optional - จะ fetch ผ่าน HTMX ถ้าไม่มี)
+
+  Usage:
+    - include 'inventory/stock/partials/stock_list.html' with stock=stock
+------------------------------------------------------------------------------
+{% endcomment %}
+
+{% if stock is not None %}
+{# Case 1: มี context stock แล้ว (อาจจะเป็น empty queryset) - render table โดยตรง #}
+<div id="stock-list-htmx" class="flex items-center justify-center">
+    <div class="bg-white p-8 m-4 rounded shadow-md w-full">
+        <h2 class="text-2xl font-bold mb-6 text-center">Stock List</h2>
+
+        <div class="overflow-x-auto">
+            <table class="table table-zebra table-pin-rows">
+                <thead>
+                    <tr>
+                        <th>SKU</th>
+                        <th>Name</th>
+                        <th>Quantity</th>
+                        <th>Warehouse</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+
+                <tbody id="stock-table-body">
+                    {% for item in stock %}
+                    <tr>
+                        <td>{{ item.item_sku__sku_code }}</td>
+                        <td>{{ item.item_sku__name }}</td>
+                        <td>{{ item.total_quantity }}</td>
+                        <td>{{ item.warehouse__code }}</td>
+                        <td>
+                            <a href="{% url 'inventory:stock-item-list' %}?item_sku_id={{ item.item_sku__id }}&warehouse_id={{ item.warehouse__id }}" 
+                                class="btn btn-sm btn-info"
+                                title="View details">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                </svg>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr class="no-stock-row">
+                        <td colspan="5" class="text-center">No stock items available.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+{% else %}
+{# Case 2: ไม่มี context stock - ใช้ HTMX fetch data #}
+<div id="stock-list-htmx" 
+    hx-get="{% url 'inventory:stock-list' %}" 
+    hx-trigger="load" 
+    hx-target="this"
+    hx-swap="innerHTML">
+    <div class="flex items-center justify-center">
+        <div class="bg-white p-8 m-4 rounded shadow-md w-full">
+            <h2 class="text-2xl font-bold mb-6 text-center">Stock List</h2>
+            <div class="text-center">
+                <span class="loading loading-spinner loading-lg"></span>
+                <p>Loading stock...</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}

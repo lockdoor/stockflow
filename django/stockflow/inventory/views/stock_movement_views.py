@@ -169,6 +169,9 @@ class StockMovementConfirmView(LoginRequiredMixin, WarehousePermissionMixin, Vie
     http_method_names = ['post']
 
     def post(self, request, pk):
+        # Debug breakpoint - uncomment when needed
+        # import pdb; pdb.set_trace()
+        
         try:
             stock_movement = get_object_or_404(StockMovement, pk=pk)
             
@@ -177,9 +180,9 @@ class StockMovementConfirmView(LoginRequiredMixin, WarehousePermissionMixin, Vie
             if not self.check_warehouse_permission(warehouse_id, self.permission_required_base):
                 raise PermissionDenied("You don't have permission to confirm stock movements in this warehouse.")
             
-            # Check if already confirmed
-            if stock_movement.status == StockMovement.Status.CONFIRMED:
-                return HttpResponse("Stock movement is already confirmed.", status=400)
+            # Check if already completed
+            if stock_movement.status == StockMovement.Status.COMPLETED:
+                return HttpResponse("Stock movement is already completed.", status=400)
             
             # Use the model's confirm method which handles immutability correctly
             stock_movement.confirm(request.user)

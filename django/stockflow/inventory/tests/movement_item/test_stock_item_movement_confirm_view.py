@@ -55,12 +55,12 @@ class StockMovementConfirmViewTest(TestCase):
             updated_by=self.user
         )
         
-        # Create confirmed stock movement
-        self.confirmed_movement = StockMovement.objects.create(
+        # Create completed stock movement
+        self.completed_movement = StockMovement.objects.create(
             warehouse=self.warehouse,
             reference_type=StockMovement.ReferenceType.ADJUST,
-            note='Test confirmed movement',
-            status=StockMovement.Status.CONFIRMED,
+            note='Test completed movement',
+            status=StockMovement.Status.COMPLETED,
             created_by=self.user,
             updated_by=self.user
         )
@@ -71,7 +71,7 @@ class StockMovementConfirmViewTest(TestCase):
         
         # URL for confirm view
         self.confirm_url = reverse('inventory:stock-movement-confirm', kwargs={'pk': self.draft_movement.pk})
-        self.confirm_url_confirmed = reverse('inventory:stock-movement-confirm', kwargs={'pk': self.confirmed_movement.pk})
+        self.confirm_url_completed = reverse('inventory:stock-movement-confirm', kwargs={'pk': self.completed_movement.pk})
 
     def test_redirect_if_not_logged_in(self):
         """Test redirect to login if not authenticated"""
@@ -119,7 +119,7 @@ class StockMovementConfirmViewTest(TestCase):
             
             # Check that status was updated
             self.draft_movement.refresh_from_db()
-            self.assertEqual(self.draft_movement.status, StockMovement.Status.CONFIRMED)
+            self.assertEqual(self.draft_movement.status, StockMovement.Status.COMPLETED)
             self.assertEqual(self.draft_movement.updated_by, self.user)
 
     @patch('inventory.views.stock_movement_views.StockMovementConfirmView.check_warehouse_permission')
@@ -141,20 +141,20 @@ class StockMovementConfirmViewTest(TestCase):
             
             # Check that status was updated
             self.draft_movement.refresh_from_db()
-            self.assertEqual(self.draft_movement.status, StockMovement.Status.CONFIRMED)
+            self.assertEqual(self.draft_movement.status, StockMovement.Status.COMPLETED)
             self.assertEqual(self.draft_movement.updated_by, self.user)
 
     @patch('inventory.views.stock_movement_views.StockMovementConfirmView.check_warehouse_permission')
-    def test_confirm_already_confirmed_movement(self, mock_check_permission):
-        """Test confirming already confirmed movement returns error"""
+    def test_confirm_already_completed_movement(self, mock_check_permission):
+        """Test confirming already completed movement returns error"""
         mock_check_permission.return_value = True
         
         self.client.login(username='testuser', password='testpass123')
-        response = self.client.post(self.confirm_url_confirmed)
+        response = self.client.post(self.confirm_url_completed)
         
         # Should return 400 Bad Request
         self.assertEqual(response.status_code, 400)
-        self.assertIn('already confirmed', response.content.decode())
+        self.assertIn('Stock movement is already completed', response.content.decode())
 
     @patch('inventory.views.stock_movement_views.StockMovementConfirmView.check_warehouse_permission')
     def test_permission_denied_no_warehouse_access(self, mock_check_permission):
@@ -245,7 +245,7 @@ class StockMovementConfirmViewTest(TestCase):
             # Check that updated_by is set to the other user
             self.draft_movement.refresh_from_db()
             self.assertEqual(self.draft_movement.updated_by, other_user)
-            self.assertEqual(self.draft_movement.status, StockMovement.Status.CONFIRMED)
+            self.assertEqual(self.draft_movement.status, StockMovement.Status.COMPLETED)
 
     @patch('inventory.views.stock_movement_views.StockMovementConfirmView.check_warehouse_permission')
     def test_status_unchanged_on_permission_error(self, mock_check_permission):
@@ -277,7 +277,7 @@ class StockMovementConfirmViewTest(TestCase):
             # Second confirm - should return error
             response2 = self.client.post(self.confirm_url, HTTP_HX_REQUEST='true')
             self.assertEqual(response2.status_code, 400)
-            self.assertIn('already confirmed', response2.content.decode())
+            self.assertIn('Stock movement is already completed', response2.content.decode())
 
     def test_unauthorized_user_cannot_confirm(self):
         """Test that unauthorized user cannot confirm movements"""

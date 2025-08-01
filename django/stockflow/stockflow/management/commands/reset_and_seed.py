@@ -26,13 +26,16 @@ class Command(BaseCommand):
         self.stdout.write(self.style.NOTICE("Seeding BOMs..."))
         call_command('seed_bom')
         
-        self.stdout.write(self.style.NOTICE("Seeding warehouses..."))
-        call_command('seed_warehouse')
+        # self.stdout.write(self.style.NOTICE("Seeding warehouses..."))
+        # call_command('seed_warehouse')
         
-        self.stdout.write(self.style.NOTICE("Seeding stock movements..."))
-        call_command('seed_stock_movement')
+        # self.stdout.write(self.style.NOTICE("Seeding stock movements..."))
+        # call_command('seed_stock_movement')
         
-        self.stdout.write(self.style.NOTICE("Seeding stock movement items..."))
-        call_command('seed_item_movement')
+        # self.stdout.write(self.style.NOTICE("Seeding stock movement items..."))
+        # call_command('seed_item_movement')
+        
+        self.stdout.write(self.style.NOTICE("Seeding inventory data..."))
+        call_command('seed_inventory_data')
 
         self.stdout.write(self.style.SUCCESS("✅ Reset and seed completed!"))

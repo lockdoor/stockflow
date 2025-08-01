@@ -32,12 +32,12 @@ class StockMovement(
     """
     Stock Movement Model
     
-    Represents movements of stock in/out of warehouses. Can be in DRAFT or CONFIRMED status.
-    Once CONFIRMED, the record becomes immutable for audit trail integrity.
+    Represents movements of stock in/out of warehouses. Can be in DRAFT or COMPLETED status.
+    Once COMPLETED, the record becomes immutable for audit trail integrity.
     
     Business Rules:
     - Only one DRAFT stock movement per warehouse at a time
-    - CONFIRMED status makes record immutable
+    - COMPLETED status makes record immutable
     - Optimistic locking via version field
     - Reference type and ID must be consistent
     """
@@ -52,6 +52,9 @@ class StockMovement(
     class Status(models.TextChoices):
         DRAFT = 'DRAFT', 'Draft'
         CONFIRMED = 'CONFIRMED', 'Confirmed'
+        PROCESSING = 'PROCESSING', 'Processing Stock Changes'
+        COMPLETED = 'COMPLETED', 'Stock Changes Completed'
+        FAILED = 'FAILED', 'Stock Processing Failed'
 
     # Core fields
     reference_type = models.CharField(
@@ -159,7 +162,7 @@ class StockMovement(
     def delete(self, *args, **kwargs):
         """
         Delete with immutability check.
-        ImmutableMixin will prevent deletion if status is CONFIRMED.
+        ImmutableMixin will prevent deletion if status is COMPLETED.
         """
         super().delete(*args, **kwargs)
     
@@ -182,28 +185,165 @@ class StockMovement(
     
     def confirm(self, user):
         """
-        Confirm this stock movement.
-        This makes the record immutable.
+        Confirm this stock movement with proper transaction handling.
+        This makes the record immutable and processes stock changes atomically.
         """
+        from django.db import transaction
+        
         can_confirm, reason = self.can_be_confirmed()
         if not can_confirm:
             raise ValidationError(reason)
         
-        # Update status and user before save
-        self.status = self.Status.CONFIRMED
-        self.updated_by = user
-        
-        # Override immutability check for this specific save
-        # by temporarily setting a flag
-        self._confirming = True
-        try:
-            self.save()
-        finally:
-            del self._confirming
-        
-        # TODO: Trigger stock balance updates when Stock model is implemented
+        # Use atomic transaction to ensure data consistency
+        with transaction.atomic():
+            # Set status to PROCESSING to indicate we're working on it
+            self.status = self.Status.PROCESSING
+            self.updated_by = user
+            
+            # Override immutability check for this specific save
+            self._confirming = True
+            try:
+                self.save()
+                
+                # Process stock changes after movement is confirmed
+                self._process_stock_changes()
+                
+                # Mark as completed
+                self.status = self.Status.COMPLETED
+                self.save()
+                
+            except Exception as e:
+                # Mark as failed for later recovery
+                self.status = self.Status.FAILED
+                self.save()
+                raise ValidationError(f"Failed to confirm movement: {str(e)}")
+            finally:
+                if hasattr(self, '_confirming'):
+                    del self._confirming
         
         return True
+    
+    def _process_stock_changes(self):
+        """
+        Process stock changes for all movement items.
+        This method is called within the confirm transaction.
+        """
+        if not hasattr(self, 'movement_items'):
+            return  # No items to process
+        
+        from .stock import Stock
+        from django.db import transaction
+        
+        # Process each movement item
+        for item in self.movement_items.all():
+            if item.movement_type == 'IN':
+                self._process_stock_in(item, self.updated_by)
+            elif item.movement_type == 'OUT':
+                self._process_stock_out(item, self.updated_by)
+    
+    def _process_stock_in(self, movement_item, user):
+        """Process stock IN (receiving inventory)"""
+        from .stock import Stock
+        
+        # Find or create stock record
+        stock, created = Stock.find_or_create_stock(
+            item_sku=movement_item.item_sku,
+            warehouse=self.warehouse,
+            lot_number=movement_item.lot_number,
+            expiry_date=movement_item.expiry_date,
+            user=user  # Pass user for created_by/updated_by
+        )
+        
+        # Add quantity to stock
+        stock.add_quantity(movement_item.quantity, user=user, save=True)
+    
+    def _process_stock_out(self, movement_item, user):
+        """Process stock OUT (consuming inventory) with FEFO"""
+        from .stock import Stock
+        
+        # Allocate stock using FEFO logic
+        allocations = Stock.allocate_stock_fefo(
+            item_sku=movement_item.item_sku,
+            warehouse=self.warehouse,
+            quantity_needed=movement_item.quantity,
+            user=user  # Pass user for audit trail
+        )
+        
+        # Deduct quantities from allocated stock records
+        for stock_record, allocated_qty in allocations:
+            stock_record.deduct_quantity(allocated_qty, user=user, save=True)
+    
+    def can_be_recovered(self):
+        """Check if this movement can be recovered from failed state"""
+        return self.status in [self.Status.PROCESSING, self.Status.FAILED]
+    
+    def recover(self, user):
+        """
+        Recover a failed stock movement.
+        Attempts to complete the stock processing that was interrupted.
+        """
+        if not self.can_be_recovered():
+            raise ValidationError("Movement cannot be recovered from current state")
+        
+        from django.db import transaction
+        
+        with transaction.atomic():
+            # Reset to processing state
+            self.status = self.Status.PROCESSING
+            self.updated_by = user
+            
+            self._confirming = True
+            try:
+                self.save()
+                
+                # Attempt to process stock changes again
+                self._process_stock_changes()
+                
+                # Mark as completed
+                self.status = self.Status.COMPLETED
+                self.save()
+                
+            except Exception as e:
+                # Mark as failed again
+                self.status = self.Status.FAILED
+                self.save()
+                raise ValidationError(f"Recovery failed: {str(e)}")
+            finally:
+                if hasattr(self, '_confirming'):
+                    del self._confirming
+        
+        return True
+    
+    @classmethod
+    def get_failed_movements(cls):
+        """Get all movements that need recovery"""
+        return cls.objects.filter(
+            status__in=[cls.Status.PROCESSING, cls.Status.FAILED]
+        ).order_by('created_at')
+    
+    @classmethod 
+    def bulk_recover_failed_movements(cls, user):
+        """
+        Bulk recovery for failed movements.
+        Should be run as a management command or scheduled task.
+        """
+        failed_movements = cls.get_failed_movements()
+        recovered = 0
+        still_failed = 0
+        
+        for movement in failed_movements:
+            try:
+                movement.recover(user)
+                recovered += 1
+            except ValidationError:
+                still_failed += 1
+                continue
+        
+        return {
+            'recovered': recovered,
+            'still_failed': still_failed,
+            'total_processed': len(failed_movements)
+        }
     
     def get_total_items_count(self):
         """Get total number of items in this movement"""
@@ -223,12 +363,12 @@ class StockMovement(
     
     # ImmutableMixin implementation
     def is_immutable(self):
-        """Return True if this stock movement is immutable (status is CONFIRMED)"""
+        """Return True if this stock movement is immutable (status is COMPLETED)"""
         # Allow confirmation process to proceed
         if hasattr(self, '_confirming'):
             return False
-        return self.status == self.Status.CONFIRMED
+        return self.status == self.Status.COMPLETED
     
     def get_immutable_reason(self):
         """Return reason why this record is immutable"""
-        return "Confirmed stock movements cannot be modified for audit trail integrity"
+        return "Completed stock movements cannot be modified for audit trail integrity"

@@ -24,6 +24,12 @@ from inventory.views.stock_item_views import (
      StockItemMovementUpdateView
 )
 
+from inventory.views.stock_view import (
+     StockListView,
+     StockIndexView,
+     StockItemListView
+)
+
 # namespaced URL patterns for the inventory app
 app_name = 'inventory'
 
@@ -80,4 +86,9 @@ urlpatterns = [
      path('stockmovement/<int:stock_movement_id>/items/<int:pk>/delete/',
           StockItemMovementDeleteView.as_view(), 
           name='stock-item-movement-delete'),
+     
+     path('stock/', StockIndexView.as_view(), name='stock-index'),
+     path('stock/list/', StockListView.as_view(), name='stock-list'),
+     path('stock/items/', StockItemListView.as_view(), name='stock-item-list'),
+     
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -39,7 +39,7 @@ class StockMovementItem(
     and movement direction (IN/OUT).
     
     Business Rules:
-    - Cannot modify items in CONFIRMED stock movements
+    - Cannot modify items in COMPLETED stock movements
     - Uses optimistic locking via AuditableMixin
     - Unique constraint on (stock_movement, item_sku, lot_number, movement_type)
     """
@@ -142,20 +142,20 @@ class StockMovementItem(
     def delete(self, *args, **kwargs):
         """
         Delete with immutability check.
-        ImmutableMixin will prevent deletion if parent movement is CONFIRMED.
+        ImmutableMixin will prevent deletion if parent movement is COMPLETED.
         """
         super().delete(*args, **kwargs)
 
     # ImmutableMixin implementation
     def is_immutable(self):
-        """Return True if parent stock movement is confirmed"""
+        """Return True if parent stock movement is completed"""
         return (hasattr(self, 'stock_movement') and 
                 self.stock_movement and 
-                self.stock_movement.status == StockMovement.Status.CONFIRMED)
+                self.stock_movement.status == StockMovement.Status.COMPLETED)
 
     def get_immutable_reason(self):
         """Return reason why this record is immutable"""
-        return "Cannot modify items in confirmed stock movements"
+        return "Cannot modify items in completed stock movements"
 
     # Business logic methods
     def can_modify(self):
