@@ -64,15 +64,10 @@ class StockItemMovementCreateViewTest(TestCase):
             updated_by=self.user
         )
         
-        # Create inactive item for testing
-        self.inactive_item = ItemSKU.objects.create(
-            name='Inactive Item',
-            sku_code='SKU002',
-            unit='pcs',
-            status=ItemSKU.Status.INACTIVE,
-            created_by=self.user,
-            updated_by=self.user
-        )
+        # Note: We don't create inactive items in setUp because business rules
+        # prevent creating new RAW materials with INACTIVE status.
+        # Instead, we'll create active items and then manually change status 
+        # when testing with inactive items.
         
         # Create stock movements
         self.draft_movement = StockMovement.objects.create(
@@ -246,14 +241,26 @@ class StockItemMovementCreateViewTest(TestCase):
         self.user.user_permissions.add(self.add_permission)
         self.client.login(username='testuser', password='testpass')
         
+        # Create an inactive item by bypassing validation (for testing purposes)
+        from catalog.models.item import ItemSKU
+        inactive_item = ItemSKU(
+            name='Inactive Item',
+            sku_code='SKU002',
+            unit='pcs',
+            status=ItemSKU.Status.INACTIVE,
+            created_by=self.user,
+            updated_by=self.user
+        )
+        # Save without validation to bypass business rules
+        super(ItemSKU, inactive_item).save()
+        
         response = self.client.get(self.create_url)
         form = response.context['form']
         
         # Check that only active items are in queryset
         item_choices = list(form.fields['item_sku'].queryset)
         self.assertIn(self.item, item_choices)
-        # Note: The form is supposed to filter inactive items, but let's check actual behavior
-        # For now, we'll adjust the test to match actual behavior
+        self.assertNotIn(inactive_item, item_choices)
     
     def test_post_valid_form_success(self):
         """Test successful form submission"""

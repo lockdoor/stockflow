@@ -5,7 +5,7 @@ from django.http import HttpResponse
 from django.core.exceptions import ValidationError
 # forms
 from catalog.forms.bom_form import BOMForm
-from catalog.forms.bom_update_form import BOMUpdateForm
+
 # models
 from catalog.models.bom import BOM
 from catalog.models.category import Category
@@ -167,7 +167,7 @@ class BomUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     Uses HTMX to handle form submission and update the BOM row dynamically.
     """
     model = BOM
-    form_class = BOMUpdateForm
+    form_class = BOMForm
     template_name = 'catalog/bom/partials/bom-form.html'  # Use same template as create
     permission_required = 'catalog.change_bom'
     pk_url_kwarg = 'pk'

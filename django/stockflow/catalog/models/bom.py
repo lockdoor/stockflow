@@ -1,16 +1,36 @@
+"""
+BOM (Bill of Materials) Model
+
+This module defines the BOM model using mixins for clean separation of concerns.
+Uses AuditableMixin for audit fields and optimistic locking,
+and ValidatableMixin for validation.
+
+Author: StockFlow Team
+Created: 2025
+"""
+
 from django.db import models
-from django.core.exceptions import ValidationError
 from catalog.models.item import ItemSKU
-from simple_history.models import HistoricalRecords
-from django.contrib.auth.models import User
+from common.mixins.auditable import AuditableMixin
+from common.mixins.validatable import ValidatableMixin
+from catalog.validators.bom_validators import (
+    BOMParentSKUValidator,
+    BOMComponentSKUValidator,
+    BOMQuantityValidator,
+    BOMDuplicateValidator,
+    BOMCircularReferenceValidator,
+    BOMBusinessRulesValidator
+)
 from decimal import Decimal
 
 
-class BOM(models.Model):
+class BOM(AuditableMixin, ValidatableMixin, models.Model):
     """
     Bill of Materials model representing the components needed to build an item.
-    Provides full business logic validation and state management.
+    Uses mixins for audit fields and validation framework.
     """
+    
+    # Core fields
     parent_sku = models.ForeignKey(
         ItemSKU, 
         on_delete=models.CASCADE, 
@@ -28,25 +48,6 @@ class BOM(models.Model):
         decimal_places=2,
         help_text="Quantity of the component required"
     )
-    created_by = models.ForeignKey(
-        User, 
-        on_delete=models.PROTECT, 
-        related_name='bom_created_by',
-        help_text="User who created this BOM"
-    )
-    updated_by = models.ForeignKey(
-        User, 
-        on_delete=models.PROTECT, 
-        related_name='bom_updated_by',
-        help_text="User who last updated this BOM"
-    )
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    version = models.PositiveIntegerField(
-        default=0,
-        help_text="Version number for optimistic locking"
-    )
-    history = HistoricalRecords()
     
     class Meta:
         db_table = 'catalog_bom'
@@ -58,130 +59,29 @@ class BOM(models.Model):
             models.Index(fields=['component_sku']),
             models.Index(fields=['created_at']),
         ]
+        ordering = ['-created_at']
 
     def __str__(self):
         return f"{self.parent_sku.sku_code} needs {self.quantity} x {self.component_sku.sku_code}"
 
-    # Private validation methods
-    def _validate_parent_sku(self) -> str | None:
-        """
-        Validate parent SKU is suitable for a BOM (not a raw material)
-        """
-        if not self.parent_sku_id:
-            return "Parent SKU is required"
-            
-        if self.parent_sku.type == ItemSKU.Type.RAW:
-            return "Cannot create BOM with parent SKU as a raw material"
-            
-        if self.parent_sku.is_bom_locked():
-            return "Cannot modify BOM when parent item is not in DRAFT status"
-        
-        return None
-        
-    def _validate_component_sku(self) -> str | None:
-        """
-        Validate component SKU
-        """
-        if not self.component_sku_id:
-            return "Component SKU is required"
-               
-        if self.parent_sku_id and self.component_sku_id:
-            if self.parent_sku_id == self.component_sku_id:
-                return "Parent SKU and component SKU cannot be the same"
-
-        if not self.component_sku.is_active():
-            return "Component SKU must be active"
-                
-        return None
-        
-    def _validate_quantity(self) -> str | None:
-        """
-        Validate quantity is positive
-        """
-        if not self.quantity:
-            return "Quantity is required"
-            
-        if self.quantity <= Decimal('0'):
-            return "Quantity must be greater than zero"
-            
-        return None
-        
-    def _validate_duplicate_component(self) -> str | None:
-        """
-        Validate no duplicate components in the same BOM
-        """
-        if not self.pk and self.parent_sku_id and self.component_sku_id:
-            if BOM.objects.filter(parent_sku=self.parent_sku, component_sku=self.component_sku).exists():
-                return "This component already exists in the BOM"
-                
-        return None
-
-    def clean(self):
-        """
-        Model-level validation - handles business logic validation
-        Calls individual validation methods for each field
-        Raises ValidationError for business logic violations
-        """
-        errors = []
-        
-        # Call field-specific validation methods
-        field_validations = [
-            self._validate_parent_sku(),
-            self._validate_component_sku(),
-            self._validate_quantity(),
-            self._validate_duplicate_component()
+    def get_validators(self):
+        """Return list of validators for this BOM"""
+        return [
+            BOMParentSKUValidator(self),
+            BOMComponentSKUValidator(self),
+            BOMQuantityValidator(self),
+            BOMDuplicateValidator(self),
+            BOMCircularReferenceValidator(self),
+            BOMBusinessRulesValidator(self)
         ]
-        
-        # Add non-None validation errors
-        errors.extend([error for error in field_validations if error])
-        
-        if errors:
-            raise ValidationError("; ".join(errors))
 
     def save(self, *args, **kwargs):
-        """
-        Override save method to handle business logic and validation
-        """
-        try:
-            # Run model validation first
-            self.full_clean()
-
-            if self.pk:  # Updating existing BOM
-                self._handle_optimistic_locking()
-            
-            super().save(*args, **kwargs)
-            
-        except ValidationError as e:
-            # Convert ValidationError to ValueError for consistency with our error handling approach
-            # This ensures business logic validation errors are consistently returned as ValueError
-            # while keeping Django's form validation flow intact (using ValidationError in clean())
-            if hasattr(e, 'message_dict'):
-                error_messages = []
-                for field, messages in e.message_dict.items():
-                    if isinstance(messages, list):
-                        error_messages.extend(messages)
-                    else:
-                        error_messages.append(str(messages))
-                raise ValueError("; ".join(error_messages))
-            else:
-                raise ValueError(str(e))
-            
-        except Exception as e:
-            # Handle other exceptions
-            raise ValueError(str(e))
-            
-    def _handle_optimistic_locking(self):
-        """
-        Handle optimistic locking to prevent concurrent updates
-        """
-        try:
-            current = BOM.objects.get(pk=self.pk)
-            if current.version != self.version:
-                raise ValueError("Optimistic locking failed: BOM record has been modified by another user")
-            self.version += 1
-        except BOM.DoesNotExist:
-            raise ValueError("BOM record no longer exists")
-            
+        """Save with validation and field normalization"""
+        # Run validation through mixins
+        self.full_clean()
+        
+        # Call parent save (includes optimistic locking)
+        super().save(*args, **kwargs)
     # Business logic methods
     def is_active(self):
         """
@@ -228,9 +128,10 @@ class BOM(models.Model):
         if parent_sku.id == component_sku.id:
             return True
             
-        # Check if the component uses the parent in its own BOM (recursively)
+        # Check if the parent uses the component in its own BOM tree (forward check)
+        # If component is already a parent of our parent, then adding parent as component's component would create cycle
         visited = set()
-        to_check = [component_sku.id]
+        to_check = [parent_sku.id]
         
         while to_check:
             current_id = to_check.pop()
@@ -240,12 +141,16 @@ class BOM(models.Model):
                 
             visited.add(current_id)
             
-            # If we find the parent in the component's BOM tree, it's circular
-            if current_id == parent_sku.id:
-                return True
-                
-            # Add all components of the current item to check
-            component_parents = cls.objects.filter(component_sku_id=current_id).values_list('parent_sku_id', flat=True)
-            to_check.extend([pid for pid in component_parents if pid not in visited])
+            # Get all components of the current item
+            component_ids = cls.objects.filter(parent_sku_id=current_id).values_list('component_sku_id', flat=True)
+            
+            for comp_id in component_ids:
+                # If we find the component we're trying to add in the parent's BOM tree, it's circular
+                if comp_id == component_sku.id:
+                    return True
+                    
+                # Add this component to check its own components
+                if comp_id not in visited:
+                    to_check.append(comp_id)
             
         return False

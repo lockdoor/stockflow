@@ -2,246 +2,231 @@
 {% load widget_tweaks %}
 
 {% block title %}
-    {% if form.instance.id %}
-        Edit Item - {{ form.instance.name }}
-    {% else %}
-        Add New Item
-    {% endif %} - StockFlow
+{% if form.instance.id %}
+Edit Item - {{ form.instance.name }}
+{% else %}
+Add New Item
+{% endif %} - StockFlow
 {% endblock %}
 
 {% block content %}
 <div class="main-content">
-    <!-- Header -->
-    <div class="dashboard-header">
-        <div class="container-fluid">
-            <div class="d-flex justify-content-between align-items-center py-4">
-                <div>
-                    {% include 'shared/breadcrumb.html' %}
-                    <h1 class="h2 mb-1">
-                        {% if form.instance.id %}
-                            Edit Item: {{ form.instance.name }}
-                        {% else %}
-                            Add New Item
-                        {% endif %}
-                    </h1>
-                    <p class="text-muted mb-0">
-                        {% if form.instance.id %}
-                            Update item information and properties
-                        {% else %}
-                            Create a new catalog item
-                        {% endif %}
-                    </p>
-                </div>
-                <div class="d-flex gap-2">
-                    <a href="{% url 'catalog:item-list' %}" class="btn btn-outline-secondary">
-                        <i class="bi bi-arrow-left me-1"></i>Back to Items
-                    </a>
-                    <a href="{% url 'catalog:dashboard' %}" class="btn btn-outline-primary">
-                        <i class="bi bi-speedometer2 me-1"></i>Catalog Dashboard
-                    </a>
-                </div>
-            </div>
+  <!-- Header -->
+  <div class="dashboard-header">
+    <div class="container-fluid">
+      <div class="d-flex justify-content-between align-items-center py-4">
+        <div>
+          {% include 'shared/breadcrumb.html' %}
+          <h1 class="h2 mb-1">
+            {% if form.instance.id %}
+            Edit Item: {{ form.instance.name }}
+            {% else %}
+            Add New Item
+            {% endif %}
+          </h1>
+          <p class="text-muted mb-0">
+            {% if form.instance.id %}
+            Update item information and properties
+            {% else %}
+            Create a new catalog item
+            {% endif %}
+          </p>
         </div>
-    </div>
-
-    <!-- Main Content -->
-    <div class="container-fluid py-4">
-        <div class="row justify-content-center">
-            <div class="col-md-8 col-lg-6">
-                <div class="dashboard-card">
-                    <div class="card-body">
-                        {% if form %}
-                            <form method="post" enctype="multipart/form-data">
-                                {% csrf_token %}
-                                
-                                <!-- Hidden field for next URL -->
-                                {% if next_url %}
-                                    <input type="hidden" name="next" value="{{ next_url }}">
-                                {% endif %}
-                                
-                                <!-- SKU Code Field -->
-                                <div class="mb-3">
-                                    <label class="form-label" for="id_sku_code">
-                                        {{ form.sku_code.label }}
-                                        {% if form.sku_code.field.required %}
-                                            <span class="text-danger">*</span>
-                                        {% endif %}
-                                    </label>
-                                    {{ form.sku_code|add_class:"form-control" }}
-                                    {% if form.sku_code.errors %}
-                                        <div class="invalid-feedback d-block">
-                                            {% for error in form.sku_code.errors %}
-                                                {{ error }}{% if not forloop.last %}, {% endif %}
-                                            {% endfor %}
-                                        </div>
-                                    {% endif %}
-                                    {% if form.sku_code.help_text %}
-                                        <div class="form-text">{{ form.sku_code.help_text }}</div>
-                                    {% endif %}
-                                </div>
-
-                                <!-- Name Field -->
-                                <div class="mb-3">
-                                    <label class="form-label" for="id_name">
-                                        {{ form.name.label }}
-                                        {% if form.name.field.required %}
-                                            <span class="text-danger">*</span>
-                                        {% endif %}
-                                    </label>
-                                    {{ form.name|add_class:"form-control" }}
-                                    {% if form.name.errors %}
-                                        <div class="invalid-feedback d-block">
-                                            {% for error in form.name.errors %}
-                                                {{ error }}{% if not forloop.last %}, {% endif %}
-                                            {% endfor %}
-                                        </div>
-                                    {% endif %}
-                                    {% if form.name.help_text %}
-                                        <div class="form-text">{{ form.name.help_text }}</div>
-                                    {% endif %}
-                                </div>
-
-                                <!-- Unit Field -->
-                                <div class="mb-3">
-                                    <label class="form-label" for="id_unit">
-                                        {{ form.unit.label }}
-                                        {% if form.unit.field.required %}
-                                            <span class="text-danger">*</span>
-                                        {% endif %}
-                                    </label>
-                                    {{ form.unit|add_class:"form-control" }}
-                                    {% if form.unit.errors %}
-                                        <div class="invalid-feedback d-block">
-                                            {% for error in form.unit.errors %}
-                                                {{ error }}{% if not forloop.last %}, {% endif %}
-                                            {% endfor %}
-                                        </div>
-                                    {% endif %}
-                                    {% if form.unit.help_text %}
-                                        <div class="form-text">{{ form.unit.help_text }}</div>
-                                    {% endif %}
-                                </div>
-
-                                <div class="row">
-                                    <!-- Type Field -->
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label" for="id_type">
-                                            {{ form.type.label }}
-                                            {% if form.type.field.required %}
-                                                <span class="text-danger">*</span>
-                                            {% endif %}
-                                        </label>
-                                        {{ form.type|add_class:"form-select" }}
-                                        {% if form.type.errors %}
-                                            <div class="invalid-feedback d-block">
-                                                {% for error in form.type.errors %}
-                                                    {{ error }}{% if not forloop.last %}, {% endif %}
-                                                {% endfor %}
-                                            </div>
-                                        {% endif %}
-                                        {% if form.type.help_text %}
-                                            <div class="form-text">{{ form.type.help_text }}</div>
-                                        {% endif %}
-                                    </div>
-
-                                    <!-- Status Field -->
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label" for="id_status">
-                                            {{ form.status.label }}
-                                            {% if form.status.field.required %}
-                                                <span class="text-danger">*</span>
-                                            {% endif %}
-                                        </label>
-                                        {{ form.status|add_class:"form-select" }}
-                                        {% if form.status.errors %}
-                                            <div class="invalid-feedback d-block">
-                                                {% for error in form.status.errors %}
-                                                    {{ error }}{% if not forloop.last %}, {% endif %}
-                                                {% endfor %}
-                                            </div>
-                                        {% endif %}
-                                        {% if form.status.help_text %}
-                                            <div class="form-text">{{ form.status.help_text }}</div>
-                                        {% endif %}
-                                    </div>
-                                </div>
-
-                                <!-- Category Field -->
-                                <div class="mb-3">
-                                    <label class="form-label" for="id_category">
-                                        {{ form.category.label }}
-                                        {% if form.category.field.required %}
-                                            <span class="text-danger">*</span>
-                                        {% endif %}
-                                    </label>
-                                    {{ form.category|add_class:"form-select" }}
-                                    {% if form.category.errors %}
-                                        <div class="invalid-feedback d-block">
-                                            {% for error in form.category.errors %}
-                                                {{ error }}{% if not forloop.last %}, {% endif %}
-                                            {% endfor %}
-                                        </div>
-                                    {% endif %}
-                                    {% if form.category.help_text %}
-                                        <div class="form-text">{{ form.category.help_text }}</div>
-                                    {% endif %}
-                                </div>
-
-                                <!-- Note Field -->
-                                <div class="mb-3">
-                                    <label class="form-label" for="id_note">
-                                        {{ form.note.label }}
-                                        {% if form.note.field.required %}
-                                            <span class="text-danger">*</span>
-                                        {% endif %}
-                                    </label>
-                                    {{ form.note|add_class:"form-control" }}
-                                    {% if form.note.errors %}
-                                        <div class="invalid-feedback d-block">
-                                            {% for error in form.note.errors %}
-                                                {{ error }}{% if not forloop.last %}, {% endif %}
-                                            {% endfor %}
-                                        </div>
-                                    {% endif %}
-                                    {% if form.note.help_text %}
-                                        <div class="form-text">{{ form.note.help_text }}</div>
-                                    {% endif %}
-                                </div>
-
-                                <!-- Non-field errors -->
-                                {% if form.non_field_errors %}
-                                    <div class="alert alert-danger mb-3">
-                                        <i class="bi bi-exclamation-triangle me-2"></i>
-                                        {% for error in form.non_field_errors %}
-                                            <div>{{ error }}</div>
-                                        {% endfor %}
-                                    </div>
-                                {% endif %}
-
-                                <!-- Form Actions -->
-                                <div class="d-flex justify-content-end gap-2 pt-3 border-top">
-                                    <a href="{% url 'catalog:item-list' %}" class="btn btn-secondary">
-                                        Cancel
-                                    </a>
-                                    <button type="submit" class="btn btn-primary">
-                                        {% if form.instance.id %}
-                                            <i class="bi bi-check-circle me-1"></i>Update Item
-                                        {% else %}
-                                            <i class="bi bi-plus-circle me-1"></i>Create Item
-                                        {% endif %}
-                                    </button>
-                                </div>
-                            </form>
-                        {% else %}
-                            <div class="alert alert-warning">
-                                <i class="bi bi-exclamation-triangle me-2"></i>
-                                <strong>Warning!</strong> No form data available.
-                            </div>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
+        <div class="d-flex gap-2">
+          <a href="{% url 'catalog:item-list' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>Back to Items
+          </a>
+          <a href="{% url 'catalog:dashboard' %}" class="btn btn-outline-primary">
+            <i class="bi bi-speedometer2 me-1"></i>Catalog Dashboard
+          </a>
         </div>
+      </div>
     </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="container-fluid py-4">
+    <div class="row justify-content-center">
+      <div class="col-md-8 col-lg-6">
+        <div class="dashboard-card">
+          <div class="card-body">
+            {% if form %}
+            <form method="post" enctype="multipart/form-data">
+              {% csrf_token %}
+
+              <!-- Hidden field for next URL -->
+              {% if next_url %}
+              <input type="hidden" name="next" value="{{ next_url }}">
+              {% endif %}
+
+              <div class="row">
+                <!-- SKU Code Field -->
+                <div class="col-md-6 mb-3">
+                  <label class="form-label" for="id_sku_code">
+                    {{ form.sku_code.label }}
+                    {% if form.sku_code.field.required %}
+                    <span class="text-danger">*</span>
+                    {% endif %}
+                  </label>
+                  {{ form.sku_code|add_class:"form-control" }}
+                  {% if form.sku_code.errors %}
+                  <div class="invalid-feedback d-block">
+                    {% for error in form.sku_code.errors %}
+                    {{ error }}{% if not forloop.last %}, {% endif %}
+                    {% endfor %}
+                  </div>
+                  {% endif %}
+                </div>
+
+                <!-- Name Field -->
+                <div class="col-md-6 mb-3">
+                  <label class="form-label" for="id_name">
+                    {{ form.name.label }}
+                    {% if form.name.field.required %}
+                    <span class="text-danger">*</span>
+                    {% endif %}
+                  </label>
+                  {{ form.name|add_class:"form-control" }}
+                  {% if form.name.errors %}
+                  <div class="invalid-feedback d-block">
+                    {% for error in form.name.errors %}
+                    {{ error }}{% if not forloop.last %}, {% endif %}
+                    {% endfor %}
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+
+              <div class="row">
+                <!-- Unit Field -->
+                <div class="col-md-6 mb-3">
+                  <label class="form-label" for="id_unit">
+                    {{ form.unit.label }}
+                    {% if form.unit.field.required %}
+                    <span class="text-danger">*</span>
+                    {% endif %}
+                  </label>
+                  {{ form.unit|add_class:"form-control" }}
+                  {% if form.unit.errors %}
+                  <div class="invalid-feedback d-block">
+                    {% for error in form.unit.errors %}
+                    {{ error }}{% if not forloop.last %}, {% endif %}
+                    {% endfor %}
+                  </div>
+                  {% endif %}
+                </div>
+
+                <!-- Category Field -->
+              <div class="col-md-6 mb-3">
+                <label class="form-label" for="id_category">
+                  {{ form.category.label }}
+                  {% if form.category.field.required %}
+                  <span class="text-danger">*</span>
+                  {% endif %}
+                </label>
+                {{ form.category|add_class:"form-select" }}
+                {% if form.category.errors %}
+                <div class="invalid-feedback d-block">
+                  {% for error in form.category.errors %}
+                  {{ error }}{% if not forloop.last %}, {% endif %}
+                  {% endfor %}
+                </div>
+                {% endif %}
+              </div>
+
+              </div>
+              <div class="row">
+                <!-- Type Field -->
+                <div class="col-md-6 mb-3">
+                  <label class="form-label" for="id_type">
+                    {{ form.type.label }}
+                    {% if form.type.field.required %}
+                    <span class="text-danger">*</span>
+                    {% endif %}
+                  </label>
+                  {{ form.type|add_class:"form-select" }}
+                  {% if form.type.errors %}
+                  <div class="invalid-feedback d-block">
+                    {% for error in form.type.errors %}
+                    {{ error }}{% if not forloop.last %}, {% endif %}
+                    {% endfor %}
+                  </div>
+                  {% endif %}
+                </div>
+
+                <!-- Status Field -->
+                <div class="col-md-6 mb-3">
+                  <label class="form-label" for="id_status">
+                    {{ form.status.label }}
+                    {% if form.status.field.required %}
+                    <span class="text-danger">*</span>
+                    {% endif %}
+                  </label>
+                  {{ form.status|add_class:"form-select" }}
+                  {% if form.status.errors %}
+                  <div class="invalid-feedback d-block">
+                    {% for error in form.status.errors %}
+                    {{ error }}{% if not forloop.last %}, {% endif %}
+                    {% endfor %}
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+
+              
+
+              <!-- Note Field -->
+              <div class="mb-3">
+                <label class="form-label" for="id_note">
+                  {{ form.note.label }}
+                  {% if form.note.field.required %}
+                  <span class="text-danger">*</span>
+                  {% endif %}
+                </label>
+                {{ form.note|add_class:"form-control" }}
+                {% if form.note.errors %}
+                <div class="invalid-feedback d-block">
+                  {% for error in form.note.errors %}
+                  {{ error }}{% if not forloop.last %}, {% endif %}
+                  {% endfor %}
+                </div>
+                {% endif %}
+              </div>
+
+              <!-- Non-field errors -->
+              {% if form.non_field_errors %}
+              <div class="alert alert-danger mb-3">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                {% for error in form.non_field_errors %}
+                <div>{{ error }}</div>
+                {% endfor %}
+              </div>
+              {% endif %}
+
+              <!-- Form Actions -->
+              <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+                <a href="{% url 'catalog:item-list' %}" class="btn btn-secondary">
+                  Cancel
+                </a>
+                <button type="submit" class="btn btn-primary">
+                  {% if form.instance.id %}
+                  <i class="bi bi-check-circle me-1"></i>Update Item
+                  {% else %}
+                  <i class="bi bi-plus-circle me-1"></i>Create Item
+                  {% endif %}
+                </button>
+              </div>
+            </form>
+            {% else %}
+            <div class="alert alert-warning">
+              <i class="bi bi-exclamation-triangle me-2"></i>
+              <strong>Warning!</strong> No form data available.
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 {% endblock %}
