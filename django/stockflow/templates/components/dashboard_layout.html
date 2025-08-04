@@ -1,0 +1,30 @@
+{% comment %}
+Dashboard Layout Component
+Usage: {% include 'components/dashboard_layout.html' with title="Page Title" subtitle="Description" %}
+{% endcomment %}
+
+<div class="dashboard-layout">
+  <!-- Header -->
+  <div class="dashboard-header">
+    <div class="dashboard-header-content">
+      <div class="dashboard-header-inner">
+        <div>
+          <h1 class="dashboard-title">{{ title|default:"Dashboard" }}</h1>
+          {% if subtitle %}<p class="dashboard-subtitle">{{ subtitle }}</p>{% endif %}
+        </div>
+        <div class="dashboard-actions">
+          {% block header_actions %}
+          <a href="{% url 'dashboard' %}" class="btn btn-secondary">
+            Main Dashboard
+          </a>
+          {% endblock %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="dashboard-main">
+    {% block dashboard_content %}{% endblock %}
+  </div>
+</div>

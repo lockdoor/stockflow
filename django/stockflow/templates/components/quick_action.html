@@ -1,0 +1,9 @@
+{% comment %}
+Quick Action Card Component
+Usage: {% include 'components/quick_action.html' with url="catalog:item-create" color="blue" title="Add Item" description="Create new product" %}
+{% endcomment %}
+
+<a href="{% if url %}{% url url %}{% else %}#{% endif %}" class="quick-action {{ color|default:'blue' }}">
+  <h3 class="quick-action-title {{ color|default:'blue' }}">{{ title }}</h3>
+  <p class="quick-action-desc {{ color|default:'blue' }}">{{ description }}</p>
+</a>

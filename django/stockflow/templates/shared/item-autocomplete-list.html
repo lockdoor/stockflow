@@ -1,14 +1,18 @@
-<ul class="menu bg-base-100 shadow-md rounded-box mt-1 w-full">
+<div class="list-group shadow mt-1">
   {% for item in items %}
-    <li>
-        <button class="btn btn-ghost w-full justify-start text-left"
-            type="button"
-            data-id="{{ item.pk }}"
-            data-name="{{ item.name|escapejs }}"
-        >{{ item.sku_code }} - {{ item.name }} - {{ item.type }}
-        </button>
-    </li>
+    <button class="list-group-item list-group-item-action text-start"
+        type="button"
+        data-id="{{ item.pk }}"
+        data-name="{{ item.name|escapejs }}"
+    >
+        <div class="d-flex justify-content-between">
+            <div>
+                <strong>{{ item.sku_code }}</strong> - {{ item.name }}
+            </div>
+            <small class="text-muted">{{ item.type }}</small>
+        </div>
+    </button>
   {% empty %}
-    <li class="text-gray-400 px-4 py-2">No items found</li>
+    <div class="list-group-item text-muted">No items found</div>
   {% endfor %}
-</ul>
+</div>

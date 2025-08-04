@@ -1,15 +1,175 @@
 {% extends "base.html" %}
+{% load widget_tweaks %}
 
-{% block title %}{{item.name}}{% endblock %}
+{% block title %}{{ item.name }} - Item Details - StockFlow{% endblock %}
 
 {% block content %}
+<div class="main-content">
+    <!-- Header -->
+    <div class="dashboard-header">
+        <div class="container-fluid">
+            <div class="d-flex justify-content-between align-items-center py-4">
+                <div>
+                    {% include 'shared/breadcrumb.html' %}
+                    <h1 class="h2 mb-1">{{ item.name }}</h1>
+                    <p class="text-muted mb-0">
+                        <span class="badge bg-secondary me-2">{{ item.sku_code }}</span>
+                        {{ item.category.name }} • {{ item.type }}
+                    </p>
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="{% url 'catalog:item-list' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-1"></i>Back to Items
+                    </a>
+                    <a href="{% url 'catalog:item-edit-form' item.id %}" class="btn btn-primary">
+                        <i class="bi bi-pencil-square me-1"></i>Edit Item
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
 
-<div id="item-detail">
-    {% include 'catalog/item/partials/item-detail.html' %}
+    <!-- Main Content -->
+    <div class="container-fluid py-4">
+        <div class="row">
+            <!-- Item Details -->
+            <div class="col-lg-8">
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Item Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <dl class="row">
+                                    <dt class="col-sm-4">SKU Code:</dt>
+                                    <dd class="col-sm-8">{{ item.sku_code }}</dd>
+                                    
+                                    <dt class="col-sm-4">Name:</dt>
+                                    <dd class="col-sm-8">{{ item.name }}</dd>
+                                    
+                                    <dt class="col-sm-4">Type:</dt>
+                                    <dd class="col-sm-8">
+                                        <span class="badge bg-secondary">{{ item.type }}</span>
+                                    </dd>
+                                    
+                                    <dt class="col-sm-4">Status:</dt>
+                                    <dd class="col-sm-8">
+                                        {% if item.status == 'Active' %}
+                                            <span class="badge bg-success">{{ item.status }}</span>
+                                        {% elif item.status == 'Inactive' %}
+                                            <span class="badge bg-danger">{{ item.status }}</span>
+                                        {% else %}
+                                            <span class="badge bg-warning">{{ item.status }}</span>
+                                        {% endif %}
+                                    </dd>
+                                </dl>
+                            </div>
+                            <div class="col-md-6">
+                                <dl class="row">
+                                    <dt class="col-sm-4">Category:</dt>
+                                    <dd class="col-sm-8">{{ item.category.name }}</dd>
+                                    
+                                    <dt class="col-sm-4">Unit:</dt>
+                                    <dd class="col-sm-8">{{ item.unit }}</dd>
+                                    
+                                    <dt class="col-sm-4">Created:</dt>
+                                    <dd class="col-sm-8">
+                                        {{ item.created_at|date:"M d, Y" }}
+                                        <small class="text-muted">by {{ item.created_by.username }}</small>
+                                    </dd>
+                                    
+                                    <dt class="col-sm-4">Updated:</dt>
+                                    <dd class="col-sm-8">
+                                        {{ item.updated_at|date:"M d, Y" }}
+                                        <small class="text-muted">by {{ item.updated_by.username }}</small>
+                                    </dd>
+                                </dl>
+                            </div>
+                        </div>
+                        
+                        {% if item.note %}
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <dt>Notes:</dt>
+                                <dd class="mt-2">
+                                    <div class="alert alert-light">
+                                        {{ item.note|linebreaks }}
+                                    </div>
+                                </dd>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Item Image / Actions -->
+            <div class="col-lg-4">
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Item Image</h5>
+                    </div>
+                    <div class="card-body text-center">
+                        {% if item.primary_image %}
+                            <img src="{{ item.primary_image.image.url }}" 
+                                 alt="{{ item.name }}" 
+                                 class="img-fluid rounded mb-3"
+                                 style="max-height: 300px;">
+                        {% else %}
+                            <div class="bg-light rounded d-flex align-items-center justify-content-center mb-3" 
+                                 style="height: 200px;">
+                                <i class="bi bi-image text-muted fs-1"></i>
+                            </div>
+                            <p class="text-muted">No image available</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="card shadow-sm">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Quick Actions</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <a href="{% url 'catalog:item-edit-form' item.id %}" class="btn btn-outline-primary">
+                                <i class="bi bi-pencil-square me-2"></i>Edit Item
+                            </a>
+                            {% if item.type != 'RAW' %}
+                                <a href="#bom-section" class="btn btn-outline-warning">
+                                    <i class="bi bi-diagram-3 me-2"></i>View BOM
+                                </a>
+                            {% endif %}
+                            <a href="{% url 'catalog:item-list' %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-list-ul me-2"></i>Back to List
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- BOM Section -->
+        {% if item.type != 'RAW' %}
+        <div class="row mt-4" id="bom-section">
+            <div class="col-12">
+                <div class="card shadow-sm">
+                    <div class="card-header">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="card-title mb-0">Bill of Materials (BOM)</h5>
+                            <a href="#" class="btn btn-sm btn-primary">
+                                <i class="bi bi-plus-circle me-1"></i>Add BOM
+                            </a>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        {% include 'catalog/bom/partials/bom-list.html' with parent_sku=item %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
 </div>
-
-{% if item.type != 'RAW' %}
-    {% include 'catalog/bom/partials/bom-list.html' with parent_sku=item %}
-{% endif %}
-
 {% endblock %}

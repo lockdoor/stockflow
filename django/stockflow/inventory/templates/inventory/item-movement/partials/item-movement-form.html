@@ -58,61 +58,61 @@
             {% include 'shared/item-autocomplete.html' with form=form field_label=form.item_sku.label item_id='id_item_sku' %}
             
             <!-- Movement type -->
-            <div class="form-control mb-4">
-                <label class="label">
-                    <span class="label-text">{{ form.movement_type.label }}</span>
+            <div class="mb-3">
+                <label class="form-label">
+                    {{ form.movement_type.label }}
                 </label>
-                {{ form.movement_type|add_class:"select select-bordered w-full" }}
+                {{ form.movement_type|add_class:"form-select" }}
             </div>
             
             <!-- Quantity -->
-            <div class="form-control mb-4">
-                <label class="label">
-                    <span class="label-text">{{ form.quantity.label }}</span>
+            <div class="mb-3">
+                <label class="form-label">
+                    {{ form.quantity.label }}
                 </label>
-                {{ form.quantity|add_class:"input input-bordered w-full" }}
+                {{ form.quantity|add_class:"form-control" }}
             </div>
             
             <!-- Lot number -->
-            <div class="form-control mb-4">
-                <label class="label">
-                    <span class="label-text">{{ form.lot_number.label }}</span>
+            <div class="mb-3">
+                <label class="form-label">
+                    {{ form.lot_number.label }}
                 </label>
-                {{ form.lot_number|add_class:"input input-bordered w-full" }}
+                {{ form.lot_number|add_class:"form-control" }}
             </div>
             
             <!-- Expiry date -->
-            <div class="form-control mb-4">
-                <label class="label">
-                    <span class="label-text">{{ form.expiry_date.label }}</span>
+            <div class="mb-3">
+                <label class="form-label">
+                    {{ form.expiry_date.label }}
                 </label>
-                {{ form.expiry_date|add_class:"input input-bordered w-full" }}
+                {{ form.expiry_date|add_class:"form-control" }}
             </div>
             
             <!-- Note -->
-            <div class="form-control mb-4">
-                <label class="label">
-                    <span class="label-text">{{ form.note.label }}</span>
+            <div class="mb-3">
+                <label class="form-label">
+                    {{ form.note.label }}
                 </label>
-                {{ form.note|add_class:"textarea textarea-bordered w-full" }}
+                {{ form.note|add_class:"form-control" }}
             </div>
             
             <!-- Submit buttons -->
-            <div class="modal-action">
-                <button type="submit" class="btn btn-primary">
-                    Add Movement Item
-                </button>
-                <button type="button" class="btn" 
+            <div class="d-flex justify-content-end gap-2">
+                <button type="button" class="btn btn-secondary" 
                     onclick="document.getElementById('modal-item-movement').close()">
                     Cancel
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    Add Movement Item
                 </button>
             </div>
         </form>
     {% else %}
         <div class="alert alert-warning">
             <p>No form or warehouse provided.</p>
-            <div class="modal-action">
-                <button type="button" class="btn" 
+            <div class="d-flex justify-content-end">
+                <button type="button" class="btn btn-secondary" 
                     onclick="document.getElementById('modal-item-movement').close()">
                     Cancel
                 </button>

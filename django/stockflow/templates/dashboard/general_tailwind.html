@@ -1,0 +1,242 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - StockFlow{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50">
+  <!-- Header -->
+  <div class="bg-white shadow">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between items-center py-6">
+        <div>
+          <h1 class="text-3xl font-bold text-gray-900">StockFlow Dashboard</h1>
+          <p class="text-gray-600">Welcome back, {{ user.username }}!</p>
+        </div>
+        <div class="flex space-x-4">
+          <form method="post" action="{% url 'logout' %}" class="inline">
+            {% csrf_token %}
+            <button type="submit" 
+                    class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition duration-200">
+              Logout
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    
+    <!-- Overview Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+      <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-center">
+          <div class="flex-shrink-0">
+            <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+              <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                      d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+              </svg>
+            </div>
+          </div>
+          <div class="ml-4">
+            <p class="text-sm font-medium text-gray-600">Items in Catalog</p>
+            <p class="text-2xl font-bold text-gray-900">{{ total_items }}</p>
+            <p class="text-sm text-green-600">{{ active_items }} active</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-center">
+          <div class="flex-shrink-0">
+            <div class="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+              <svg class="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                      d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+              </svg>
+            </div>
+          </div>
+          <div class="ml-4">
+            <p class="text-sm font-medium text-gray-600">Total Stock</p>
+            <p class="text-2xl font-bold text-gray-900">{{ total_available_stock|floatformat:0 }}</p>
+            <p class="text-sm text-blue-600">units available</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-center">
+          <div class="flex-shrink-0">
+            <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+              <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                      d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path>
+              </svg>
+            </div>
+          </div>
+          <div class="ml-4">
+            <p class="text-sm font-medium text-gray-600">Warehouses</p>
+            <p class="text-2xl font-bold text-gray-900">{{ total_warehouses }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Navigation -->
+    <div class="bg-white rounded-lg shadow mb-8">
+      <div class="px-6 py-4 border-b border-gray-200">
+        <h2 class="text-xl font-bold text-gray-900">Main Features</h2>
+      </div>
+      <div class="p-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          
+          <!-- Catalog Section -->
+          <div class="border border-gray-200 rounded-lg p-6">
+            <div class="flex items-center mb-4">
+              <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                        d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                </svg>
+              </div>
+              <h3 class="text-lg font-semibold text-gray-900">Product Catalog</h3>
+            </div>
+            <p class="text-gray-600 mb-4">Manage your product catalog, categories, and bill of materials.</p>
+            <div class="space-y-2">
+              <a href="{% url 'catalog:dashboard' %}" 
+                 class="quick-action indigo">
+                <h3 class="quick-action-title indigo">📊 Catalog Dashboard</h3>
+                <p class="quick-action-desc indigo">Detailed catalog management</p>
+              </a>
+              <a href="{% url 'catalog:item-list' %}" 
+                 class="block w-full text-left px-4 py-2 text-blue-700 bg-blue-50 rounded hover:bg-blue-100 transition duration-200">
+                View Items ({{ total_items }})
+              </a>
+              <a href="{% url 'catalog:category-list' %}" 
+                 class="block w-full text-left px-4 py-2 text-blue-700 bg-blue-50 rounded hover:bg-blue-100 transition duration-200">
+                Categories ({{ total_categories }})
+              </a>
+              <a href="{% url 'catalog:bom-list' %}" 
+                 class="block w-full text-left px-4 py-2 text-blue-700 bg-blue-50 rounded hover:bg-blue-100 transition duration-200">
+                Bill of Materials ({{ total_boms }})
+              </a>
+            </div>
+          </div>
+
+          <!-- Inventory Section -->
+          <div class="border border-gray-200 rounded-lg p-6">
+            <div class="flex items-center mb-4">
+              <div class="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center mr-3">
+                <svg class="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                        d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                </svg>
+              </div>
+              <h3 class="text-lg font-semibold text-gray-900">Inventory Management</h3>
+            </div>
+            <p class="text-gray-600 mb-4">Track stock levels, movements, and warehouse operations.</p>
+            <div class="space-y-2">
+              <a href="{% url 'inventory:dashboard' %}" 
+                 class="quick-action orange">
+                <h3 class="quick-action-title orange">📦 Inventory Dashboard</h3>
+                <p class="quick-action-desc orange">Stock & warehouse management</p>
+              </a>
+              <a href="{% url 'inventory:stock-index' %}" 
+                 class="block w-full text-left px-4 py-2 text-orange-700 bg-orange-50 rounded hover:bg-orange-100 transition duration-200">
+                Stock Overview
+              </a>
+              <a href="{% url 'inventory:stock-list' %}" 
+                 class="block w-full text-left px-4 py-2 text-orange-700 bg-orange-50 rounded hover:bg-orange-100 transition duration-200">
+                Stock List ({{ total_stock_records }} records)
+              </a>
+              {% comment %}
+              <a href="{% url 'inventory:warehouse-list' %}" 
+                 class="block w-full text-left px-4 py-2 text-orange-700 bg-orange-50 rounded hover:bg-orange-100 transition duration-200">
+                Warehouses ({{ total_warehouses }})
+              </a>
+              {% endcomment %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Activity Summary -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      
+      <!-- Recent Items -->
+      <div class="bg-white rounded-lg shadow">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h2 class="text-xl font-bold text-gray-900">Recently Added Items</h2>
+        </div>
+        <div class="p-6">
+          {% if recent_items %}
+            <div class="space-y-4">
+              {% for item in recent_items %}
+                <div class="flex items-center justify-between py-3 border-b border-gray-100">
+                  <div>
+                    <p class="font-medium text-gray-900">{{ item.sku_code }}</p>
+                    <p class="text-sm text-gray-600">{{ item.name }}</p>
+                    <p class="text-xs text-gray-500">{{ item.created_at|date:"M d, Y" }}</p>
+                  </div>
+                  <div class="text-right">
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
+                                 {% if item.status == 'ACTIVE' %}bg-green-100 text-green-800
+                                 {% elif item.status == 'DRAFT' %}bg-yellow-100 text-yellow-800
+                                 {% else %}bg-gray-100 text-gray-800{% endif %}">
+                      {{ item.get_status_display }}
+                    </span>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <p class="text-gray-500 text-center py-4">No recent items</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Low Stock Alerts -->
+      <div class="bg-white rounded-lg shadow">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h2 class="text-xl font-bold text-gray-900">Low Stock Alerts</h2>
+        </div>
+        <div class="p-6">
+          {% if low_stock_items %}
+            <div class="space-y-4">
+              {% for stock in low_stock_items %}
+                <div class="flex items-center justify-between py-3 border-b border-gray-100">
+                  <div>
+                    <p class="font-medium text-gray-900">{{ stock.item_sku.sku_code }}</p>
+                    <p class="text-sm text-gray-600">{{ stock.item_sku.name }}</p>
+                    <p class="text-xs text-gray-500">{{ stock.warehouse.name }}</p>
+                  </div>
+                  <div class="text-right">
+                    <p class="text-lg font-bold text-red-600">{{ stock.available_quantity|floatformat:0 }}</p>
+                    <p class="text-xs text-gray-500">{{ stock.item_sku.unit }}</p>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+            <div class="mt-4">
+              <a href="{% url 'inventory:stock-index' %}" 
+                 class="text-sm text-blue-600 hover:text-blue-800">
+                View all stock →
+              </a>
+            </div>
+          {% else %}
+            <div class="text-center py-8">
+              <svg class="mx-auto h-12 w-12 text-green-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+              <p class="text-gray-500">All stock levels are healthy!</p>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

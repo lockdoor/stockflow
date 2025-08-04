@@ -1,7 +1,24 @@
-<dialog id="{% if modal_id %}{{ modal_id }}{% else %}modal-form{% endif %}" class="modal">
-    <div id="{% if modal_id %}{{ modal_id }}-box{% else %}modal-form-box{% endif %}" class="modal-box">  
-        {% if form_partial %}
-            {% include form_partial %}
-        {% endif %}
+<!-- Bootstrap Modal -->
+<div class="modal fade" id="{% if modal_id %}{{ modal_id }}{% else %}modal-form{% endif %}" tabindex="-1" aria-labelledby="modalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalLabel">
+                    {% if modal_title %}
+                        {{ modal_title }}
+                    {% else %}
+                        Form
+                    {% endif %}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="{% if modal_id %}{{ modal_id }}-container{% else %}item-form-container{% endif %}">
+                    {% if form_partial %}
+                        {% include form_partial with is_modal=True %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
     </div>
-</dialog>
+</div>

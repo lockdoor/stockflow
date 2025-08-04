@@ -4,11 +4,11 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 from catalog.views.category_views import (
-    CategoryListView, CategoryIndexView, CategoryCreateView, CategoryUpdateView, CategoryDetailView
+    CategoryListView, CategoryCreateView, CategoryUpdateView, CategoryDetailView, CategoryDeleteView
 )
 
 from catalog.views.item_views import (
-    ItemListView, ItemIndexView, ItemCreateView, ItemUpdateView, ItemDetailView
+    ItemListView, ItemCreateView, ItemUpdateView, ItemDetailView
 )
 
 from catalog.views.item_bom_views import ItemAutocompleteView
@@ -25,10 +25,10 @@ app_name = 'catalog'
 urlpatterns = [
     path('dashboard/', catalog_dashboard_view, name='dashboard'),
     
-    path('items/', ItemIndexView.as_view(), name='item-index'),
-    path('items/list/', ItemListView.as_view(), name='item-list'),
-    path('items/create/', ItemCreateView.as_view(), name='item-create'),
-    path('items/<int:pk>/edit/', ItemUpdateView.as_view(), name='item-edit'),
+    # Full page forms (primary workflow)
+    path('items/new/', ItemCreateView.as_view(), name='item-form'),
+    path('items/<int:pk>/edit/', ItemUpdateView.as_view(), name='item-edit-form'),
+    path('items/', ItemListView.as_view(), name='item-list'),
     path('items/<int:pk>/detail/', ItemDetailView.as_view(), name='item-detail'),
     
     path('items-bom/<int:parent_id>/create', BomCreateView.as_view(), name='bom-create'),   
@@ -37,9 +37,10 @@ urlpatterns = [
     path('bom/<int:pk>/edit/', BomUpdateView.as_view(), name='bom-edit'),
     path('bom/<int:pk>/delete/', BomDeleteView.as_view(), name='bom-delete'),
     
-    path('categories/', CategoryIndexView.as_view(), name='category-index'),
-    path('categories/list/', CategoryListView.as_view(), name='category-list'),
+    path('categories/', CategoryListView.as_view(), name='category-list'),
+    # path('categories/list/', CategoryListView.as_view(), name='category-list'),
     path('categories/create/', CategoryCreateView.as_view(), name='category-create'),
     path('categories/<int:pk>/edit/', CategoryUpdateView.as_view(), name='category-edit'),
     path('categories/<int:pk>/', CategoryDetailView.as_view(), name='category-detail'),
+    path('categories/<int:pk>/delete/', CategoryDeleteView.as_view(), name='category-delete'),
 ]  + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

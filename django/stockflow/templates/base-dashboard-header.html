@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="main-content">
+    <!-- Dashboard Header -->
+    <div class="dashboard-header">
+        <div class="container-fluid">
+            <div class="d-flex justify-content-between align-items-center py-4">
+                <div>
+                    {% include 'shared/breadcrumb.html' %}
+                    {% block page_title %}
+                    <h1 class="h2 mb-1">{% block title_text %}Page Title{% endblock %}</h1>
+                    <p class="text-muted mb-0">{% block subtitle_text %}Page description{% endblock %}</p>
+                    {% endblock %}
+                </div>
+                <div class="d-flex gap-2">
+                    {% block header_actions %}
+                    <!-- Default header actions -->
+                    {% endblock %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="container-fluid py-4">
+        {% block dashboard_content %}
+        <!-- Page specific content -->
+        {% endblock %}
+    </div>
+</div>
+{% endblock %}

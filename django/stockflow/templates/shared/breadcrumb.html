@@ -1,0 +1,30 @@
+{% comment %}
+------------------------------------------------------------------------------
+  shared/breadcrumb.html
+
+  Description:
+    - Reusable breadcrumb component 
+    - Auto-generated from context processor
+    - Consistent styling across all pages
+
+  Usage:
+    - {% include 'shared/breadcrumb.html' %}
+    - No additional context needed (auto from context processor)
+------------------------------------------------------------------------------
+{% endcomment %}
+
+{% if breadcrumb_items %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb mb-1">
+        {% for item in breadcrumb_items %}
+            <li class="breadcrumb-item{% if item.active %} active{% endif %}">
+                {% if item.url and not item.active %}
+                    <a href="{% url item.url %}">{{ item.name }}</a>
+                {% else %}
+                    {{ item.name }}
+                {% endif %}
+            </li>
+        {% endfor %}
+    </ol>
+</nav>
+{% endif %}

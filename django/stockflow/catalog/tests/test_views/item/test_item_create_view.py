@@ -37,7 +37,7 @@ class ItemCreateViewTest(TestCase):
         )
         
         # URL for creating items
-        self.create_url = reverse('catalog:item-create')
+        self.create_url = reverse('catalog:item-form')
         
         # Valid form data
         self.valid_item_data = {
@@ -79,7 +79,6 @@ class ItemCreateViewTest(TestCase):
         # Should return success
         self.assertEqual(response.status_code, 200)
         self.assertIsInstance(response.context['form'], ItemForm)
-        self.assertTemplateUsed(response, 'catalog/item/partials/item-form.html')
     
     def test_create_item_success(self):
         """Test that an item can be created successfully"""
@@ -90,10 +89,11 @@ class ItemCreateViewTest(TestCase):
         valid_data = self.valid_item_data.copy()
         valid_data['status'] = ItemSKU.Status.DRAFT
         
-        response = self.client.post(self.create_url, valid_data, HTTP_HX_REQUEST='true')
+        response = self.client.post(self.create_url, valid_data)
         
-        # Should succeed
-        self.assertEqual(response.status_code, 200)
+        # Should redirect to item list after successful creation (302)
+        self.assertEqual(response.status_code, 302, "Should redirect after successful creation")
+        self.assertRedirects(response, reverse('catalog:item-list'))
         
         # Verify item was created in database
         self.assertTrue(ItemSKU.objects.filter(sku_code='TEST-001').exists())
@@ -110,9 +110,9 @@ class ItemCreateViewTest(TestCase):
         # Post invalid data (missing required field)
         invalid_data = self.valid_item_data.copy()
         invalid_data.pop('name')
-        response = self.client.post(self.create_url, invalid_data, HTTP_HX_REQUEST='true')
+        response = self.client.post(self.create_url, invalid_data)
         
-        # Should return form with errors
+        # Should return form with errors (no redirect on validation error)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "This field is required")
         self.assertContains(response, "Item name is required")
@@ -130,9 +130,9 @@ class ItemCreateViewTest(TestCase):
         invalid_data['type'] = ItemSKU.Type.RAW
         invalid_data['status'] = ItemSKU.Status.DRAFT
         
-        response = self.client.post(self.create_url, invalid_data, HTTP_HX_REQUEST='true')
+        response = self.client.post(self.create_url, invalid_data)
         
-        # Should return form with errors
+        # Should return form with errors (no redirect on validation error)
         self.assertEqual(response.status_code, 200)
         
         # Check for the business logic error message
@@ -170,13 +170,3 @@ class ItemCreateViewTest(TestCase):
         
         # Verify no item was created
         self.assertFalse(ItemSKU.objects.filter(sku_code='TEST-001').exists())
-    
-    def test_htmx_response_handling(self):
-        """Test proper HTMX response handling"""
-        # Log in with privileged user
-        self.client.login(username='testuser', password='testpassword')
-        
-        # Test HTMX request
-        response = self.client.get(self.create_url, HTTP_HX_REQUEST='true')
-        self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, 'catalog/item/partials/item-form.html')

@@ -23,13 +23,23 @@ def dashboard_view(request):
         
         # Inventory Statistics
         'total_warehouses': Warehouse.objects.count(),
+        'active_warehouses': Warehouse.objects.filter(is_active=True).count(),
         'total_stock_records': Stock.objects.filter(available_quantity__gt=0).count(),
+        'total_movements': StockMovement.objects.count(),
+        'total_users': user.__class__.objects.count(),
+        'active_users': user.__class__.objects.filter(is_active=True).count(),
         'total_available_stock': Stock.objects.aggregate(
             total=Sum('available_quantity'))['total'] or 0,
         'recent_movements': StockMovement.objects.filter(
             status='COMPLETED').order_by('-created_at')[:5],
         'pending_movements': StockMovement.objects.filter(
             status='DRAFT').count(),
+        
+        # Stock by warehouse for dropdown selections
+        'stock_by_warehouse': Warehouse.objects.filter(is_active=True).annotate(
+            total_quantity=Sum('stocks__available_quantity'),
+            items_count=Count('stocks__item_sku', distinct=True)
+        ).order_by('name'),
         
         # Low stock alerts (items with less than 10 units)
         'low_stock_items': Stock.objects.filter(

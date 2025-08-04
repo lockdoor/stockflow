@@ -1,0 +1,26 @@
+{% comment %}
+Statistics Card Component
+Usage: {% include 'components/stats_card.html' with icon_color="blue" icon_svg="..." label="Total Items" value="123" meta="5 added today" meta_color="success" %}
+{% endcomment %}
+
+<div class="stats-card">
+  <div class="stats-card-content">
+    <div class="stats-card-icon {{ icon_color|default:'blue' }}">
+      {% if icon_svg %}
+        {{ icon_svg|safe }}
+      {% else %}
+        <!-- Default icon if none provided -->
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h2a2 2 0 01-2-2z"></path>
+        </svg>
+      {% endif %}
+    </div>
+    <div>
+      <p class="stats-card-label">{{ label }}</p>
+      <p class="stats-card-value">{{ value }}</p>
+      {% if meta %}
+        <p class="stats-card-meta {{ meta_color|default:'info' }}">{{ meta }}</p>
+      {% endif %}
+    </div>
+  </div>
+</div>

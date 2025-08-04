@@ -187,29 +187,11 @@
                 </a>
               </div>
               <div class="col-12">
-                <div class="dropdown">
-                  <button class="btn btn-soft-info w-100 text-start dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                    <i class="bi bi-arrow-left-right me-2"></i>
-                    <strong>Stock Movement</strong>
-                    <small class="text-muted d-block">Select warehouse first</small>
-                  </button>
-                  <ul class="dropdown-menu">
-                    {% if stock_by_warehouse %}
-                      {% for warehouse in stock_by_warehouse %}
-                      <li>
-                        <a class="dropdown-item" href="{% url 'inventory:stock-movement-create' %}?warehouse_id={{ warehouse.id }}">
-                          <div class="d-flex justify-content-between">
-                            <span>{{ warehouse.name }}</span>
-                            <small class="text-muted">{{ warehouse.items_count }} items</small>
-                          </div>
-                        </a>
-                      </li>
-                      {% endfor %}
-                    {% else %}
-                      <li><span class="dropdown-item-text text-muted">No warehouses available</span></li>
-                    {% endif %}
-                  </ul>
-                </div>
+                <a href="{% url 'inventory:stock-movement-create' %}" class="btn btn-soft-info w-100 text-start">
+                  <i class="bi bi-arrow-left-right me-2"></i>
+                  <strong>Stock Movement</strong>
+                  <small class="text-muted d-block">Record stock transactions</small>
+                </a>
               </div>
               <div class="col-12">
                 <a href="{% url 'catalog:item-list' %}" class="btn btn-soft-warning w-100 text-start">
@@ -259,24 +241,9 @@
                 </div>
               {% endfor %}
               <div class="mt-3">
-                <div class="dropdown">
-                  <button class="btn btn-sm btn-soft-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                    View movements by warehouse
-                  </button>
-                  <ul class="dropdown-menu">
-                    {% if stock_by_warehouse %}
-                      {% for warehouse in stock_by_warehouse %}
-                      <li>
-                        <a class="dropdown-item" href="{% url 'inventory:stock-movement-list' %}?warehouse={{ warehouse.id }}">
-                          {{ warehouse.name }}
-                        </a>
-                      </li>
-                      {% endfor %}
-                    {% else %}
-                      <li><span class="dropdown-item-text text-muted">No warehouses available</span></li>
-                    {% endif %}
-                  </ul>
-                </div>
+                <a href="{% url 'inventory:stock-movement-list' %}" class="btn btn-sm btn-soft-primary">
+                  View all movements →
+                </a>
               </div>
             {% else %}
               <div class="text-center py-4">

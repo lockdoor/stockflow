@@ -82,9 +82,9 @@ class ItemUpdateViewTest(TestCase):
         )
         
         # URLs for testing
-        self.raw_item_url = reverse('catalog:item-edit', kwargs={'pk': self.raw_item.pk})
-        self.product_item_url = reverse('catalog:item-edit', kwargs={'pk': self.product_item.pk})
-        self.package_item_url = reverse('catalog:item-edit', kwargs={'pk': self.package_item.pk})
+        self.raw_item_url = reverse('catalog:item-edit-form', kwargs={'pk': self.raw_item.pk})
+        self.product_item_url = reverse('catalog:item-edit-form', kwargs={'pk': self.product_item.pk})
+        self.package_item_url = reverse('catalog:item-edit-form', kwargs={'pk': self.package_item.pk})
         
         # Valid update data
         self.valid_update_data = {
@@ -126,8 +126,8 @@ class ItemUpdateViewTest(TestCase):
         response = self.client.get(self.product_item_url)
         
         # Should return success
-        self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, 'catalog/item/partials/item-form.html')
+        self.assertEqual(response.status_code, 200, "Should return 200 OK for form view")
+        self.assertTemplateUsed(response, 'catalog/item/item-form.html')
         
         # Check that form is pre-filled with item data
         self.assertContains(response, 'Product Item')  # Item name
@@ -146,7 +146,8 @@ class ItemUpdateViewTest(TestCase):
         )
         
         # Should succeed
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 302, "Should redirect after successful update")
+        self.assertRedirects(response, reverse('catalog:item-list'))
         
         # Verify item was updated in database
         self.product_item.refresh_from_db()

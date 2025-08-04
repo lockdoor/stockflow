@@ -3,12 +3,12 @@
 {% block title %}Catalog Dashboard - StockFlow{% endblock %}
 
 {% block content %}
-<div>
+<div class="main-content">
+  <!-- Header -->
   <div class="dashboard-header">
     <div class="container-fluid">
       <div class="d-flex justify-content-between align-items-center py-4">
         <div>
-          {% include 'shared/breadcrumb.html' %}
           <h1 class="h2 mb-1">Catalog Dashboard</h1>
           <p class="text-muted mb-0">Product Catalog & Category Management</p>
         </div>
@@ -16,7 +16,7 @@
           <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">
             <i class="bi bi-house me-1"></i>Main Dashboard
           </a>
-          <a href="{% url 'catalog:item-form' %}" class="btn btn-primary">
+          <a href="{% url 'catalog:item-create' %}" class="btn btn-primary">
             <i class="bi bi-plus-circle me-1"></i>Add New Item
           </a>
         </div>
@@ -101,8 +101,8 @@
       </div>
       <div class="card-body">
         <div class="row g-3">
-          <div class="col-sm-6 col-lg-4">
-            <a href="{% url 'catalog:item-form' %}" class="quick-action action-primary">
+          <div class="col-sm-6 col-lg-3">
+            <a href="{% url 'catalog:item-create' %}" class="quick-action action-primary">
               <div class="d-flex align-items-center">
                 <i class="bi bi-plus-circle me-3 fs-4 text-primary"></i>
                 <div>
@@ -113,7 +113,7 @@
             </a>
           </div>
 
-          <div class="col-sm-6 col-lg-4">
+          <div class="col-sm-6 col-lg-3">
             <a href="{% url 'catalog:category-create' %}" class="quick-action action-success">
               <div class="d-flex align-items-center">
                 <i class="bi bi-folder-plus me-3 fs-4 text-success"></i>
@@ -125,7 +125,19 @@
             </a>
           </div>
 
-          <div class="col-sm-6 col-lg-4">
+          <div class="col-sm-6 col-lg-3">
+            <a href="{% url 'catalog:bom-create' %}" class="quick-action action-warning">
+              <div class="d-flex align-items-center">
+                <i class="bi bi-diagram-3-fill me-3 fs-4 text-warning"></i>
+                <div>
+                  <h6 class="text-warning mb-1">New BOM</h6>
+                  <small class="text-warning">Create bill of materials</small>
+                </div>
+              </div>
+            </a>
+          </div>
+
+          <div class="col-sm-6 col-lg-3">
             <a href="{% url 'catalog:item-list' %}" class="quick-action action-info">
               <div class="d-flex align-items-center">
                 <i class="bi bi-list-ul me-3 fs-4 text-info"></i>
@@ -226,7 +238,7 @@
                 </div>
               {% endfor %}
               <div class="mt-3">
-                <a href="{% url 'catalog:item-form' %}" class="btn btn-sm btn-soft-primary">
+                <a href="{% url 'catalog:item-create' %}" class="btn btn-sm btn-soft-primary">
                   <i class="bi bi-plus-circle me-1"></i>Add Item
                 </a>
               </div>
@@ -234,7 +246,7 @@
               <div class="text-center py-4">
                 <i class="bi bi-box-seam text-muted fs-1 mb-3 d-block"></i>
                 <p class="text-muted mb-3">No items yet</p>
-                <a href="{% url 'catalog:item-form' %}" class="btn btn-soft-primary">
+                <a href="{% url 'catalog:item-create' %}" class="btn btn-soft-primary">
                   Create First Item
                 </a>
               </div>
@@ -251,10 +263,10 @@
           <div class="card-header d-flex justify-content-between align-items-center">
             <h5 class="card-title mb-0">Bills of Materials</h5>
             <div class="d-flex gap-2">
-              <a href="{#% url 'catalog:bom-list' %#}" class="btn btn-sm btn-soft-primary">
+              <a href="{% url 'catalog:bom-list' %}" class="btn btn-sm btn-soft-primary">
                 View All BOMs
               </a>
-              <a href="{#% url 'catalog:bom-create' %#}" class="btn btn-sm btn-primary">
+              <a href="{% url 'catalog:bom-create' %}" class="btn btn-sm btn-primary">
                 <i class="bi bi-plus-circle me-1"></i>Create BOM
               </a>
             </div>
@@ -286,7 +298,7 @@
               <div class="text-center py-4">
                 <i class="bi bi-diagram-3 text-muted fs-1 mb-3 d-block"></i>
                 <p class="text-muted mb-3">No BOMs created yet</p>
-                <a href="{#% url 'catalog:bom-create' %#}" class="btn btn-soft-primary">
+                <a href="{% url 'catalog:bom-create' %}" class="btn btn-soft-primary">
                   Create First BOM
                 </a>
               </div>

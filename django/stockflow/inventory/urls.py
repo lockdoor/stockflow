@@ -2,6 +2,8 @@ from django.urls import path
 from django.conf import settings
 from django.conf.urls.static import static
 
+from inventory.views.dashboard import inventory_dashboard_view
+
 from inventory.views.warehouse_views import (
     WarehouseListView, WarehouseDetailView, 
     WarehouseCreateView, WarehouseUpdateView,
@@ -34,6 +36,9 @@ from inventory.views.stock_view import (
 app_name = 'inventory'
 
 urlpatterns = [
+    # Dashboard
+    path('dashboard/', inventory_dashboard_view, name='dashboard'),
+    
     # Warehouse management
     path('warehouses/', 
          WarehouseIndexView.as_view(), 

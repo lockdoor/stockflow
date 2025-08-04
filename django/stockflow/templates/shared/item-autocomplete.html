@@ -36,9 +36,9 @@ Features:
 <!-- ============================================================================ -->
 <!-- Item Autocomplete Component -->
 <!-- ============================================================================ -->
-<div class="form-control w-full mb-4">
-    <label for="item-search" class="label">{{ field_label|default:"Component" }}:</label>
-    <input type="text" id="item-search" name="q" class="input input-bordered w-full" placeholder="Search..."
+<div class="mb-3">
+    <label for="item-search" class="form-label">{{ field_label|default:"Component" }}:</label>
+    <input type="text" id="item-search" name="q" class="form-control" placeholder="Search..."
         data-name="" hx-get="{% url autocomplete_url|default:'catalog:item-bom-autocomplete' %}" 
         {% if category %}hx-include="#category"{% endif %}
         hx-swap="innerHTML" hx-target="#autocomplete-results" hx-trigger="keyup changed delay:300ms"
@@ -46,9 +46,9 @@ Features:
 </div>
 <div id="autocomplete-results"></div>
 {% if category %}
-<div class="form-control w-full">
-    <label class="label" for="category">Category: </label>
-    <select class="select input input-bordered w-full" name="category" id="category" {% if form.instance.pk %}disabled{% endif %}>
+<div class="mb-3">
+    <label class="form-label" for="category">Category:</label>
+    <select class="form-select" name="category" id="category" {% if form.instance.pk %}disabled{% endif %}>
         <option selected value="0">All Category</option>
         {% if category %}
         {% for cat in category %}

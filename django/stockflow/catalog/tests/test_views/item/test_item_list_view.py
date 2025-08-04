@@ -103,9 +103,6 @@ class ItemListViewTest(TestCase):
         items = list(response.context['items'])
         self.assertEqual(len(items), 3)
         
-        # Check if the view uses the correct template
-        self.assertTemplateUsed(response, 'catalog/item/partials/item-list.html')
-        
         # Check if items are sorted by created_at in descending order (newest first)
         self.assertEqual(items[0].sku_code, self.package_item.sku_code)
         self.assertEqual(items[1].sku_code, self.product_item.sku_code)

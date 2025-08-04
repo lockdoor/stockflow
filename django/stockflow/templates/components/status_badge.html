@@ -1,0 +1,24 @@
+{% comment %}
+Status Badge Component
+Usage: {% include 'components/status_badge.html' with status="ACTIVE" %}
+{% endcomment %}
+
+{% if status == 'ACTIVE' %}
+  <span class="status-badge success">Active</span>
+{% elif status == 'DRAFT' %}
+  <span class="status-badge warning">Draft</span>
+{% elif status == 'INACTIVE' %}
+  <span class="status-badge neutral">Inactive</span>
+{% elif status == 'COMPLETED' %}
+  <span class="status-badge success">Completed</span>
+{% elif status == 'PROCESSING' %}
+  <span class="status-badge info">Processing</span>
+{% elif status == 'PENDING' %}
+  <span class="status-badge warning">Pending</span>
+{% elif status == 'FAILED' %}
+  <span class="status-badge danger">Failed</span>
+{% elif status == 'CANCELLED' %}
+  <span class="status-badge neutral">Cancelled</span>
+{% else %}
+  <span class="status-badge neutral">{{ status|default:"Unknown" }}</span>
+{% endif %}

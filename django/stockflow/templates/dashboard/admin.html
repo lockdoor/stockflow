@@ -3,25 +3,23 @@
 {% block title %}Admin Dashboard - StockFlow{% endblock %}
 
 {% block content %}
-<div class="min-h-screen bg-gray-50">
+<div class="main-content">
   <!-- Header -->
-  <div class="bg-white shadow">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="flex justify-between items-center py-6">
+  <div class="dashboard-header">
+    <div class="container-fluid">
+      <div class="d-flex justify-content-between align-items-center py-4">
         <div>
-          <h1 class="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-          <p class="text-gray-600">Welcome back, {{ user.username }}!</p>
+          <h1 class="h2 mb-1">Admin Dashboard</h1>
+          <p class="text-muted mb-0">Welcome back, {{ user.username }}!</p>
         </div>
-        <div class="flex space-x-4">
-          <a href="{% url 'admin:index' %}" 
-             class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition duration-200">
-            Django Admin
+        <div class="d-flex gap-2">
+          <a href="{% url 'admin:index' %}" class="btn btn-primary">
+            <i class="bi bi-gear me-1"></i>Django Admin
           </a>
-          <form method="post" action="{% url 'logout' %}" class="inline">
+          <form method="post" action="{% url 'logout' %}" class="d-inline">
             {% csrf_token %}
-            <button type="submit" 
-                    class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition duration-200">
-              Logout
+            <button type="submit" class="btn btn-outline-danger">
+              <i class="bi bi-box-arrow-right me-1"></i>Logout
             </button>
           </form>
         </div>
@@ -30,252 +28,305 @@
   </div>
 
   <!-- Main Content -->
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <div class="container-fluid py-8">
     
     <!-- Statistics Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <div class="row g-4 mb-8">
       <!-- Catalog Stats -->
-      <div class="bg-white rounded-lg shadow p-6">
-        <div class="flex items-center">
-          <div class="flex-shrink-0">
-            <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-              <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                      d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
-              </svg>
+      <div class="col-sm-6 col-lg-3">
+        <div class="stats-card">
+          <div class="d-flex align-items-center">
+            <div class="stats-card-icon bg-primary-light">
+              <i class="bi bi-box-seam"></i>
             </div>
-          </div>
-          <div class="ml-4">
-            <p class="text-sm font-medium text-gray-600">Total Items</p>
-            <p class="text-2xl font-bold text-gray-900">{{ total_items }}</p>
-            <p class="text-sm text-green-600">{{ active_items }} active</p>
+            <div>
+              <p class="text-muted small mb-1">Total Items</p>
+              <h3 class="h4 mb-1">{{ total_items }}</h3>
+              <small class="text-success">{{ active_items }} active</small>
+            </div>
           </div>
         </div>
       </div>
 
-      <div class="bg-white rounded-lg shadow p-6">
-        <div class="flex items-center">
-          <div class="flex-shrink-0">
-            <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-              <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                      d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
-              </svg>
+      <!-- Inventory Stats -->
+      <div class="col-sm-6 col-lg-3">
+        <div class="stats-card">
+          <div class="d-flex align-items-center">
+            <div class="stats-card-icon bg-success-light">
+              <i class="bi bi-building"></i>
             </div>
-          </div>
-          <div class="ml-4">
-            <p class="text-sm font-medium text-gray-600">Categories</p>
-            <p class="text-2xl font-bold text-gray-900">{{ total_categories }}</p>
+            <div>
+              <p class="text-muted small mb-1">Warehouses</p>
+              <h3 class="h4 mb-1">{{ total_warehouses }}</h3>
+              <small class="text-info">{{ active_warehouses }} active</small>
+            </div>
           </div>
         </div>
       </div>
 
-      <div class="bg-white rounded-lg shadow p-6">
-        <div class="flex items-center">
-          <div class="flex-shrink-0">
-            <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-              <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                      d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
-              </svg>
+      <!-- Stock Records -->
+      <div class="col-sm-6 col-lg-3">
+        <div class="stats-card">
+          <div class="d-flex align-items-center">
+            <div class="stats-card-icon bg-warning-light">
+              <i class="bi bi-stack"></i>
             </div>
-          </div>
-          <div class="ml-4">
-            <p class="text-sm font-medium text-gray-600">BOMs</p>
-            <p class="text-2xl font-bold text-gray-900">{{ total_boms }}</p>
+            <div>
+              <p class="text-muted small mb-1">Stock Records</p>
+              <h3 class="h4 mb-1">{{ total_stock_records }}</h3>
+              <small class="text-warning">{{ low_stock_items }} low stock</small>
+            </div>
           </div>
         </div>
       </div>
 
-      <div class="bg-white rounded-lg shadow p-6">
-        <div class="flex items-center">
-          <div class="flex-shrink-0">
-            <div class="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
-              <svg class="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                      d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
-              </svg>
+      <!-- User Management -->
+      <div class="col-sm-6 col-lg-3">
+        <div class="stats-card">
+          <div class="d-flex align-items-center">
+            <div class="stats-card-icon bg-info-light">
+              <i class="bi bi-people"></i>
             </div>
-          </div>
-          <div class="ml-4">
-            <p class="text-sm font-medium text-gray-600">Stock Records</p>
-            <p class="text-2xl font-bold text-gray-900">{{ total_stock_records }}</p>
-            <p class="text-sm text-blue-600">{{ total_available_stock|floatformat:0 }} units</p>
+            <div>
+              <p class="text-muted small mb-1">Total Users</p>
+              <h3 class="h4 mb-1">{{ total_users }}</h3>
+              <small class="text-success">{{ active_users }} active</small>
+            </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Quick Actions -->
-    <div class="bg-white rounded-lg shadow mb-8">
-      <div class="px-6 py-4 border-b border-gray-200">
-        <h2 class="text-xl font-bold text-gray-900">Quick Actions</h2>
+    <!-- Context Navigation -->
+    <div class="dashboard-card mb-8">
+      <div class="card-header">
+        <h4 class="card-title mb-0">Application Contexts</h4>
       </div>
-      <div class="p-6">
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-          <!-- Context Dashboards -->
-          <a href="{% url 'catalog:dashboard' %}" 
-             class="block p-4 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition duration-200">
-            <h3 class="font-semibold text-indigo-900">Catalog Dashboard</h3>
-            <p class="text-sm text-indigo-700">Product management hub</p>
-          </a>
-          
-          <!-- Catalog Actions -->
-          <a href="{% url 'catalog:item-list' %}" 
-             class="block p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition duration-200">
-            <h3 class="font-semibold text-blue-900">Manage Items</h3>
-            <p class="text-sm text-blue-700">View and edit item catalog</p>
-          </a>
-          
-          <a href="{% url 'catalog:category-list' %}" 
-             class="block p-4 bg-green-50 rounded-lg hover:bg-green-100 transition duration-200">
-            <h3 class="font-semibold text-green-900">Categories</h3>
-            <p class="text-sm text-green-700">Manage item categories</p>
-          </a>
-          
-          {% comment %}
-          <a href="{% url 'catalog:bom-list' %}" 
-             class="block p-4 bg-purple-50 rounded-lg hover:bg-purple-100 transition duration-200">
-            <h3 class="font-semibold text-purple-900">BOMs</h3>
-            <p class="text-sm text-purple-700">Bill of Materials</p>
-          </a>
-          {% endcomment %}
-          
-          <!-- Inventory Actions -->
-          <a href="{% url 'inventory:stock-index' %}" 
-             class="block p-4 bg-orange-50 rounded-lg hover:bg-orange-100 transition duration-200">
-            <h3 class="font-semibold text-orange-900">Stock Overview</h3>
-            <p class="text-sm text-orange-700">View stock levels</p>
-          </a>
+      <div class="card-body">
+        <div class="row g-4">
+          <!-- Catalog Context -->
+          <div class="col-md-4">
+            <a href="{% url 'catalog:dashboard' %}" class="quick-action action-primary">
+              <div class="d-flex align-items-center">
+                <i class="bi bi-collection me-3 fs-3 text-primary"></i>
+                <div>
+                  <h5 class="text-primary mb-1">Catalog</h5>
+                  <p class="text-primary small mb-2">Item & BOM Management</p>
+                  <div class="row text-center">
+                    <div class="col-6">
+                      <small class="text-muted d-block">Items</small>
+                      <strong class="text-primary">{{ total_items }}</strong>
+                    </div>
+                    <div class="col-6">
+                      <small class="text-muted d-block">Categories</small>
+                      <strong class="text-primary">{{ total_categories }}</strong>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </a>
+          </div>
+
+          <!-- Inventory Context -->
+          <div class="col-md-4">
+            <a href="{% url 'inventory:dashboard' %}" class="quick-action action-success">
+              <div class="d-flex align-items-center">
+                <i class="bi bi-boxes me-3 fs-3 text-success"></i>
+                <div>
+                  <h5 class="text-success mb-1">Inventory</h5>
+                  <p class="text-success small mb-2">Stock & Warehouse Management</p>
+                  <div class="row text-center">
+                    <div class="col-6">
+                      <small class="text-muted d-block">Warehouses</small>
+                      <strong class="text-success">{{ total_warehouses }}</strong>
+                    </div>
+                    <div class="col-6">
+                      <small class="text-muted d-block">Stock Records</small>
+                      <strong class="text-success">{{ total_stock_records }}</strong>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </a>
+          </div>
+
+          <!-- Production Context (Coming Soon) -->
+          <div class="col-md-4">
+            <div class="quick-action action-warning" style="opacity: 0.6;">
+              <div class="d-flex align-items-center">
+                <i class="bi bi-gear-fill me-3 fs-3 text-warning"></i>
+                <div>
+                  <h5 class="text-warning mb-1">Production</h5>
+                  <p class="text-warning small mb-2">Manufacturing & Work Orders</p>
+                  <div class="text-center">
+                    <small class="text-muted">Coming Soon</small>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- Content Grid -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-      
-      <!-- Recent Stock Movements -->
-      <div class="bg-white rounded-lg shadow">
-        <div class="px-6 py-4 border-b border-gray-200">
-          <h2 class="text-xl font-bold text-gray-900">Recent Stock Movements</h2>
+    <!-- Quick Actions & Recent Activity -->
+    <div class="row g-4">
+      <!-- Quick Actions -->
+      <div class="col-lg-6">
+        <div class="dashboard-card">
+          <div class="card-header">
+            <h5 class="card-title mb-0">Quick Actions</h5>
+          </div>
+          <div class="card-body">
+            <div class="row g-3">
+              <div class="col-12">
+                <a href="{% url 'catalog:item-form' %}" class="btn btn-soft-primary w-100 text-start">
+                  <i class="bi bi-plus-circle me-2"></i>
+                  <strong>Create New Item</strong>
+                  <small class="text-muted d-block">Add items to catalog</small>
+                </a>
+              </div>
+              <div class="col-12">
+                <a href="{% url 'inventory:warehouse-create' %}" class="btn btn-soft-success w-100 text-start">
+                  <i class="bi bi-building-add me-2"></i>
+                  <strong>Create Warehouse</strong>
+                  <small class="text-muted d-block">Set up new storage location</small>
+                </a>
+              </div>
+              <div class="col-12">
+                <div class="dropdown">
+                  <button class="btn btn-soft-info w-100 text-start dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    <i class="bi bi-arrow-left-right me-2"></i>
+                    <strong>Stock Movement</strong>
+                    <small class="text-muted d-block">Select warehouse first</small>
+                  </button>
+                  <ul class="dropdown-menu">
+                    {% if stock_by_warehouse %}
+                      {% for warehouse in stock_by_warehouse %}
+                      <li>
+                        <a class="dropdown-item" href="{% url 'inventory:stock-movement-create' warehouse.id %}">
+                          <div class="d-flex justify-content-between">
+                            <span>{{ warehouse.name }}</span>
+                            <small class="text-muted">{{ warehouse.items_count }} items</small>
+                          </div>
+                        </a>
+                      </li>
+                      {% endfor %}
+                    {% else %}
+                      <li><span class="dropdown-item-text text-muted">No warehouses available</span></li>
+                    {% endif %}
+                  </ul>
+                </div>
+              </div>
+              <div class="col-12">
+                <a href="{% url 'admin:index' %}" class="btn btn-soft-warning w-100 text-start">
+                  <i class="bi bi-gear me-2"></i>
+                  <strong>System Administration</strong>
+                  <small class="text-muted d-block">Manage users & system settings</small>
+                </a>
+              </div>
+            </div>
+          </div>
         </div>
-        <div class="p-6">
-          {% if recent_movements %}
-            <div class="space-y-4">
+      </div>
+
+      <!-- Recent Activity -->
+      <div class="col-lg-6">
+        <div class="dashboard-card">
+          <div class="card-header">
+            <h5 class="card-title mb-0">Recent Activity</h5>
+          </div>
+          <div class="card-body">
+            {% if recent_movements %}
               {% for movement in recent_movements %}
-                <div class="flex items-center justify-between py-3 border-b border-gray-100">
-                  <div>
-                    <p class="font-medium text-gray-900">Movement #{{ movement.id }}</p>
-                    <p class="text-sm text-gray-600">{{ movement.warehouse.name }}</p>
-                    <p class="text-xs text-gray-500">{{ movement.created_at|date:"M d, Y H:i" }}</p>
-                  </div>
-                  <div class="text-right">
-                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
-                                 {% if movement.status == 'COMPLETED' %}bg-green-100 text-green-800
-                                 {% elif movement.status == 'PROCESSING' %}bg-yellow-100 text-yellow-800
-                                 {% else %}bg-gray-100 text-gray-800{% endif %}">
-                      {{ movement.get_status_display }}
-                    </span>
-                  </div>
-                </div>
-              {% endfor %}
-            </div>
-          {% else %}
-            <p class="text-gray-500 text-center py-4">No recent movements</p>
-          {% endif %}
-          
-          {% if pending_movements > 0 %}
-            <div class="mt-4 p-3 bg-yellow-50 rounded-lg">
-              <p class="text-sm text-yellow-800">
-                <strong>{{ pending_movements }}</strong> pending movements need attention
-              </p>
-            </div>
-          {% endif %}
-        </div>
-      </div>
-
-      <!-- Low Stock Alerts -->
-      <div class="bg-white rounded-lg shadow">
-        <div class="px-6 py-4 border-b border-gray-200">
-          <h2 class="text-xl font-bold text-gray-900">Low Stock Alerts</h2>
-        </div>
-        <div class="p-6">
-          {% if low_stock_items %}
-            <div class="space-y-4">
-              {% for stock in low_stock_items %}
-                <div class="flex items-center justify-between py-3 border-b border-gray-100">
-                  <div>
-                    <p class="font-medium text-gray-900">{{ stock.item_sku.sku_code }}</p>
-                    <p class="text-sm text-gray-600">{{ stock.item_sku.name }}</p>
-                    <p class="text-xs text-gray-500">{{ stock.warehouse.name }}</p>
-                  </div>
-                  <div class="text-right">
-                    <p class="text-lg font-bold text-red-600">{{ stock.available_quantity|floatformat:0 }}</p>
-                    <p class="text-xs text-gray-500">{{ stock.item_sku.unit }}</p>
+                <div class="movement-item">
+                  <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                      <h6 class="mb-1">
+                        <i class="bi bi-arrow-right text-muted me-1"></i>
+                        Movement #{{ movement.id }}
+                      </h6>
+                      <p class="text-muted small mb-1">{{ movement.warehouse.name }}</p>
+                      <small class="text-muted">{{ movement.created_at|timesince }} ago</small>
+                    </div>
+                    <div class="text-end">
+                      {% if movement.status == 'COMPLETED' %}
+                        <span class="status-badge status-completed">{{ movement.get_status_display }}</span>
+                      {% elif movement.status == 'PROCESSING' %}
+                        <span class="status-badge status-processing">{{ movement.get_status_display }}</span>
+                      {% elif movement.status == 'DRAFT' %}
+                        <span class="status-badge status-draft">{{ movement.get_status_display }}</span>
+                      {% elif movement.status == 'FAILED' %}
+                        <span class="status-badge status-failed">{{ movement.get_status_display }}</span>
+                      {% else %}
+                        <span class="status-badge status-pending">{{ movement.get_status_display }}</span>
+                      {% endif %}
+                    </div>
                   </div>
                 </div>
               {% endfor %}
-            </div>
-          {% else %}
-            <p class="text-gray-500 text-center py-4">No low stock alerts</p>
-          {% endif %}
-        </div>
-      </div>
-
-      <!-- Recent Items -->
-      <div class="bg-white rounded-lg shadow">
-        <div class="px-6 py-4 border-b border-gray-200">
-          <h2 class="text-xl font-bold text-gray-900">Recently Added Items</h2>
-        </div>
-        <div class="p-6">
-          {% if recent_items %}
-            <div class="space-y-4">
-              {% for item in recent_items %}
-                <div class="flex items-center justify-between py-3 border-b border-gray-100">
-                  <div>
-                    <p class="font-medium text-gray-900">{{ item.sku_code }}</p>
-                    <p class="text-sm text-gray-600">{{ item.name }}</p>
-                    <p class="text-xs text-gray-500">{{ item.created_at|date:"M d, Y" }}</p>
-                  </div>
-                  <div class="text-right">
-                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
-                                 {% if item.status == 'ACTIVE' %}bg-green-100 text-green-800
-                                 {% elif item.status == 'DRAFT' %}bg-yellow-100 text-yellow-800
-                                 {% else %}bg-gray-100 text-gray-800{% endif %}">
-                      {{ item.get_status_display }}
-                    </span>
-                  </div>
+              <div class="mt-3">
+                <div class="dropdown">
+                  <button class="btn btn-sm btn-soft-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    View movements by warehouse
+                  </button>
+                  <ul class="dropdown-menu">
+                    {% if stock_by_warehouse %}
+                      {% for warehouse in stock_by_warehouse %}
+                      <li>
+                        <a class="dropdown-item" href="{% url 'inventory:stock-movement-list' warehouse.id %}">
+                          {{ warehouse.name }}
+                        </a>
+                      </li>
+                      {% endfor %}
+                    {% else %}
+                      <li><span class="dropdown-item-text text-muted">No warehouses available</span></li>
+                    {% endif %}
+                  </ul>
                 </div>
-              {% endfor %}
-            </div>
-          {% else %}
-            <p class="text-gray-500 text-center py-4">No recent items</p>
-          {% endif %}
+              </div>
+            {% else %}
+              <div class="text-center py-4">
+                <i class="bi bi-clock-history text-muted fs-1 mb-3 d-block"></i>
+                <p class="text-muted mb-0">No recent activity</p>
+              </div>
+            {% endif %}
+          </div>
         </div>
       </div>
+    </div>
 
-      <!-- System Status -->
-      <div class="bg-white rounded-lg shadow">
-        <div class="px-6 py-4 border-b border-gray-200">
-          <h2 class="text-xl font-bold text-gray-900">System Status</h2>
-        </div>
-        <div class="p-6">
-          <div class="space-y-4">
-            <div class="flex items-center justify-between">
-              <span class="text-gray-600">Warehouses</span>
-              <span class="font-semibold">{{ total_warehouses }}</span>
-            </div>
-            <div class="flex items-center justify-between">
-              <span class="text-gray-600">Active Items</span>
-              <span class="font-semibold">{{ active_items }} / {{ total_items }}</span>
-            </div>
-            <div class="flex items-center justify-between">
-              <span class="text-gray-600">Stock Records</span>
-              <span class="font-semibold">{{ total_stock_records }}</span>
-            </div>
-            <div class="flex items-center justify-between">
-              <span class="text-gray-600">Total Inventory Value</span>
-              <span class="font-semibold">{{ total_available_stock|floatformat:0 }} units</span>
+    <!-- System Health -->
+    <div class="row g-4 mt-4">
+      <div class="col-12">
+        <div class="dashboard-card">
+          <div class="card-header">
+            <h5 class="card-title mb-0">System Overview</h5>
+          </div>
+          <div class="card-body">
+            <div class="row text-center">
+              <div class="col-md-3">
+                <div class="border-end pe-3">
+                  <h3 class="text-primary mb-1">{{ total_items }}</h3>
+                  <small class="text-muted">Total Items</small>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="border-end pe-3">
+                  <h3 class="text-success mb-1">{{ total_stock_records }}</h3>
+                  <small class="text-muted">Stock Records</small>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="border-end pe-3">
+                  <h3 class="text-warning mb-1">{{ total_movements }}</h3>
+                  <small class="text-muted">Stock Movements</small>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <h3 class="text-info mb-1">{{ total_users }}</h3>
+                <small class="text-muted">System Users</small>
+              </div>
             </div>
           </div>
         </div>
