@@ -54,6 +54,11 @@
                             <form method="post" enctype="multipart/form-data">
                                 {% csrf_token %}
                                 
+                                <!-- Hidden field for next URL -->
+                                {% if next_url %}
+                                    <input type="hidden" name="next" value="{{ next_url }}">
+                                {% endif %}
+                                
                                 <!-- SKU Code Field -->
                                 <div class="mb-3">
                                     <label class="form-label" for="id_sku_code">

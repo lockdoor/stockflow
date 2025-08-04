@@ -8,181 +8,177 @@
 
 {% block header_actions %}
 <a href="{% url 'catalog:dashboard' %}" class="btn btn-outline-secondary">
-    <i class="bi bi-speedometer2 me-1"></i>Catalog Dashboard
+  <i class="bi bi-speedometer2 me-1"></i>Catalog Dashboard
 </a>
 <a href="{% url 'catalog:category-create' %}" class="btn btn-primary">
-    <i class="bi bi-plus-circle me-1"></i> Add Category
+  <i class="bi bi-plus-circle me-1"></i> Add Category
 </a>
 {% endblock %}
 
 {% block dashboard_content %}
 <div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="card-title mb-0">
-            <i class="bi bi-tags me-2"></i>Categories
-        </h5>
-        <div class="d-flex gap-2">
-            <div class="input-group" style="width: 300px;">
-                <input type="text" class="form-control" placeholder="Search categories..." id="categorySearch">
-                <button class="btn btn-outline-secondary" type="button">
-                    <i class="bi bi-search"></i>
-                </button>
-            </div>
-        </div>
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <h5 class="card-title mb-0">
+      <i class="bi bi-tags me-2"></i>Categories
+    </h5>
+    <div class="d-flex gap-2">
+      <div class="input-group" style="width: 300px;">
+        <input type="text" class="form-control" placeholder="Search categories..." id="categorySearch">
+        <button class="btn btn-outline-secondary" type="button">
+          <i class="bi bi-search"></i>
+        </button>
+      </div>
     </div>
-    
-    <div class="card-body p-0">
-                    {% if categories %}
-                        <div class="table-responsive">
-                            <table class="table table-hover mb-0">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>Name</th>
-                                        <th>Description</th>
-                                        <th>Parent Category</th>
-                                        <th>Status</th>
-                                        <th class="text-center">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for category in categories %}
-                                        <tr>
-                                            <td>
-                                                <div class="d-flex align-items-center">
-                                                    <div class="category-icon me-2">
-                                                        <i class="bi bi-folder text-primary"></i>
-                                                    </div>
-                                                    <div>
-                                                        <div class="fw-medium">{{ category.name }}</div>
-                                                        {% if category.code %}
-                                                            <small class="text-muted">{{ category.code }}</small>
-                                                        {% endif %}
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td>
-                                                <span class="text-muted">
-                                                    {% if category.description %}
-                                                        {{ category.description|truncatewords:10 }}
-                                                    {% else %}
-                                                        <em>No description</em>
-                                                    {% endif %}
-                                                </span>
-                                            </td>
-                                            <td>
-                                                {% if category.parent %}
-                                                    <span class="badge bg-light text-dark">
-                                                        {{ category.parent.name }}
-                                                    </span>
-                                                {% else %}
-                                                    <span class="text-muted">
-                                                        <em>Root Category</em>
-                                                    </span>
-                                                {% endif %}
-                                            </td>
-                                            <td>
-                                                {% if category.is_active %}
-                                                    <span class="badge bg-success">Active</span>
-                                                {% else %}
-                                                    <span class="badge bg-secondary">Inactive</span>
-                                                {% endif %}
-                                            </td>
-                                            <td class="text-center">
-                                                <div class="btn-group" role="group">
-                                                    <a href="{% url 'catalog:category-detail' category.pk %}" 
-                                                       class="btn btn-sm btn-outline-primary" 
-                                                       title="View Details">
-                                                        <i class="bi bi-eye"></i>
-                                                    </a>
-                                                    <a href="{% url 'catalog:category-edit' category.pk %}" 
-                                                       class="btn btn-sm btn-outline-secondary"
-                                                       title="Edit Category">
-                                                        <i class="bi bi-pencil-square"></i>
-                                                    </a>
-                                                    <button type="button" 
-                                                            class="btn btn-sm btn-outline-danger"
-                                                            title="Delete Category"
-                                                            onclick="confirmDelete('{{ category.pk }}', '{{ category.name }}')">
-                                                        <i class="bi bi-trash"></i>
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    {% else %}
-                        <div class="text-center py-5">
-                            <div class="mb-3">
-                                <i class="bi bi-tags text-muted" style="font-size: 3rem;"></i>
-                            </div>
-                            <h5 class="text-muted">No Categories Found</h5>
-                            <p class="text-muted mb-3">Start by creating your first product category</p>
-                            <a href="{% url 'catalog:category-create' %}" class="btn btn-primary">
-                                <i class="bi bi-plus-circle me-2"></i> Create First Category
-                            </a>
-                        </div>
-                    {% endif %}
+  </div>
+
+  <div class="card-body p-0">
+    {% if categories %}
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Name</th>
+            <th>Description</th>
+            <th>Parent Category</th>
+            <th>Status</th>
+            <th class="text-center">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for category in categories %}
+          <tr>
+            <td>
+              <div class="d-flex align-items-center">
+                <div class="category-icon me-2">
+                  <i class="bi bi-folder text-primary"></i>
                 </div>
-                
-                {% if categories %}
-                    <div class="card-footer">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <small class="text-muted">
-                                Showing {{ categories|length }} categor{{ categories|length|pluralize:"y,ies" }}
-                            </small>
-                            <!-- Pagination can be added here if needed -->
-                        </div>
-                    </div>
+                <div>
+                  <div class="fw-medium">{{ category.name }}</div>
+                  {% if category.code %}
+                  <small class="text-muted">{{ category.code }}</small>
+                  {% endif %}
+                </div>
+              </div>
+            </td>
+            <td>
+              <span class="text-muted">
+                {% if category.description %}
+                {{ category.description|truncatewords:10 }}
+                {% else %}
+                <em>No description</em>
                 {% endif %}
-            </div>
-        </div>
+              </span>
+            </td>
+            <td>
+              {% if category.parent %}
+              <span class="badge bg-light text-dark">
+                {{ category.parent.name }}
+              </span>
+              {% else %}
+              <span class="text-muted">
+                <em>Root Category</em>
+              </span>
+              {% endif %}
+            </td>
+            <td>
+              {% if category.is_active %}
+              <span class="badge bg-success">Active</span>
+              {% else %}
+              <span class="badge bg-secondary">Inactive</span>
+              {% endif %}
+            </td>
+            <td class="text-center">
+              <div class="btn-group" role="group">
+                <a href="{% url 'catalog:category-detail' category.pk %}" class="btn btn-sm btn-outline-primary"
+                  title="View Details">
+                  <i class="bi bi-eye"></i>
+                </a>
+                <a href="{% url 'catalog:category-edit' category.pk %}" class="btn btn-sm btn-outline-secondary"
+                  title="Edit Category">
+                  <i class="bi bi-pencil-square"></i>
+                </a>
+                <button type="button" class="btn btn-sm btn-outline-danger" title="Delete Category"
+                  onclick="confirmDelete('{{ category.pk }}', '{{ category.name }}')">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+      <div class="mb-3">
+        <i class="bi bi-tags text-muted" style="font-size: 3rem;"></i>
+      </div>
+      <h5 class="text-muted">No Categories Found</h5>
+      <p class="text-muted mb-3">Start by creating your first product category</p>
+      <a href="{% url 'catalog:category-create' %}" class="btn btn-primary">
+        <i class="bi bi-plus-circle me-2"></i> Create First Category
+      </a>
+    </div>
+    {% endif %}
+  </div>
+
+  {% if categories %}
+  <div class="card-footer">
+    <div class="d-flex justify-content-between align-items-center">
+      <small class="text-muted">
+        Showing {{ categories|length }} categor{{ categories|length|pluralize:"y,ies" }}
+      </small>
+      <!-- Pagination can be added here if needed -->
+    </div>
+  </div>
+  {% endif %}
+</div>
+</div>
 
 <!-- Delete Confirmation Modal -->
 <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="deleteModalLabel">Confirm Delete</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p>Are you sure you want to delete the category "<span id="categoryName"></span>"?</p>
-                <p class="text-warning">
-                    <i class="bi bi-exclamation-triangle me-1"></i>
-                    This action cannot be undone and may affect related items.
-                </p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <form id="deleteForm" method="post" style="display: inline;">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-danger">Delete Category</button>
-                </form>
-            </div>
-        </div>
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="deleteModalLabel">Confirm Delete</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p>Are you sure you want to delete the category "<span id="categoryName"></span>"?</p>
+        <p class="text-warning">
+          <i class="bi bi-exclamation-triangle me-1"></i>
+          This action cannot be undone and may affect related items.
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <form id="deleteForm" method="post" style="display: inline;">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger">Delete Category</button>
+        </form>
+      </div>
     </div>
+  </div>
 </div>
 
 <script>
-function confirmDelete(categoryId, categoryName) {
+  function confirmDelete(categoryId, categoryName) {
     document.getElementById('categoryName').textContent = categoryName;
     document.getElementById('deleteForm').action = '{% url "catalog:category-delete" 0 %}'.replace('0', categoryId);
-    
+
     const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
     deleteModal.show();
-}
+  }
 
-// Search functionality
-document.getElementById('categorySearch').addEventListener('input', function(e) {
+  // Search functionality
+  document.getElementById('categorySearch').addEventListener('input', function (e) {
     const searchTerm = e.target.value.toLowerCase();
     const rows = document.querySelectorAll('tbody tr');
-    
+
     rows.forEach(row => {
-        const text = row.textContent.toLowerCase();
-        row.style.display = text.includes(searchTerm) ? '' : 'none';
+      const text = row.textContent.toLowerCase();
+      row.style.display = text.includes(searchTerm) ? '' : 'none';
     });
-});
+  });
 </script>
 {% endblock %}

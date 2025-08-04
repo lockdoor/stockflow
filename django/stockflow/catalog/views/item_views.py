@@ -34,16 +34,27 @@ class ItemCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
             # Save the item (may still raise validation errors)
             item.save()
             
-            # Regular form submission - redirect to item list
-            from django.shortcuts import redirect
+            # Add success message
             from django.contrib import messages
             messages.success(self.request, f'Item "{item.name}" was created successfully.')
+            
+            # Redirect to next URL if provided, otherwise default to item list
+            from django.shortcuts import redirect
+            next_url = self.request.GET.get('next') or self.request.POST.get('next')
+            if next_url:
+                return redirect(next_url)
             return redirect('catalog:item-list')
             
         except (ValueError, ValidationError) as e:
             # Handle all types of business logic validation errors
             form.add_error(None, str(e))
             return self.form_invalid(form)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Pass next URL to template for hidden form field
+        context['next_url'] = self.request.GET.get('next', '')
+        return context
     
 class ItemUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """
@@ -66,16 +77,27 @@ class ItemUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
             # The model's clean and save methods will raise appropriate exceptions
             item.save()
             
-            # Regular form submission - redirect to item list
-            from django.shortcuts import redirect
+            # Add success message
             from django.contrib import messages
             messages.success(self.request, f'Item "{item.name}" was updated successfully.')
-            return redirect('catalog:item-list')
+            
+            # Redirect to next URL if provided, otherwise default to item detail
+            from django.shortcuts import redirect
+            next_url = self.request.GET.get('next') or self.request.POST.get('next')
+            if next_url:
+                return redirect(next_url)
+            return redirect('catalog:item-detail', pk=item.pk)
             
         except (ValueError, ValidationError) as e:
             # Handle business logic validation errors
             form.add_error(None, str(e))
             return self.form_invalid(form)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Pass next URL to template for hidden form field
+        context['next_url'] = self.request.GET.get('next', '')
+        return context
 
 class ItemDetailView(LoginRequiredMixin, DetailView):
     model = ItemSKU
