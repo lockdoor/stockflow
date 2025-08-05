@@ -1,8 +1,8 @@
 """
 Test Warehouse List View
 
-Tests for warehouse list view including HTMX integration, pagination,
-and proper template rendering.
+Tests for warehouse list view including pagination and proper template rendering
+with redirect flow.
 
 Author: StockFlow Team
 Created: 2025
@@ -78,15 +78,9 @@ class WarehouseListViewTest(TestCase):
         self.assertIn('warehouses', response.context)
         warehouses = response.context['warehouses']
         self.assertEqual(len(warehouses), 3)
-
-    def test_list_view_htmx_request(self):
-        """Test HTMX request returns proper template"""
-        self.client.login(username='testuser', password='testpass123')
-        url = reverse('inventory:warehouse-list')
-        response = self.client.get(url, HTTP_HX_REQUEST='true')
         
-        self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, 'inventory/warehouse/partials/warehouse-list.html')
+        # Check template used is main warehouse list template
+        self.assertTemplateUsed(response, 'inventory/warehouse/warehouse-list.html')
 
     def test_list_view_ordering(self):
         """Test that warehouses are ordered by name"""
@@ -137,8 +131,8 @@ class WarehouseListViewTest(TestCase):
         url = reverse('inventory:warehouse-list')
         response = self.client.get(url)
         
-        # Check for status badges (based on warehouse-row.html template)
-        self.assertContains(response, 'badge-success')  # Active warehouses
+        # Check for status badges (Bootstrap 5 classes)
+        self.assertContains(response, 'bg-success')  # Active warehouses
         # Since all test warehouses are active, no inactive badges expected
 
     def test_list_view_pagination(self):
@@ -168,12 +162,12 @@ class WarehouseListViewTest(TestCase):
         url = reverse('inventory:warehouse-list')
         response = self.client.get(url)
         
-        # Check for Add New Warehouse button
+        # Check for Add New Warehouse button (redirect flow uses form URL)
         self.assertContains(response, 'Add New Warehouse')
-        self.assertContains(response, '/inventory/warehouses/create/')
+        self.assertContains(response, '/inventory/warehouses/form/')
         
-        # Check for edit and view buttons in warehouse rows
-        self.assertContains(response, 'warehouses/edit/')
+        # Check for edit and view buttons in warehouse rows (redirect flow uses form URLs)
+        self.assertContains(response, 'warehouses/3/form/')  # Edit URL
         self.assertContains(response, 'warehouses/3/')  # Detail view URL
 
     def test_list_view_with_search_parameters(self):
@@ -214,7 +208,7 @@ class WarehouseListViewTest(TestCase):
         detail_url = reverse('inventory:warehouse-detail', args=[self.warehouse1.pk])
         self.assertContains(response, detail_url)
         
-        edit_url = reverse('inventory:warehouse-edit', args=[self.warehouse1.pk])
+        edit_url = reverse('inventory:warehouse-edit-form', args=[self.warehouse1.pk])
         self.assertContains(response, edit_url)
 
     def test_list_view_performance(self):

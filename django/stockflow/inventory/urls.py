@@ -6,8 +6,7 @@ from inventory.views.dashboard import inventory_dashboard_view
 
 from inventory.views.warehouse_views import (
     WarehouseListView, WarehouseDetailView, 
-    WarehouseCreateView, WarehouseUpdateView,
-    WarehouseIndexView
+    WarehouseCreateView, WarehouseUpdateView
 )
 
 from inventory.views.stock_movement_views import (
@@ -41,20 +40,17 @@ urlpatterns = [
     
     # Warehouse management
     path('warehouses/', 
-         WarehouseIndexView.as_view(), 
-         name='warehouse-index'),
-    path('warehouses/list/', 
          WarehouseListView.as_view(), 
          name='warehouse-list'),
     path('warehouses/<int:pk>/', 
          WarehouseDetailView.as_view(), 
          name='warehouse-detail'),
-    path('warehouses/create/', 
+    path('warehouses/form/', 
          WarehouseCreateView.as_view(), 
-         name='warehouse-create'),
-    path('warehouses/edit/<int:pk>/', 
+         name='warehouse-form'),
+    path('warehouses/<int:pk>/form/', 
          WarehouseUpdateView.as_view(), 
-         name='warehouse-edit'),   
+         name='warehouse-edit-form'),   
     
     # Warehouse stock movements
     path('warehouses/<int:warehouse_id>/stock-movements/', 

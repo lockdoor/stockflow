@@ -140,7 +140,7 @@ class WarehouseDetailViewTest(TestCase):
         response = self.client.get(url)
         
         # Check for back button (the one actually in template)
-        self.assertContains(response, 'Go Back')
+        self.assertContains(response, 'Back to Warehouses')
         
         # Note: Edit and list buttons are not in current template
 
@@ -201,7 +201,7 @@ class WarehouseDetailViewTest(TestCase):
         response = self.client.get(url)
         
         # Check for responsive CSS classes that are actually in template
-        self.assertContains(response, 'table')
+        self.assertContains(response, 'card')  # Card layout instead of table
         self.assertContains(response, 'btn')
 
     def test_detail_view_with_special_characters(self):
@@ -233,9 +233,8 @@ class WarehouseDetailViewTest(TestCase):
         response = self.client.get(url)
         
         # Check for metadata display that exists in template
-        self.assertContains(response, 'Created by')
-        self.assertContains(response, 'Updated by')
+        self.assertContains(response, 'by testuser')
         
         # Check timestamps are formatted
-        created_date = self.warehouse.created_at.strftime('%Y-%m-%d')
+        created_date = self.warehouse.created_at.strftime('%b %d, %Y')  # Match template format "Aug 05, 2025"
         self.assertContains(response, created_date)

@@ -1,0 +1,126 @@
+{% extends "base-dashboard-header.html" %}
+{% load widget_tweaks %}
+
+{% block title %}Warehouses - StockFlow{% endblock %}
+
+{% block title_text %}Warehouse Management{% endblock %}
+{% block subtitle_text %}View and manage all warehouses{% endblock %}
+
+{% block header_actions %}
+<a href="{% url 'inventory:dashboard' %}" class="btn btn-outline-secondary">
+    <i class="bi bi-speedometer2 me-1"></i>Inventory Dashboard
+</a>
+<a href="{% url 'inventory:warehouse-form' %}" class="btn btn-primary">
+    <i class="bi bi-plus-circle me-1"></i>Add New Warehouse
+</a>
+{% endblock %}
+
+{% block dashboard_content %}
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">Warehouses List</h5>
+                    <div class="d-flex gap-2">
+                        <span class="badge bg-secondary">{{ warehouses|length }} warehouse{{ warehouses|length|pluralize }}</span>
+                        <a href="{% url 'inventory:warehouse-form' %}" class="btn btn-primary btn-sm">
+                            <i class="bi bi-plus-lg me-1"></i>Add New Warehouse
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                {% if warehouses %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Code</th>
+                                    <th>Name</th>
+                                    <th>Address</th>
+                                    <th>Status</th>
+                                    <th>Created At</th>
+                                    <th class="text-center" width="120">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for warehouse in warehouses %}
+                                <tr>
+                                    <td>
+                                        <a href="{% url 'inventory:warehouse-detail' warehouse.id %}" class="text-decoration-none fw-medium">
+                                            {{ warehouse.code|truncatechars:20 }}
+                                        </a>
+                                    </td>
+                                    <td>{{ warehouse.name }}</td>
+                                    <td>{{ warehouse.address|truncatechars:50 }}</td>
+                                    <td>
+                                        {% if warehouse.is_active %}
+                                            <span class="badge bg-success">Active</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">Inactive</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ warehouse.created_at|date:"M d, Y" }}</td>
+                                    <td class="text-center">
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{% url 'inventory:warehouse-detail' warehouse.id %}" 
+                                               class="btn btn-outline-info" 
+                                               title="View Details">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                            <a href="{% url 'inventory:warehouse-edit-form' warehouse.id %}" 
+                                               class="btn btn-outline-primary" 
+                                               title="Edit Warehouse">
+                                                <i class="bi bi-pencil-square"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    {% if is_paginated %}
+                    <div class="card-footer">
+                        <nav aria-label="Warehouse pagination">
+                            <ul class="pagination pagination-sm mb-0 justify-content-center">
+                                {% if page_obj.has_previous %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page=1">First</a>
+                                    </li>
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
+                                    </li>
+                                {% endif %}
+                                
+                                <li class="page-item active">
+                                    <span class="page-link">
+                                        Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                                    </span>
+                                </li>
+                                
+                                {% if page_obj.has_next %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
+                                    </li>
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Last</a>
+                                    </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                    </div>
+                    {% endif %}
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="bi bi-building text-muted fs-1 mb-3 d-block"></i>
+                        <h5 class="text-muted mb-3">No warehouses found</h5>
+                        <p class="text-muted mb-4">Start managing your inventory by adding your first warehouse.</p>
+                        <a href="{% url 'inventory:warehouse-form' %}" class="btn btn-primary">
+                            <i class="bi bi-plus-circle me-2"></i>Add First Warehouse
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+{% endblock %}

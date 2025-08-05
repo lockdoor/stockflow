@@ -85,10 +85,73 @@ def breadcrumb(request):
                 {'name': 'Dashboard', 'url': 'dashboard', 'active': False},
                 {'name': 'Inventory', 'url': 'inventory:dashboard', 'active': True}
             ],
+            
+            # Warehouse management
+            'inventory:warehouse-list': [
+                {'name': 'Dashboard', 'url': 'dashboard', 'active': False},
+                {'name': 'Inventory', 'url': 'inventory:dashboard', 'active': False},
+                {'name': 'Warehouses', 'url': 'inventory:warehouse-list', 'active': True}
+            ],
+            'inventory:warehouse-form': [
+                {'name': 'Dashboard', 'url': 'dashboard', 'active': False},
+                {'name': 'Inventory', 'url': 'inventory:dashboard', 'active': False},
+                {'name': 'Warehouses', 'url': 'inventory:warehouse-list', 'active': False},
+                {'name': 'New Warehouse', 'url': None, 'active': True}
+            ],
+            'inventory:warehouse-edit-form': [
+                {'name': 'Dashboard', 'url': 'dashboard', 'active': False},
+                {'name': 'Inventory', 'url': 'inventory:dashboard', 'active': False},
+                {'name': 'Warehouses', 'url': 'inventory:warehouse-list', 'active': False},
+                {'name': 'Edit Warehouse', 'url': None, 'active': True}
+            ],
+            'inventory:warehouse-detail': [
+                {'name': 'Dashboard', 'url': 'dashboard', 'active': False},
+                {'name': 'Inventory', 'url': 'inventory:dashboard', 'active': False},
+                {'name': 'Warehouses', 'url': 'inventory:warehouse-list', 'active': False},
+                {'name': 'Warehouse Details', 'url': None, 'active': True}
+            ],
+            
+            # Stock movements
             'inventory:stock-movement-list': [
                 {'name': 'Dashboard', 'url': 'dashboard', 'active': False},
                 {'name': 'Inventory', 'url': 'inventory:dashboard', 'active': False},
                 {'name': 'Stock Movements', 'url': 'inventory:stock-movement-list', 'active': True}
+            ],
+            'inventory:stock-movement-create': [
+                {'name': 'Dashboard', 'url': 'dashboard', 'active': False},
+                {'name': 'Inventory', 'url': 'inventory:dashboard', 'active': False},
+                {'name': 'Warehouses', 'url': 'inventory:warehouse-list', 'active': False},
+                {'name': 'Stock Movements', 'url': 'inventory:stock-movement-list', 'active': False},
+                {'name': 'New Stock Movement', 'url': None, 'active': True}
+            ],
+            'inventory:stock-movement-detail': [
+                {'name': 'Dashboard', 'url': 'dashboard', 'active': False},
+                {'name': 'Inventory', 'url': 'inventory:dashboard', 'active': False},
+                {'name': 'Stock Movements', 'url': 'inventory:stock-movement-list', 'active': False},
+                {'name': 'Movement Details', 'url': None, 'active': True}
+            ],
+            'inventory:stock-movement-edit': [
+                {'name': 'Dashboard', 'url': 'dashboard', 'active': False},
+                {'name': 'Inventory', 'url': 'inventory:dashboard', 'active': False},
+                {'name': 'Stock Movements', 'url': 'inventory:stock-movement-list', 'active': False},
+                {'name': 'Edit Movement', 'url': None, 'active': True}
+            ],
+            
+            # Stock management
+            'inventory:stock-index': [
+                {'name': 'Dashboard', 'url': 'dashboard', 'active': False},
+                {'name': 'Inventory', 'url': 'inventory:dashboard', 'active': False},
+                {'name': 'Stock Overview', 'url': 'inventory:stock-index', 'active': True}
+            ],
+            'inventory:stock-list': [
+                {'name': 'Dashboard', 'url': 'dashboard', 'active': False},
+                {'name': 'Inventory', 'url': 'inventory:dashboard', 'active': False},
+                {'name': 'Stock List', 'url': 'inventory:stock-list', 'active': True}
+            ],
+            'inventory:stock-item-list': [
+                {'name': 'Dashboard', 'url': 'dashboard', 'active': False},
+                {'name': 'Inventory', 'url': 'inventory:dashboard', 'active': False},
+                {'name': 'Stock Items', 'url': 'inventory:stock-item-list', 'active': True}
             ],
         }
         

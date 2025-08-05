@@ -1,16 +1,14 @@
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
-from django.views.generic import ListView, DetailView, CreateView, UpdateView, TemplateView
+from django.views.generic import ListView, DetailView, CreateView, UpdateView
+from django.shortcuts import redirect
+from django.contrib import messages
+from django.core.exceptions import ValidationError
 from inventory.models.warehouse import Warehouse
 from inventory.forms.warehouse_form import WarehouseForm
-from django.shortcuts import render
-
-
-class WarehouseIndexView(LoginRequiredMixin, TemplateView):
-    template_name = 'inventory/warehouse/warehouse-index.html'
 
 class WarehouseListView(LoginRequiredMixin, ListView):
     model = Warehouse
-    template_name = 'inventory/warehouse/partials/warehouse-list.html'
+    template_name = 'inventory/warehouse/warehouse-list.html'
     context_object_name = 'warehouses'
     paginate_by = 20
     ordering = 'name'
@@ -21,46 +19,81 @@ class WarehouseDetailView(LoginRequiredMixin, DetailView):
     context_object_name = 'warehouse'
     
 class WarehouseCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
-    
+    """
+    View for creating a new Warehouse
+    Full page form workflow
+    """
     model = Warehouse
     form_class = WarehouseForm
-    template_name = 'inventory/warehouse/partials/warehouse-form.html'
+    template_name = 'inventory/warehouse/warehouse-form.html'
     permission_required = 'inventory.add_warehouse'
     
     def form_valid(self, form):
-        warehouse = form.save(commit=False)
-        warehouse.created_by = self.request.user
-        warehouse.updated_by = self.request.user
-        warehouse.save()
-        context = {'warehouse': warehouse}
-        response = render(self.request, 'inventory/warehouse/partials/warehouse-row.html', context)
-        response['HX-Trigger'] = 'success'
-        return response
-    
-    def form_invalid(self, form):
-        response = render(self.request, self.template_name, {'form': form})
-        response['HX-Retarget'] = '#warehouse-form'
-        response['HX-Reswap'] = 'outerHTML'
-        return response
+        try:
+            # Set created_by and updated_by to current user
+            warehouse = form.save(commit=False)
+            warehouse.created_by = self.request.user
+            warehouse.updated_by = self.request.user
+            
+            # Save the warehouse (may still raise validation errors)
+            warehouse.save()
+            
+            # Add success message
+            messages.success(self.request, f'Warehouse "{warehouse.name}" was created successfully.')
+            
+            # Redirect to next URL if provided, otherwise default to warehouse list
+            next_url = self.request.GET.get('next') or self.request.POST.get('next')
+            if next_url:
+                return redirect(next_url)
+            return redirect('inventory:warehouse-list')
+            
+        except (ValueError, ValidationError) as e:
+            # Handle all types of business logic validation errors
+            form.add_error(None, str(e))
+            return self.form_invalid(form)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Pass next URL to template for hidden form field
+        context['next_url'] = self.request.GET.get('next', '')
+        return context
 
 class WarehouseUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+    """
+    View for updating an existing Warehouse
+    Full page form workflow
+    """
     model = Warehouse
     form_class = WarehouseForm
-    template_name = 'inventory/warehouse/partials/warehouse-form.html'
+    template_name = 'inventory/warehouse/warehouse-form.html'
     permission_required = 'inventory.change_warehouse'
     pk_url_kwarg = 'pk'
 
     def form_valid(self, form):
-        warehouse = form.save(commit=False)
-        warehouse.updated_by = self.request.user
-        warehouse.save()
-        context = {'warehouse': warehouse}
-        response = render(self.request, 'inventory/warehouse/partials/warehouse-row.html', context)
-        response['HX-Trigger'] = 'success'
-        return response
+        try:
+            # Set updated_by to current user
+            warehouse = form.save(commit=False)
+            warehouse.updated_by = self.request.user
+            
+            # Save the warehouse (may still raise validation errors)
+            warehouse.save()
+            
+            # Add success message
+            messages.success(self.request, f'Warehouse "{warehouse.name}" was updated successfully.')
+            
+            # Redirect to next URL if provided, otherwise default to warehouse detail
+            next_url = self.request.GET.get('next') or self.request.POST.get('next')
+            if next_url:
+                return redirect(next_url)
+            return redirect('inventory:warehouse-detail', pk=warehouse.pk)
+            
+        except (ValueError, ValidationError) as e:
+            # Handle business logic validation errors
+            form.add_error(None, str(e))
+            return self.form_invalid(form)
 
-    def form_invalid(self, form):
-        response = render(self.request, self.template_name, {'form': form})
-        response['HX-Retarget'] = '#warehouse-form'
-        response['HX-Reswap'] = 'outerHTML'
-        return response
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Pass next URL to template for hidden form field
+        context['next_url'] = self.request.GET.get('next', '')
+        return context

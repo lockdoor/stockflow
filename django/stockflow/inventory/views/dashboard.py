@@ -1,7 +1,8 @@
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Sum, Q
-from datetime import datetime, timedelta
+from django.utils import timezone
+from datetime import timedelta
 
 from inventory.models.warehouse import Warehouse
 from inventory.models.stock_movement import StockMovement
@@ -35,7 +36,7 @@ def inventory_dashboard_view(request):
     low_stock_items = Stock.get_all_stock().filter(total_quantity__lt=10).count()
     
     # Recent movements (last 7 days)
-    week_ago = datetime.now() - timedelta(days=7)
+    week_ago = timezone.now() - timedelta(days=7)
     recent_movements = StockMovement.objects.filter(
         created_at__gte=week_ago
     ).select_related('warehouse', 'created_by').order_by('-created_at')[:8]
