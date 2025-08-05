@@ -12,6 +12,7 @@ from django.test import TestCase, Client
 from django.urls import reverse
 from django.contrib.auth.models import User
 from catalog.models.category import Category
+from catalog.models.item import ItemSKU
 
 
 class CategoryListViewTest(TestCase):
@@ -71,18 +72,26 @@ class CategoryListViewTest(TestCase):
         self.assertContains(response, 'Accessories')
     
     def test_category_list_ordering(self):
-        """Test that category list is ordered by name"""
+        """Test that category list is ordered by -created_at (newest first)"""
         url = reverse('catalog:category-list')
         response = self.client.get(url)
         
-        content = response.content.decode()
-        accessories_pos = content.find('Accessories')
-        books_pos = content.find('Books')
-        electronics_pos = content.find('Electronics')
+        self.assertEqual(response.status_code, 200)
         
-        # Should be in alphabetical order
-        self.assertLess(accessories_pos, books_pos)
-        self.assertLess(books_pos, electronics_pos)
+        # Get categories from response in order
+        categories = list(response.context['categories'])
+        
+        # Since ordering is by -created_at, the last created should be first
+        # Check that we have all 3 categories
+        self.assertEqual(len(categories), 3)
+        
+        # Verify ordering by created_at (newest first)
+        for i in range(len(categories) - 1):
+            self.assertGreaterEqual(
+                categories[i].created_at, 
+                categories[i + 1].created_at,
+                "Categories should be ordered by created_at descending"
+            )
     
     def test_category_list_shows_status(self):
         """Test that category list shows active/inactive status"""

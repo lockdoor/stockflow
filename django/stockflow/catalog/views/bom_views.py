@@ -1,8 +1,10 @@
 from django.views.generic import ListView, CreateView, UpdateView, View
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
 from django.http import HttpResponse
 from django.core.exceptions import ValidationError
+from django.contrib import messages
+from django.urls import reverse
 # forms
 from catalog.forms.bom_form import BOMForm
 
@@ -52,123 +54,77 @@ class BomListByParentIDView(LoginRequiredMixin, ListView):
         return context
 
 class BomCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
-    """
-    View for creating a new BOM entry.
-    Uses HTMX to handle form submission and updates the BOM list dynamically.
-    Requires parent_id in URL kwargs to associate the BOM with a parent ItemSKU.
-    """
-    model = BOM
+    template_name = 'catalog/bom/bom-form.html'
     form_class = BOMForm
-    template_name = 'catalog/bom/partials/bom-form.html'
     permission_required = 'catalog.add_bom'
+    http_method_names = ['get', 'post']
     
-    def get_initial(self):
-        """
-        Set initial form data including parent_sku validation.
-        """
-        initial = super().get_initial()
-        parent_id = self.kwargs.get('parent_id')
-        if not parent_id:
-            from django.http import Http404
-            raise Http404("Parent ID is required to create a BOM.")
-        
-        # Validate parent exists and store for context
-        self.parent_sku = get_object_or_404(ItemSKU, pk=parent_id)
-        return initial
-    
+    def dispatch(self, request, *args, **kwargs):
+        self.parent_sku = get_object_or_404(ItemSKU, pk=kwargs.get('parent_id'))
+        return super().dispatch(request, *args, **kwargs)
+
     def get_context_data(self, **kwargs):
         """
-        Add categories and parent_sku to context for template use.
+        Add parent_sku to context for template use.
         """
         context = super().get_context_data(**kwargs)
-        # Ensure parent_sku is available (from get_initial)
-        if not hasattr(self, 'parent_sku'):
-            parent_id = self.kwargs.get('parent_id')
-            if parent_id:
-                self.parent_sku = get_object_or_404(ItemSKU, pk=parent_id)
-        
-        context['category'] = Category.objects.all().order_by('name')
         context['parent_sku'] = self.parent_sku
+        # get all items is active for select as component_sku
+        context['components'] = ItemSKU.get_active().select_related('category')
+        # get existing BOMs for this parent
+        context['boms'] = BOM.objects.filter(
+            parent_sku=self.parent_sku
+        ).select_related('component_sku', 'component_sku__category').order_by('-created_at')
         return context
-
+    
     def get_form_kwargs(self):
         """
-        Add parent_sku to form kwargs so form validation can access it.
+        Pass parent_sku to the form.
         """
         kwargs = super().get_form_kwargs()
-        # Ensure parent_sku is available
-        if not hasattr(self, 'parent_sku'):
-            parent_id = self.kwargs.get('parent_id')
-            if parent_id:
-                self.parent_sku = get_object_or_404(ItemSKU, pk=parent_id)
-        
         kwargs['parent_sku'] = self.parent_sku
         return kwargs
-
+    
     def form_valid(self, form):
         """
         Handle successful form submission.
-        Creates BOM with audit fields and returns HTMX response.
         """
         try:
-            # Set audit fields before saving
-            bom = form.save(commit=False)
+            # Set parent_sku and audit fields
+            bom: BOM = form.save(commit=False)
+            bom.parent_sku = self.parent_sku
             bom.created_by = self.request.user
             bom.updated_by = self.request.user
-            
-            # Save the BOM (may still raise validation errors)
             bom.save()
             
-            # Prepare context with the newly created BOM
-            context = {'bom': bom}
+            messages.success(
+                self.request, 
+                f'Component "{bom.component_sku.sku_code}" added to BOM successfully!'
+            )
             
-            # Render the new BOM row for insertion into the table
-            response = render(self.request, 'catalog/bom/partials/bom-row.html', context)
-            
-            # Add HTMX trigger for success notifications
-            response['HX-Trigger'] = 'success'
-            
-            return response
+            # Redirect back to the same form to continue adding components
+            return redirect('catalog:bom-create', parent_id=self.parent_sku.pk)
             
         except (ValueError, ValidationError) as e:
-            # Handle all types of business logic validation errors
             form.add_error(None, str(e))
             return self.form_invalid(form)
-
+    
     def form_invalid(self, form):
         """
         Handle form validation errors.
-        Returns the form with errors highlighted to be displayed in the container.
         """
-        # Ensure parent_sku is available for context
-        if not hasattr(self, 'parent_sku'):
-            parent_id = self.kwargs.get('parent_id')
-            if parent_id:
-                self.parent_sku = get_object_or_404(ItemSKU, pk=parent_id)
-        
-        response = render(self.request, self.template_name, {
-            'form': form,
-            'parent_sku': self.parent_sku,
-            'category': Category.objects.all().order_by('name'),
-            'form_errors': True,
-            'error_message': 'Please correct the errors below.'
-        })
-        
-        # Configure HTMX to target the form container for replacement
-        response['HX-Retarget'] = '#bom-form-container'
-        response['HX-Reswap'] = 'innerHTML'
-        
-        return response
+        messages.error(self.request, 'Please correct the errors below.')
+        return super().form_invalid(form)
+    
     
 class BomUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """
     View for updating an existing BOM entry.
     Only allows editing of quantity field - parent_sku and component_sku cannot be changed.
-    Uses HTMX to handle form submission and update the BOM row dynamically.
     """
     model = BOM
     form_class = BOMForm
-    template_name = 'catalog/bom/partials/bom-form.html'  # Use same template as create
+    template_name = 'catalog/bom/bom-form.html'
     permission_required = 'catalog.change_bom'
     pk_url_kwarg = 'pk'
     
@@ -177,34 +133,33 @@ class BomUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
         Add categories and BOM instance to context for template use.
         """
         context = super().get_context_data(**kwargs)
-        context['category'] = Category.objects.all().order_by('name')
-        context['bom'] = self.object  # The BOM being updated
         context['parent_sku'] = self.object.parent_sku
+        context['components'] = ItemSKU.objects.filter(is_active=True)
+        context['boms'] = BOM.objects.filter(
+            parent_sku=self.object.parent_sku
+        ).select_related('component_sku', 'component_sku__category').order_by('-created_at')
         return context
 
     def form_valid(self, form):
         """
         Handle successful form submission.
-        Updates BOM with audit fields and returns HTMX response.
+        Updates BOM with audit fields and redirects back to BOM form.
         """
         try:
             # Set audit fields before saving
-            bom = form.save(commit=False)
+            bom: BOM = form.save(commit=False)
             bom.updated_by = self.request.user
             
             # Save the BOM (may still raise validation errors)
             bom.save()
             
-            # Prepare context with the updated BOM
-            context = {'bom': bom}
+            messages.success(
+                self.request,
+                f'BOM component "{bom.component_sku.sku_code}" updated successfully!'
+            )
             
-            # Render the updated BOM row for replacement
-            response = render(self.request, 'catalog/bom/partials/bom-row.html', context)
-            
-            # Add HTMX trigger for success notifications
-            response['HX-Trigger'] = 'success'
-            
-            return response
+            # Redirect back to BOM form
+            return redirect('catalog:bom-create', parent_id=bom.parent_sku.pk)
             
         except (ValueError, ValidationError) as e:
             # Handle all types of business logic validation errors
@@ -214,30 +169,31 @@ class BomUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     def form_invalid(self, form):
         """
         Handle form validation errors.
-        Returns the form with errors highlighted to be displayed in the container.
         """
-        response = render(self.request, self.template_name, {
-            'form': form,
-            'bom': self.object,
-            'parent_sku': self.object.parent_sku,
-            'category': Category.objects.all().order_by('name'),
-            'form_errors': True,
-            'error_message': 'Please correct the errors below.'
-        })
-        
-        # Configure HTMX to target the form container for replacement
-        response['HX-Retarget'] = '#bom-form-container'
-        response['HX-Reswap'] = 'innerHTML'
-        
-        return response
+        messages.error(self.request, 'Please correct the errors below.')
+        return super().form_invalid(form)
 
 class BomDeleteView(LoginRequiredMixin, PermissionRequiredMixin, View):
     permission_required = 'catalog.delete_bom'
     
-    def delete(self, request, pk):
+    def post(self, request, pk):
+        """
+        Handle DELETE request to remove BOM entry.
+        """
         try:
-            bom = BOM.objects.get(pk=pk)
+            bom = get_object_or_404(BOM, pk=pk)
+            parent_id = bom.parent_sku.pk
+            component_name = bom.component_sku.sku
+            
             bom.delete()
-            return HttpResponse("")
-        except BOM.DoesNotExist:
-            return HttpResponse(status=404)
+            
+            messages.success(
+                request,
+                f'Component "{component_name}" removed from BOM successfully!'
+            )
+            
+            return redirect('catalog:bom-create', parent_id=parent_id)
+            
+        except Exception as e:
+            messages.error(request, f'Error removing component: {str(e)}')
+            return redirect('catalog:bom-create', parent_id=parent_id)

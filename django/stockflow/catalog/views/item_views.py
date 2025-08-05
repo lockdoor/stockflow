@@ -5,6 +5,7 @@ from django.core.exceptions import ValidationError
 
 # from catalog.forms.category_form import CategoryForm
 from catalog.models.item import ItemSKU
+from catalog.models.bom import BOM
 # froms
 from catalog.forms.item_form import ItemForm
 
@@ -13,6 +14,38 @@ class ItemListView(LoginRequiredMixin, ListView):
     template_name = 'catalog/item/item-list.html'
     context_object_name = 'items'
     ordering = ['-created_at']
+    
+    def get_queryset(self):
+        """
+        Get items with optional category filtering
+        """
+        queryset = super().get_queryset()
+        
+        # Filter by category if provided
+        category_id = self.request.GET.get('category')
+        if category_id:
+            try:
+                queryset = queryset.filter(category_id=category_id)
+            except (ValueError, TypeError):
+                pass  # Ignore invalid category IDs
+                
+        return queryset
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        # Add category filter info to context
+        category_id = self.request.GET.get('category')
+        if category_id:
+            try:
+                from catalog.models.category import Category
+                context['filtered_category'] = Category.objects.get(pk=category_id)
+            except (Category.DoesNotExist, ValueError, TypeError):
+                context['filtered_category'] = None
+        else:
+            context['filtered_category'] = None
+            
+        return context
     
 class ItemCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """
@@ -54,6 +87,20 @@ class ItemCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
         context = super().get_context_data(**kwargs)
         # Pass next URL to template for hidden form field
         context['next_url'] = self.request.GET.get('next', '')
+        
+        # Pre-select category if provided
+        category_id = self.request.GET.get('category')
+        if category_id and not context['form'].instance.pk:
+            try:
+                from catalog.models.category import Category
+                context['preselected_category'] = Category.objects.get(pk=category_id)
+                # Set initial value for the form
+                context['form'].initial['category'] = category_id
+            except (Category.DoesNotExist, ValueError, TypeError):
+                context['preselected_category'] = None
+        else:
+            context['preselected_category'] = None
+            
         return context
     
 class ItemUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
@@ -103,3 +150,18 @@ class ItemDetailView(LoginRequiredMixin, DetailView):
     model = ItemSKU
     template_name = 'catalog/item/item-detail.html'
     context_object_name = 'item'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if self.object.can_have_bom:
+            # If item can have BOM, add BOM components to context with optimized query
+            context['boms'] = BOM.objects.filter(
+                parent_sku=self.object
+            ).select_related(
+                'component_sku', 
+                'component_sku__category'
+            ).order_by('-created_at')
+        else:
+            context['boms'] = None
+        
+        return context

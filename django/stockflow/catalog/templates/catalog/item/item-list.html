@@ -4,12 +4,27 @@
 {% block title %}Items - StockFlow{% endblock %}
 
 {% block title_text %}Items Management{% endblock %}
-{% block subtitle_text %}View and manage all catalog items{% endblock %}
+{% block subtitle_text %}
+    {% if filtered_category %}
+        View and manage items in <span class="fw-bold">{{ filtered_category.name }}</span> category
+    {% else %}
+        View and manage all catalog items
+    {% endif %}
+{% endblock %}
 
 {% block header_actions %}
+{% if filtered_category %}
+<a href="{% url 'catalog:category-list' %}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i>Back to Categories
+</a>
+<a href="{% url 'catalog:item-list' %}" class="btn btn-outline-secondary">
+    <i class="bi bi-list me-1"></i>All Items
+</a>
+{% else %}
 <a href="{% url 'catalog:dashboard' %}" class="btn btn-outline-secondary">
     <i class="bi bi-speedometer2 me-1"></i>Catalog Dashboard
 </a>
+{% endif %}
 <a href="{% url 'catalog:item-form' %}" class="btn btn-primary">
     <i class="bi bi-plus-circle me-1"></i>Add New Item
 </a>
@@ -19,12 +34,25 @@
         <div class="card shadow-sm">
             <div class="card-header">
                 <div class="d-flex justify-content-between align-items-center">
-                    <h5 class="card-title mb-0">Items List</h5>
+                    <h5 class="card-title mb-0">
+                        {% if filtered_category %}
+                            Items in "{{ filtered_category.name }}" Category
+                        {% else %}
+                            Items List
+                        {% endif %}
+                    </h5>
                     <div class="d-flex gap-2">
-                        <span class="badge bg-secondary">{{ items|length }} items</span>
+                        <span class="badge bg-secondary">{{ items|length }} item{{ items|length|pluralize }}</span>
+                        {% if filtered_category %}
+                        <a href="{% url 'catalog:item-form' %}?category={{ filtered_category.pk }}" class="btn btn-primary btn-sm">
+                            <i class="bi bi-plus-circle me-1"></i>Add Item to Category
+                        </a>
+                        {% endif %}
+                        {% if not filtered_category %}
                         <a href="{% url 'catalog:item-form' %}" class="btn btn-primary btn-sm">
                             <i class="bi bi-plus-lg me-1"></i>Add New Item
                         </a>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -55,12 +83,12 @@
                                         <span class="badge bg-secondary">{{ item.type }}</span>
                                     </td>
                                     <td>
-                                        {% if item.status == 'Active' %}
+                                        {% if item.is_active %}
                                             <span class="badge bg-success">{{ item.status }}</span>
-                                        {% elif item.status == 'Inactive' %}
-                                            <span class="badge bg-danger">{{ item.status }}</span>
-                                        {% else %}
+                                        {% elif item.is_draft %}
                                             <span class="badge bg-warning">{{ item.status }}</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">{{ item.status }}</span>
                                         {% endif %}
                                     </td>
                                     <td>{{ item.category.name }}</td>

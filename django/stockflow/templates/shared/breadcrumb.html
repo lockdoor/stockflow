@@ -19,7 +19,13 @@
         {% for item in breadcrumb_items %}
             <li class="breadcrumb-item{% if item.active %} active{% endif %}">
                 {% if item.url and not item.active %}
-                    <a href="{% url item.url %}">{{ item.name }}</a>
+                    {% if item.url|slice:":1" == "/" %}
+                        {# URL is already a full path (from reverse()) #}
+                        <a href="{{ item.url }}">{{ item.name }}</a>
+                    {% else %}
+                        {# URL is a name, use url template tag #}
+                        <a href="{% url item.url %}">{{ item.name }}</a>
+                    {% endif %}
                 {% else %}
                     {{ item.name }}
                 {% endif %}

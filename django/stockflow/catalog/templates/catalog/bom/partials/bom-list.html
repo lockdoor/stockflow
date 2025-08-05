@@ -1,89 +1,142 @@
 {% comment %}
-------------------------------------------------------------------------------
-  catalog/bom/partials/bom-list.html
-
-  Description:
-    - Render BOM list with auto-fetch via HTMX when included
-    - If boms context is provided, render table directly
-    - Otherwise, render HTMX loader that fetches data from view
-
-  Required context:
-    - parent_sku: ItemSKU object (ต้องมี parent_sku.id)
-    - boms: queryset ของ BOM objects (optional - จะ fetch ผ่าน HTMX ถ้าไม่มี)
-
-  Usage:
-    - include 'catalog/bom/partials/bom-list.html' with parent_sku=item
-------------------------------------------------------------------------------
+BOM List Section
+Context required:
+- `boms`: List of BOM components for the parent SKU
+- `parent_sku`: The parent SKU for which the BOM is being displayed
+- `view_only`: Optional boolean to indicate if the BOM is view-only (default is False)
 {% endcomment %}
 
-{% if boms is not None %}
-{# Case 1: มี context boms แล้ว (อาจจะเป็น empty queryset) - render table โดยตรง #}
-<div class="flex items-center justify-center">
-    <div class="bg-white p-8 m-4 rounded shadow-md w-full">
-        <h2 class="text-2xl font-bold mb-6 text-center">Bill of material List</h2>
-
-        {% if not parent_sku.is_bom_locked %}
-        <button class="btn btn-primary mb-4" hx-get="{% url 'catalog:bom-create' parent_sku.id %}"
-            hx-target="#bom-form-container" hx-swap="innerHTML" hx-trigger="click"
-            onclick="document.getElementById('modal-form').showModal()">
-            Add New Bom
-        </button>
-        {% include 'shared/modal-form.html' with form_partial='catalog/bom/partials/bom-form.html' %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">
+            <i class="bi bi-list-ul me-2"></i>Bill of Materials
+        </h5>
+        <span class="badge bg-primary">{{ boms.count }} component{{ boms.count|pluralize }}</span>
+    </div>
+    <div class="card-body">
+        {% if boms %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Component SKU</th>
+                        <th>Component Name</th>
+                        <th>Category</th>
+                        <th class="text-end">Quantity</th>
+                        <th>Unit</th>
+                        <th class="text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for bom in boms %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-puzzle me-2 text-info"></i>
+                                <span class="fw-semibold">{{ bom.component_sku.sku_code }}</span>
+                            </div>
+                        </td>
+                        <td>{{ bom.component_sku.name }}</td>
+                        <td>
+                            {% if bom.component_sku.category %}
+                            <span class="badge bg-light text-dark border">
+                                {{ bom.component_sku.category.name }}
+                            </span>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <span class="fw-bold">{{ bom.quantity }}</span>
+                        </td>
+                        <td>{{ bom.component_sku.unit }}</td>
+                        <td class="text-center">
+                            <div class="btn-group btn-group-sm" role="group">
+                                <a href="{% url 'catalog:item-detail' bom.component_sku.pk %}"
+                                    class="btn btn-outline-primary" title="View Component Details">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                {% if not parent_sku.is_bom_locked and not view_only %}
+                                <button type="button" class="btn btn-outline-warning" title="Edit BOM Entry"
+                                    data-bs-toggle="modal" data-bs-target="#editBomModal{{ bom.pk }}">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <form method="post" action="{% url 'catalog:bom-delete' bom.pk %}" class="d-inline"
+                                    onsubmit="return confirm('Are you sure you want to delete this component from the BOM?');">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="_method" value="DELETE">
+                                    <button type="submit" class="btn btn-outline-danger" title="Remove from BOM">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-inbox display-1 text-muted"></i>
+            <h5 class="mt-3 text-muted">No Components Added</h5>
+            <p class="text-muted">Start building your Bill of Materials by adding components using the form on the left.
+            </p>
+        </div>
         {% endif %}
-
-        <table class="table table-zebra table-pin-rows">
-            <thead>
-                <tr>
-                    <th>SKU</th>
-                    <th>Name</th>
-                    <th>Type</th>
-                    <th>Quantity</th>
-                    <th>Unit</th>
-                    <th>Category</th>
-                    {% if boms and boms.0.parent_sku.is_locked %}
-                    <th>Action</th>
-                    {% endif %}
-                </tr>
-            </thead>
-
-            <tbody id="bom-table-body">
-                {% if boms %}
-                {% for bom in boms %}
-                {% include './bom-row.html' %}
-                {% endfor %}
-                {% else %}
-                <tr class="no-contact-row">
-                    <td colspan="6">
-                        <div role="alert" class="alert alert-info">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                                class="h-6 w-6 shrink-0 stroke-current">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                            </svg>
-                            <span>No Bill of material found.</span>
-                        </div>
-                    </td>
-                </tr>
-                {% endif %}
-            </tbody>
-        </table>
     </div>
 </div>
-{% else %}
-{# Case 2: ไม่มี context boms - ใช้ HTMX fetch data #}
-<div id="bom-list-htmx" 
-    hx-get="{% url 'catalog:bom-list' parent_sku.id %}" 
-    hx-trigger="load" 
-    hx-target="this"
-    hx-swap="innerHTML">
-    <div class="flex items-center justify-center">
-        <div class="bg-white p-8 m-4 rounded shadow-md w-full">
-            <h2 class="text-2xl font-bold mb-6 text-center">Bill of material List</h2>
-            <div class="text-center">
-                <span class="loading loading-spinner loading-lg"></span>
-                <p>Loading BOM data...</p>
+
+<!-- Edit BOM Modals -->
+{% if not parent_sku.is_bom_locked %}
+    {% for bom in boms %}
+    <div class="modal fade" id="editBomModal{{ bom.pk }}" tabindex="-1" aria-labelledby="editBomModalLabel{{ bom.pk }}" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form method="post" action="{% url 'catalog:bom-edit' bom.pk %}">
+                    {% csrf_token %}
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="editBomModalLabel{{ bom.pk }}">
+                            Edit BOM Entry
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" name="component_sku" value="{{ bom.component_sku.pk }}">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Component</label>
+                            <div class="bg-light p-2 rounded">
+                                <div class="d-flex align-items-center">
+                                    <i class="bi bi-puzzle me-2 text-info"></i>
+                                    <div>
+                                        <div class="fw-semibold">{{ bom.component_sku.sku }}</div>
+                                        <small class="text-muted">{{ bom.component_sku.name }}</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="quantity{{ bom.pk }}" class="form-label">
+                                Quantity <span class="text-danger">*</span>
+                            </label>
+                            <input type="number" 
+                                   class="form-control" 
+                                   id="quantity{{ bom.pk }}" 
+                                   name="quantity" 
+                                   value="{{ bom.quantity }}" 
+                                   min="0.01" 
+                                   step="0.01" 
+                                   required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Update</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
-</div>
+    {% endfor %}
 {% endif %}

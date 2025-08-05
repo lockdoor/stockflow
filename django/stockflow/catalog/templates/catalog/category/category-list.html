@@ -39,7 +39,7 @@
           <tr>
             <th>Name</th>
             <th>Description</th>
-            <th>Parent Category</th>
+            <th class="text-center">Items Count</th>
             <th>Status</th>
             <th class="text-center">Actions</th>
           </tr>
@@ -69,15 +69,20 @@
                 {% endif %}
               </span>
             </td>
-            <td>
-              {% if category.parent %}
-              <span class="badge bg-light text-dark">
-                {{ category.parent.name }}
-              </span>
+            <td class="text-center">
+              {% if category.items_count > 0 %}
+              <a href="{% url 'catalog:item-list' %}?category={{ category.pk }}" 
+                 class="text-decoration-none d-flex align-items-center justify-content-center">
+                <i class="bi bi-box me-1 text-primary"></i>
+                <span class="fw-semibold text-primary">{{ category.items_count }}</span>
+                <span class="text-muted ms-1">item{{ category.items_count|pluralize }}</span>
+              </a>
               {% else %}
-              <span class="text-muted">
-                <em>Root Category</em>
-              </span>
+              <div class="d-flex align-items-center justify-content-center">
+                <i class="bi bi-box me-1 text-muted"></i>
+                <span class="fw-semibold text-muted">0</span>
+                <span class="text-muted ms-1">items</span>
+              </div>
               {% endif %}
             </td>
             <td>

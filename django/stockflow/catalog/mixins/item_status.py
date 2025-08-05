@@ -52,11 +52,11 @@ class ItemStatusMixin(models.Model):
         
     def allows_bom_changes(self):
         """Check if the item allows BOM structure changes"""
-        return self.status == self.Status.DRAFT and self.can_have_bom()
+        return self.status == self.Status.DRAFT and self.can_have_bom
     
     def lock_bom(self):
         """Lock the BOM structure for this item by changing status from DRAFT to ACTIVE"""
-        if not self.can_have_bom():
+        if not self.can_have_bom:
             raise ValidationError("This item type cannot have a BOM")
             
         if self.status == self.Status.DRAFT:
@@ -66,7 +66,7 @@ class ItemStatusMixin(models.Model):
         
     def unlock_bom(self):
         """Unlock the BOM structure for editing by changing status to DRAFT"""
-        if not self.can_have_bom():
+        if not self.can_have_bom:
             raise ValidationError("This item type cannot have a BOM")
             
         # Check for dependencies before allowing unlock

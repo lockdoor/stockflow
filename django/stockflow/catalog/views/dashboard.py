@@ -21,14 +21,19 @@ def catalog_dashboard_view(request):
     
     # Categories
     total_categories = Category.objects.count()
+    active_categories = Category.objects.filter(is_active=True).count()
     categories_with_items = Category.objects.annotate(
         items_count=Count('items')
     ).filter(items_count__gt=0).count()
     
     # BOMs
     total_boms = BOM.objects.count()
-    # Remove the line that tries to filter by status since BOM doesn't have status field
-    # active_boms = BOM.objects.filter(status='ACTIVE').count()
+    boms_with_items = BOM.objects.values('parent_sku').distinct().count()
+    
+    # Items with images (assuming there's an image field or related model)
+    # For now, we'll use a placeholder since we don't see image model
+    items_with_images = 0  # TODO: Update when image model is available
+    image_coverage_percentage = round((items_with_images / total_items * 100) if total_items > 0 else 0, 1)
     
     # Recent Activity (last 30 days)
     thirty_days_ago = datetime.now() - timedelta(days=30)
@@ -36,10 +41,21 @@ def catalog_dashboard_view(request):
         created_at__gte=thirty_days_ago
     ).count()
     
-    # Recent Items
-    recent_items = ItemSKU.objects.select_related('category').order_by('-created_at')[:10]
+    # Recent Items (for dashboard display) - optimized with prefetch
+    recent_items = ItemSKU.objects.select_related('category').prefetch_related('bom_parent').order_by('-created_at')[:5]
     
-    # Categories breakdown
+    # Categories with counts for dashboard display
+    categories_with_counts = Category.objects.annotate(
+        item_count=Count('items')
+    ).filter(item_count__gt=0).order_by('-item_count')[:6]
+    
+    # If no categories have items, show all categories
+    if not categories_with_counts.exists():
+        categories_with_counts = Category.objects.annotate(
+            item_count=Count('items')
+        ).order_by('name')[:6]
+    
+    # Categories breakdown for detailed analysis
     categories_breakdown = Category.objects.annotate(
         items_count=Count('items'),
         active_items_count=Count('items', filter=Q(items__status='ACTIVE'))
@@ -55,23 +71,26 @@ def catalog_dashboard_view(request):
         Q(status='DRAFT') | Q(status='INACTIVE')
     ).select_related('category')[:10]
     
-    # BOMs breakdown - count unique parent SKUs that have BOMs
-    boms_with_components = BOM.objects.values('parent_sku').distinct().count()
-    
     context = {
-        # Basic Stats
+        # Statistics for template cards
         'total_items': total_items,
+        'recent_additions': recent_additions,
+        'total_categories': total_categories,
+        'active_categories': active_categories,
+        'total_boms': total_boms,
+        'boms_with_items': boms_with_items,
+        'items_with_images': items_with_images,
+        'image_coverage_percentage': image_coverage_percentage,
+        
+        # Dashboard sections
+        'categories_with_counts': categories_with_counts,
+        'recent_items': recent_items,
+        
+        # Detailed stats (for potential use)
         'active_items': active_items,
         'draft_items': draft_items,
         'inactive_items': inactive_items,
-        'total_categories': total_categories,
         'categories_with_items': categories_with_items,
-        'total_boms': total_boms,
-        'boms_with_components': boms_with_components,
-        
-        # Activity
-        'recent_additions': recent_additions,
-        'recent_items': recent_items,
         'categories_breakdown': categories_breakdown,
         'items_by_type': items_by_type,
         'items_needing_attention': items_needing_attention,

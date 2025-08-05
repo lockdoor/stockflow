@@ -158,11 +158,11 @@
                   <div class="d-flex justify-content-between align-items-center">
                     <div>
                       <h6 class="mb-1">{{ category.name }}</h6>
-                      <small class="text-muted">{{ category.description|truncatechars:50 }}</small>
+                      <small class="text-muted">{% if category.note %}{{ category.note|truncatechars:50 }}{% else %}No description{% endif %}</small>
                     </div>
                     <div class="text-end">
                       <h6 class="text-primary mb-1">{{ category.item_count }}</h6>
-                      <small class="text-muted">items</small>
+                      <small class="text-muted">item{{ category.item_count|pluralize }}</small>
                     </div>
                   </div>
                 </div>
@@ -200,26 +200,22 @@
                 <div class="movement-item">
                   <div class="d-flex justify-content-between align-items-center">
                     <div class="d-flex align-items-center">
-                      {% if item.primary_image %}
-                        <img src="{{ item.primary_image.image.url }}" 
-                             alt="{{ item.name }}" 
-                             class="me-3 rounded"
-                             style="width: 40px; height: 40px; object-fit: cover;">
-                      {% else %}
-                        <div class="me-3 rounded bg-light d-flex align-items-center justify-content-center" 
-                             style="width: 40px; height: 40px;">
-                          <i class="bi bi-image text-muted"></i>
-                        </div>
-                      {% endif %}
+                      <!-- Placeholder for image since image model might not be available yet -->
+                      <div class="me-3 rounded bg-light d-flex align-items-center justify-content-center" 
+                           style="width: 40px; height: 40px;">
+                        <i class="bi bi-box text-muted"></i>
+                      </div>
                       <div>
                         <h6 class="mb-1">{{ item.name }}</h6>
-                        <small class="text-muted">{{ item.sku }} • {{ item.category.name }}</small>
+                        <small class="text-muted">{{ item.sku_code }} • {% if item.category %}{{ item.category.name }}{% else %}No Category{% endif %}</small>
                       </div>
                     </div>
                     <div class="text-end">
                       <small class="text-muted">{{ item.created_at|timesince }} ago</small>
                       {% if item.has_bom %}
-                        <br><span class="badge bg-warning">BOM</span>
+                        <br><span class="badge bg-warning">Has BOM</span>
+                      {% elif item.can_have_bom %}
+                        <br><span class="badge bg-info">Can have BOM</span>
                       {% endif %}
                     </div>
                   </div>
@@ -236,58 +232,6 @@
                 <p class="text-muted mb-3">No items yet</p>
                 <a href="{% url 'catalog:item-form' %}" class="btn btn-soft-primary">
                   Create First Item
-                </a>
-              </div>
-            {% endif %}
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- BOMs Overview -->
-    <div class="row g-4 mt-4">
-      <div class="col-12">
-        <div class="dashboard-card">
-          <div class="card-header d-flex justify-content-between align-items-center">
-            <h5 class="card-title mb-0">Bills of Materials</h5>
-            <div class="d-flex gap-2">
-              <a href="{#% url 'catalog:bom-list' %#}" class="btn btn-sm btn-soft-primary">
-                View All BOMs
-              </a>
-              <a href="{#% url 'catalog:bom-create' %#}" class="btn btn-sm btn-primary">
-                <i class="bi bi-plus-circle me-1"></i>Create BOM
-              </a>
-            </div>
-          </div>
-          <div class="card-body">
-            {% if recent_boms %}
-              <div class="row">
-                {% for bom in recent_boms %}
-                  <div class="col-md-6 col-lg-4 mb-3">
-                    <div class="border rounded p-3 h-100">
-                      <div class="d-flex justify-content-between align-items-start mb-2">
-                        <h6 class="mb-0">{{ bom.parent_item.name }}</h6>
-                        <small class="text-muted">v{{ bom.version }}</small>
-                      </div>
-                      <p class="small text-muted mb-2">{{ bom.parent_item.sku }}</p>
-                      <div class="d-flex justify-content-between align-items-center">
-                        <small class="text-info">{{ bom.components.count }} components</small>
-                        {% if bom.is_active %}
-                          <span class="badge bg-success">Active</span>
-                        {% else %}
-                          <span class="badge bg-secondary">Inactive</span>
-                        {% endif %}
-                      </div>
-                    </div>
-                  </div>
-                {% endfor %}
-              </div>
-            {% else %}
-              <div class="text-center py-4">
-                <i class="bi bi-diagram-3 text-muted fs-1 mb-3 d-block"></i>
-                <p class="text-muted mb-3">No BOMs created yet</p>
-                <a href="{#% url 'catalog:bom-create' %#}" class="btn btn-soft-primary">
-                  Create First BOM
                 </a>
               </div>
             {% endif %}

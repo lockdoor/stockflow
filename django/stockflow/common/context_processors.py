@@ -2,7 +2,7 @@
 Context processors for adding common data to all templates
 """
 
-from django.urls import resolve
+from django.urls import resolve, reverse
 from django.urls.exceptions import Resolver404
 
 def breadcrumb(request):
@@ -48,6 +48,13 @@ def breadcrumb(request):
                 {'name': 'Catalog', 'url': 'catalog:dashboard', 'active': False},
                 {'name': 'Items', 'url': 'catalog:item-list', 'active': False},
                 {'name': 'Item Details', 'url': None, 'active': True}
+            ],
+            'catalog:bom-create': [
+                {'name': 'Dashboard', 'url': 'dashboard', 'active': False},
+                {'name': 'Catalog', 'url': 'catalog:dashboard', 'active': False},
+                {'name': 'Items', 'url': 'catalog:item-list', 'active': False},
+                {'name': 'Item Details', 'url': reverse('catalog:item-detail', args=[resolver_match.kwargs.get('parent_id')]) if resolver_match.kwargs.get('parent_id') else None, 'active': False},
+                {'name': 'Create BOM', 'url': None, 'active': True}
             ],
             'catalog:category-list': [
                 {'name': 'Dashboard', 'url': 'dashboard', 'active': False},

@@ -101,6 +101,7 @@ class ItemSKU(AuditableMixin, ItemStatusMixin, ValidatableMixin, models.Model):
         # Call parent save (includes optimistic locking)
         super().save(*args, **kwargs)
 
+    @property
     def can_have_bom(self):
         """
         Check if this item can have a BOM (Bill of Materials)
@@ -108,11 +109,35 @@ class ItemSKU(AuditableMixin, ItemStatusMixin, ValidatableMixin, models.Model):
         """
         return self.type in [self.Type.PRODUCT, self.Type.PACKAGE]
 
+    @property
     def can_be_component(self):
         """
         Check if this item can be used as a component in other BOMs
         """
         return True  # All items can be components
+
+    @property
+    def is_active(self):
+        """Check if this item is active"""
+        return self.status == self.Status.ACTIVE
+    
+    @property
+    def is_draft(self):
+        """Check if this item is in draft status"""
+        return self.status == self.Status.DRAFT
+    
+    @property
+    def is_inactive(self):
+        """Check if this item is inactive"""
+        return self.status == self.Status.INACTIVE
+
+    @property
+    def has_bom(self):
+        """Check if this item has any BOM components"""
+        if not self.can_have_bom:
+            return False
+        # Use the correct related_name from BOM model
+        return hasattr(self, 'bom_parent') and self.bom_parent.exists()
 
     def get_display_type(self):
         """Get human-readable type display"""

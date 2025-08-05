@@ -1,0 +1,109 @@
+{% extends "base-dashboard-header.html" %}
+{% load widget_tweaks %}
+
+{% block title %}Bom Form - StockFlow{% endblock %}
+
+{% block title_text %}Bom Management{% endblock %}
+{% block subtitle_text %}View and manage <span class="fw-bold">{{ parent_sku }}</span> Bill of Materials{% endblock %}
+
+{% block header_actions %}
+<a href="{% url 'catalog:item-detail' parent_sku.pk %}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i>Back to Item
+</a>
+<a href="{% url 'catalog:item-list' %}" class="btn btn-outline-secondary">
+    <i class="bi bi-list me-1"></i>All Items
+</a>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- BOM Form Section -->
+        <div class="col-lg-4 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-plus-circle me-2"></i>Add New Component
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{% url 'catalog:bom-create' parent_sku.pk %}">
+                        {% csrf_token %}
+                        
+                        <!-- Parent Item Info -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Parent Item</label>
+                            <div class="bg-light p-2 rounded">
+                                <div class="d-flex align-items-center">
+                                    <i class="bi bi-box me-2 text-primary"></i>
+                                    <div>
+                                        <div class="fw-semibold">{{ parent_sku.sku_code }}</div>
+                                        <small class="text-muted">{{ parent_sku.name }}</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Component Selection -->
+                        <div class="mb-3">
+                            <label for="{{ form.component_sku.id_for_label }}" class="form-label">
+                                Component <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-select" name="{{ form.component_sku.html_name }}" id="{{ form.component_sku.id_for_label }}" required>
+                                <option value="">Select a component...</option>
+                                {% for component in components %}
+                                    {% if component.pk != parent_sku.pk %}
+                                    <option value="{{ component.pk }}" 
+                                            {% if form.component_sku.value == component.pk|stringformat:"s" %}selected{% endif %}>
+                                        {{ component.sku_code }} - {{ component.name }} ({{ component.get_item_type_display }})
+                                    </option>
+                                    {% endif %}
+                                {% endfor %}
+                            </select>
+                            {% if form.component_sku.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.component_sku.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Quantity -->
+                        <div class="mb-3">
+                            <label for="{{ form.quantity.id_for_label }}" class="form-label">
+                                Quantity <span class="text-danger">*</span>
+                            </label>
+                            {{ form.quantity|add_class:"form-control" }}
+                            {% if form.quantity.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.quantity.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Form Errors -->
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger">
+                                {% for error in form.non_field_errors %}
+                                    <div>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+
+                        <!-- Submit Button -->
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-plus-circle me-2"></i>Add Component
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- BOM List Section -->
+        <div class="col-lg-8">
+            {% include 'catalog/bom/partials/bom-list.html' with boms=boms parent_sku=parent_sku %}
+        </div>
+    </div>
+</div>
+{% endblock %}

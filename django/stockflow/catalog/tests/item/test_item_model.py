@@ -305,9 +305,9 @@ class ItemSKUModelTest(TestCase):
     
     def test_can_have_bom_logic(self):
         """Test can_have_bom business logic"""
-        self.assertFalse(self.raw_item.can_have_bom())
-        self.assertTrue(self.product_item.can_have_bom())
-        self.assertTrue(self.package_item.can_have_bom())
+        self.assertFalse(self.raw_item.can_have_bom)
+        self.assertTrue(self.product_item.can_have_bom)
+        self.assertTrue(self.package_item.can_have_bom)
     
     def test_is_bom_locked_logic(self):
         """Test is_bom_locked business logic"""
@@ -376,12 +376,12 @@ class ItemSKUModelTest(TestCase):
             created_by=self.user,
             updated_by=self.user
         )
-        self.assertTrue(active_item.is_active())
-        self.assertFalse(active_item.is_draft())
+        self.assertTrue(active_item.is_active)
+        self.assertFalse(active_item.is_draft)
         
         # Draft item
-        self.assertTrue(self.product_item.is_draft())
-        self.assertFalse(self.product_item.is_active())
+        self.assertTrue(self.product_item.is_draft)
+        self.assertFalse(self.product_item.is_active)
         
         # Inactive item
         inactive_item = ItemSKU.objects.create(
@@ -394,6 +394,6 @@ class ItemSKUModelTest(TestCase):
             created_by=self.user,
             updated_by=self.user
         )
-        self.assertFalse(inactive_item.is_active())
-        self.assertFalse(inactive_item.is_draft())
-        self.assertTrue(inactive_item.is_inactive())
+        self.assertFalse(inactive_item.is_active)
+        self.assertFalse(inactive_item.is_draft)
+        self.assertTrue(inactive_item.is_inactive)
