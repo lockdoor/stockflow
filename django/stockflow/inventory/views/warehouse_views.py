@@ -18,6 +18,12 @@ class WarehouseDetailView(LoginRequiredMixin, DetailView):
     template_name = 'inventory/warehouse/warehouse-detail.html'
     context_object_name = 'warehouse'
     
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Add any additional context if needed
+        context['stock_movements'] = self.object.stock_movements.all().order_by('-created_at')[:5]
+        return context
+    
 class WarehouseCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """
     View for creating a new Warehouse

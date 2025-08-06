@@ -19,12 +19,15 @@ class StockMovementForm(forms.ModelForm):
     class Meta:
         model = StockMovement
         fields = [
+            'warehouse',
             'reference_type',
             'reference_id',
             'note',
-            'warehouse',
         ]
         widgets = {
+            'warehouse': forms.Select(attrs={
+                'class': 'form-select'
+            }),
             'reference_type': forms.Select(attrs={
                 'class': 'form-select'
             }),
@@ -39,23 +42,20 @@ class StockMovementForm(forms.ModelForm):
                 'maxlength': '1000',
                 'class': 'form-control'
             }),
-            'warehouse': forms.Select(attrs={
-                'class': 'form-select'
-            }),
         }
         
         labels = {
+            'warehouse': 'Warehouse',
             'reference_type': 'Reference Type',
             'reference_id': 'Reference ID',
             'note': 'Notes',
-            'warehouse': 'Warehouse',
         }
         
         help_texts = {
+            'warehouse': 'Select the warehouse where this stock movement occurs',
             'reference_type': 'Select the type of document this movement references',
             'reference_id': 'ID of the referenced document (required for most reference types)',
             'note': 'Additional information about this stock movement (optional, max 1000 characters)',
-            'warehouse': 'Select the warehouse where this stock movement occurs',
         }
     
     def __init__(self, *args, **kwargs):
@@ -71,23 +71,6 @@ class StockMovementForm(forms.ModelForm):
         
         # Make reference_id conditionally required based on reference_type
         self.fields['reference_id'].required = False
-    
-    def clean(self):
-        """Validate form data with business rules"""
-        cleaned_data = super().clean()
-        reference_type = cleaned_data.get('reference_type')
-        reference_id = cleaned_data.get('reference_id')
-        
-        # Clear reference_id if reference_type is NONE
-        if reference_type == StockMovement.ReferenceType.NONE:
-            cleaned_data['reference_id'] = None
-        # Reference ID is required for non-NONE reference types
-        elif reference_type and not reference_id:
-            raise forms.ValidationError({
-                'reference_id': f'Reference ID is required when reference type is {reference_type}'
-            })
-        
-        return cleaned_data
     
     def clean_note(self):
         """Validate and normalize note field"""

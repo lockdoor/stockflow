@@ -11,15 +11,15 @@ from inventory.views.warehouse_views import (
 
 from inventory.views.stock_movement_views import (
     StockMovementCreateView, 
-    StockMovementByWarehouseListView, 
+    StockMovementListView,
     StockMovementDeleteView, 
     StockMovementUpdateView,
     StockMovementDetailView,
     StockMovementConfirmView
 )
 
-from inventory.views.stock_item_views import (
-     StockItemMovementListView,
+from inventory.views.stock_movement_item_views import (
+     # StockItemMovementListView,
      StockItemMovementCreateView,
      StockItemMovementDeleteView,
      StockItemMovementUpdateView
@@ -50,43 +50,39 @@ urlpatterns = [
          name='warehouse-form'),
     path('warehouses/<int:pk>/form/', 
          WarehouseUpdateView.as_view(), 
-         name='warehouse-edit-form'),   
-    
-    # Warehouse stock movements
-    path('warehouses/<int:warehouse_id>/stock-movements/', 
-        StockMovementByWarehouseListView.as_view(), 
-        name='stock-movement-list'), 
-    path('warehouses/<int:warehouse_id>/stock-movements/create/', 
-         StockMovementCreateView.as_view(), 
-         name='stock-movement-create'),
+         name='warehouse-edit-form'),
     
     # Stock movement
+    path('stockmovement/', 
+         StockMovementListView.as_view(), 
+         name='stock-movement-list'),
     path('stockmovement/<int:pk>/', 
          StockMovementDetailView.as_view(), 
          name='stock-movement-detail'),
     path('stockmovement/<int:pk>/delete/', 
         StockMovementDeleteView.as_view(), 
         name='stock-movement-delete'),
+    path('stockmovement/create/', 
+         StockMovementCreateView.as_view(), 
+         name='stock-movement-create'),
     path('stockmovement/<int:pk>/edit/', 
          StockMovementUpdateView.as_view(), 
-         name='stock-movement-edit'),
+         name='stock-movement-update'),
      path('stockmovement/<int:pk>/confirm/', 
           StockMovementConfirmView.as_view(), 
           name='stock-movement-confirm'),
     
     # Stock item movements
-    path('stockmovement/<int:stock_movement_id>/items/', 
-         StockItemMovementListView.as_view(), 
-         name='stock-item-movement-list'),
-    path('stockmovement/<int:stock_movement_id>/items/create/', 
-         StockItemMovementCreateView.as_view(), 
-         name='stock-item-movement-create'),
-    path('stockmovement/<int:stock_movement_id>/items/<int:pk>/edit/', 
-         StockItemMovementUpdateView.as_view(), 
-         name='stock-item-movement-edit'),
-     path('stockmovement/<int:stock_movement_id>/items/<int:pk>/delete/',
-          StockItemMovementDeleteView.as_view(), 
-          name='stock-item-movement-delete'),
+    path('movement/<int:stock_movement_id>/form/', 
+         StockItemMovementCreateView.as_view(),
+         name='movement-create'),
+    path('movement/<int:stock_movement_id>/items/<int:pk>/edit/', 
+         StockItemMovementUpdateView.as_view(),
+         name='movement-edit'),
+    path('movement/<int:stock_movement_id>/items/<int:pk>/delete/', 
+         StockItemMovementDeleteView.as_view(),
+         name='movement-delete'),
+
      
      path('stock/', StockIndexView.as_view(), name='stock-index'),
      path('stock/list/', StockListView.as_view(), name='stock-list'),

@@ -193,7 +193,7 @@
                 {% if stock_by_warehouse %}
                 {% for warehouse in stock_by_warehouse %}
                 <li>
-                  <a class="dropdown-item" href="{% url 'inventory:stock-movement-create' warehouse.id %}">
+                  <a class="dropdown-item" href="{% url 'inventory:stock-movement-create'%}">
                     <div class="d-flex justify-content-between">
                       <span>{{ warehouse.name }}</span>
                       <small class="text-muted">{{ warehouse.items_count }} items</small>
@@ -263,7 +263,7 @@
               {% if stock_by_warehouse %}
               {% for warehouse in stock_by_warehouse %}
               <li>
-                <a class="dropdown-item" href="{% url 'inventory:stock-movement-list' warehouse.id %}">
+                <a class="dropdown-item" href="{% url 'inventory:stock-movement-list' %}">
                   {{ warehouse.name }}
                 </a>
               </li>

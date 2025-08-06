@@ -101,6 +101,7 @@
       </div>
       <div class="card-body">
         <div class="row g-3">
+          <!-- Quick Action: New Item -->
           <div class="col-sm-6 col-lg-4">
             <a href="{% url 'catalog:item-form' %}" class="quick-action action-primary">
               <div class="d-flex align-items-center">
@@ -112,7 +113,7 @@
               </div>
             </a>
           </div>
-
+          <!-- Quick Action: New Category -->
           <div class="col-sm-6 col-lg-4">
             <a href="{% url 'catalog:category-create' %}" class="quick-action action-success">
               <div class="d-flex align-items-center">

@@ -1,55 +1,46 @@
-{% extends "base.html" %}
+{% extends "base-dashboard-header.html" %}
 {% load widget_tweaks %}
 
 {% block title %}
 {% if form.instance.id %}
-Edit Warehouse - {{ form.instance.name }}
+Edit Warehouse - {{ form.instance.name }} - StockFlow
 {% else %}
-Add New Warehouse
-{% endif %} - StockFlow
+Add New Warehouse - StockFlow
+{% endif %}
 {% endblock %}
 
-{% block content %}
-<div class="main-content">
-  <!-- Header -->
-  <div class="dashboard-header">
-    <div class="container-fluid">
-      <div class="d-flex justify-content-between align-items-center py-4">
-        <div>
-          {% include 'shared/breadcrumb.html' %}
-          <h1 class="h2 mb-1">
-            {% if form.instance.id %}
-            Edit Warehouse: {{ form.instance.name }}
-            {% else %}
-            Add New Warehouse
-            {% endif %}
-          </h1>
-          <p class="text-muted mb-0">
-            {% if form.instance.id %}
-            Update warehouse information and properties
-            {% else %}
-            Create a new warehouse location
-            {% endif %}
-          </p>
-        </div>
-        <div class="d-flex gap-2">
-          <a href="{% url 'inventory:warehouse-list' %}" class="btn btn-outline-secondary">
-            <i class="bi bi-arrow-left me-1"></i>Back to Warehouses
-          </a>
-          <a href="{% url 'inventory:dashboard' %}" class="btn btn-outline-primary">
-            <i class="bi bi-speedometer2 me-1"></i>Inventory Dashboard
-          </a>
-        </div>
-      </div>
-    </div>
-  </div>
+{% block title_text %}Warehouse Management{% endblock %}
+{% block subtitle_text %}
+{% if form.instance.id %}
+Edit warehouse: {{ form.instance.name }}
+{% else %}
+Create a new warehouse location
+{% endif %}
+{% endblock %}
 
-  <!-- Main Content -->
-  <div class="container-fluid py-4">
-    <div class="row justify-content-center">
-      <div class="col-md-8 col-lg-6">
-        <div class="dashboard-card">
-          <div class="card-body">
+{% block header_actions %}
+<a href="{% url 'inventory:warehouse-list' %}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i>Back to Warehouses
+</a>
+<a href="{% url 'inventory:dashboard' %}" class="btn btn-outline-primary">
+    <i class="bi bi-speedometer2 me-1"></i>Inventory Dashboard
+</a>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="row justify-content-center">
+  <div class="col-md-8 col-lg-6">
+    <div class="card shadow-sm">
+      <div class="card-header">
+        <h5 class="card-title mb-0">
+          {% if form.instance.id %}
+          <i class="bi bi-pencil-square me-2"></i>Edit Warehouse
+          {% else %}
+          <i class="bi bi-plus-circle me-2"></i>Add New Warehouse
+          {% endif %}
+        </h5>
+      </div>
+      <div class="card-body">
             {% if form %}
             <form method="post" enctype="multipart/form-data">
               {% csrf_token %}

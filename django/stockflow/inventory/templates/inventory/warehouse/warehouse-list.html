@@ -37,6 +37,7 @@
                                     <th>Code</th>
                                     <th>Name</th>
                                     <th>Address</th>
+                                    <th>Movement</th>
                                     <th>Status</th>
                                     <th>Created At</th>
                                     <th class="text-center" width="120">Actions</th>
@@ -52,6 +53,7 @@
                                     </td>
                                     <td>{{ warehouse.name }}</td>
                                     <td>{{ warehouse.address|truncatechars:50 }}</td>
+                                    <td>{{ warehouse.stock_movements.count }}</td>
                                     <td>
                                         {% if warehouse.is_active %}
                                             <span class="badge bg-success">Active</span>

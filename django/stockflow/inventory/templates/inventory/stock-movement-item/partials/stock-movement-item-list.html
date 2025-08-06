@@ -1,0 +1,244 @@
+{% comment %}
+------------------------------------------------------------------------------
+  inventory/item-movement/partials/item-movement-list.html
+
+  Description:
+    - Render movement items list for redirect flow pattern
+    - Shows table of movement items with edit/delete actions
+
+  Required context:
+    - stock_movement: StockMovement object
+    - movement_items: queryset of StockMovementItem objects
+
+  Usage:
+    - include 'inventory/item-movement/partials/item-movement-list.html' with movement_items=movement_items stock_movement=stock_movement
+------------------------------------------------------------------------------
+{% endcomment %}
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">
+            <i class="bi bi-list-ul me-2"></i>Movement Items
+        </h5>
+        <span class="badge bg-secondary">{{ movement_items|length }} items</span>
+    </div>
+    
+    {% if movement_items %}
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Item SKU</th>
+                    <th>Lot Number</th>
+                    <th class="text-end">Quantity</th>
+                    <th>Expiry Date</th>
+                    <th>Note</th>
+                    <th class="text-center">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in movement_items %}
+                <tr>
+                    <td>
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-box me-2 text-primary"></i>
+                            <div>
+                                <div class="fw-semibold">{{ item.item_sku.sku_code }}</div>
+                                <small class="text-muted">{{ item.item_sku.name }}</small>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="badge bg-light text-dark">{{ item.lot_number }}</span>
+                    </td>
+                    <td class="text-end">
+                        <span class="fw-semibold">{{ item.quantity|floatformat:0 }}</span>
+                        <small class="text-muted">{{ item.item_sku.unit_of_measure }}</small>
+                    </td>
+                    <td>
+                        {% if item.expiry_date %}
+                            <span class="badge bg-info">{{ item.expiry_date|date:"M d, Y" }}</span>
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if item.note %}
+                            <small class="text-muted">{{ item.note|truncatechars:30 }}</small>
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">
+                        {% if stock_movement.status != 'CONFIRMED' %}
+                        <div class="btn-group btn-group-sm">
+                            <button type="button" class="btn btn-outline-warning btn-sm" title="Edit" 
+                                    data-bs-toggle="modal" data-bs-target="#editMovementItemModal{{ item.pk }}">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <form method="post" action="{% url 'inventory:movement-delete' stock_movement.pk item.pk %}" class="d-inline"
+                                  onsubmit="return confirm('Are you sure you want to delete this movement item?');">
+                                {% csrf_token %}
+                                <input type="hidden" name="_method" value="DELETE">
+                                <button type="submit" class="btn btn-outline-danger btn-sm" title="Delete">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                        {% else %}
+                        <span class="text-muted">
+                            <i class="bi bi-lock"></i>
+                        </span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="card-body text-center py-5">
+        <div class="text-muted">
+            <i class="bi bi-inbox display-6"></i>
+            <h5 class="mt-3">No movement items yet</h5>
+            <p>Add items to this stock movement using the form on the left.</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Edit Movement Item Modals -->
+{% if stock_movement.status != 'CONFIRMED' %}
+    {% for item in movement_items %}
+    <div class="modal fade" id="editMovementItemModal{{ item.pk }}" tabindex="-1" aria-labelledby="editMovementItemModalLabel{{ item.pk }}" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form method="post" action="{% url 'inventory:movement-edit' stock_movement.pk item.pk %}">
+                    {% csrf_token %}
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="editMovementItemModalLabel{{ item.pk }}">
+                            <i class="bi bi-pencil-square me-2"></i>Edit Movement Item
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <!-- Hidden fields for non-editable data -->
+                        <input type="hidden" name="stock_movement" value="{{ stock_movement.pk }}">
+                        <input type="hidden" name="item_sku" value="{{ item.item_sku.pk }}">
+                        <input type="hidden" name="movement_type" value="{{ item.movement_type }}">
+                        
+                        <!-- Stock Movement Info (Read-only) -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">
+                                <i class="bi bi-box-seam me-1"></i>Stock Movement
+                            </label>
+                            <div class="bg-light p-3 rounded border">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <div class="d-flex align-items-center">
+                                        <i class="bi bi-arrow-repeat me-2 text-primary fs-5"></i>
+                                        <div>
+                                            <div class="fw-semibold">{{ stock_movement.get_reference_type_display }} #{{ stock_movement.id }}</div>
+                                            <small class="text-muted">
+                                                <i class="bi bi-building me-1"></i>{{ stock_movement.warehouse.name }}
+                                            </small>
+                                        </div>
+                                    </div>
+                                    <span class="badge {% if stock_movement.status == 'CONFIRMED' %}bg-success{% else %}bg-warning{% endif %} fs-6">
+                                        {{ stock_movement.get_status_display }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Item SKU Info (Read-only) -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">
+                                <i class="bi bi-box me-1"></i>Item SKU
+                            </label>
+                            <div class="bg-light p-3 rounded border">
+                                <div class="d-flex align-items-center">
+                                    <i class="bi bi-box me-2 text-primary"></i>
+                                    <div>
+                                        <div class="fw-semibold">{{ item.item_sku.sku_code }}</div>
+                                        <small class="text-muted">{{ item.item_sku.name }}</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Movement Type Info (Read-only) -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">
+                                <i class="bi bi-arrow-up-down me-1"></i>Movement Type
+                            </label>
+                            <div class="bg-light p-2 rounded border">
+                                <span class="fw-semibold">{{ item.get_movement_type_display }}</span>
+                            </div>
+                        </div>
+
+                        <!-- Editable Fields -->
+                        <!-- Quantity -->
+                        <div class="mb-3">
+                            <label for="quantity{{ item.pk }}" class="form-label">
+                                <i class="bi bi-123 me-1"></i>Quantity <span class="text-danger">*</span>
+                            </label>
+                            <div class="input-group">
+                                <input type="number" 
+                                       class="form-control" 
+                                       id="quantity{{ item.pk }}" 
+                                       name="quantity" 
+                                       value="{{ item.quantity }}" 
+                                       min="0.01" 
+                                       step="0.01" 
+                                       required>
+                                <span class="input-group-text">units</span>
+                            </div>
+                        </div>
+
+                        <!-- Lot Number -->
+                        <div class="mb-3">
+                            <label for="lot_number{{ item.pk }}" class="form-label">
+                                <i class="bi bi-tag me-1"></i>Lot Number
+                            </label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="lot_number{{ item.pk }}" 
+                                   name="lot_number" 
+                                   value="{{ item.lot_number }}">
+                        </div>
+
+                        <!-- Expiry Date -->
+                        <div class="mb-3">
+                            <label for="expiry_date{{ item.pk }}" class="form-label">
+                                <i class="bi bi-calendar-event me-1"></i>Expiry Date
+                            </label>
+                            <input type="date" 
+                                   class="form-control" 
+                                   id="expiry_date{{ item.pk }}" 
+                                   name="expiry_date" 
+                                   value="{% if item.expiry_date %}{{ item.expiry_date|date:'Y-m-d' }}{% endif %}">
+                        </div>
+
+                        <!-- Note -->
+                        <div class="mb-3">
+                            <label for="note{{ item.pk }}" class="form-label">
+                                <i class="bi bi-chat-text me-1"></i>Note
+                            </label>
+                            <textarea class="form-control" 
+                                      id="note{{ item.pk }}" 
+                                      name="note" 
+                                      rows="3">{{ item.note }}</textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle me-1"></i>Update Item
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+{% endif %}

@@ -196,13 +196,14 @@ class StockMovementFormValidationTest(TestCase):
                 form = StockMovementForm(data=form_data)
                 
                 self.assertFalse(form.is_valid(), f"Form should be invalid for {ref_type} without reference_id")
-                self.assertIn('reference_id', form.errors)
+                # Model validation puts errors in __all__ (non-field errors)
+                self.assertIn('__all__', form.errors)
                 self.assertIn(f'Reference ID is required when reference type is {ref_type}', 
-                            str(form.errors['reference_id']))
+                            str(form.errors['__all__']))
     
     def test_reference_id_optional_for_none_type(self):
         """Test that reference_id is optional for NONE reference type"""
-        # Test without reference_id
+        # Test without reference_id - should be valid
         form_data = {
             'reference_type': StockMovement.ReferenceType.NONE,
             'warehouse': self.warehouse.id,
@@ -211,12 +212,13 @@ class StockMovementFormValidationTest(TestCase):
         self.assertTrue(form.is_valid(), f"Form errors: {form.errors}")
         self.assertIsNone(form.cleaned_data.get('reference_id'))
         
-        # Test with reference_id (should be cleared automatically)
+        # Test with reference_id - model validation should catch this  
         form_data['reference_id'] = 999
         form = StockMovementForm(data=form_data)
-        self.assertTrue(form.is_valid(), f"Form errors: {form.errors}")
-        # reference_id should be cleared when reference_type is NONE
-        self.assertIsNone(form.cleaned_data['reference_id'])
+        self.assertFalse(form.is_valid(), f"Form should be invalid when reference_id provided with NONE type")
+        # Model validation puts this error in __all__
+        self.assertIn('__all__', form.errors)
+        self.assertIn('Reference ID must be empty when reference type is None', str(form.errors['__all__']))
     
     def test_required_fields_validation(self):
         """Test validation of required fields"""
@@ -430,9 +432,10 @@ class StockMovementFormIntegrationTest(TestCase):
         }
         form = StockMovementForm(data=form_data)
         
-        # Form should catch this before model validation
+        # Model validation should catch this  
         self.assertFalse(form.is_valid())
-        self.assertIn('reference_id', form.errors)
+        self.assertIn('__all__', form.errors)
+        self.assertIn('Reference ID is required when reference type is INVOICE', str(form.errors['__all__']))
     
     def test_form_preserves_model_defaults(self):
         """Test that form doesn't interfere with model defaults"""

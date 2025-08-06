@@ -1,0 +1,224 @@
+{% extends "base-dashboard-header.html" %}
+{% load widget_tweaks %}
+
+{% block title %}Stock Movement Items - StockFlow{% endblock %}
+
+{% block title_text %}Stock Movement Management{% endblock %}
+{% block subtitle_text %}Manage items in stock movement <span class="fw-bold">{{ stock_movement.reference_type|capfirst }} #{{ stock_movement.id }}</span>{% endblock %}
+
+{% block header_actions %}
+<a href="{% url 'inventory:stock-movement-detail' stock_movement.pk %}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i>Back to Movement
+</a>
+<a href="{% url 'inventory:stock-movement-list' %}" class="btn btn-outline-secondary">
+    <i class="bi bi-list me-1"></i>All Movements
+</a>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Stock Movement Item Form Section -->
+        <div class="col-lg-4 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-plus-circle me-2"></i>Add New Item
+                    </h5>
+                    <small class="text-muted">Add items to this movement. After adding, the page will refresh to show the updated list.</small>
+                </div>
+                <div class="card-body">
+                    {% if stock_movement.status == 'CONFIRMED' %}
+                        <div class="alert alert-info mb-3">
+                            <i class="bi bi-info-circle me-2"></i>
+                            <strong>Movement Confirmed:</strong> This movement has been confirmed and cannot be modified.
+                        </div>
+                    {% else %}
+                    <form method="post" action="{% url 'inventory:movement-create' stock_movement.pk %}" id="item-form">
+                        {% csrf_token %}
+                        {{ form.stock_movement }}
+                        
+                        <!-- Stock Movement Info -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">
+                                <i class="bi bi-box-seam me-1"></i>Stock Movement
+                            </label>
+                            <div class="bg-light p-3 rounded border">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <div class="d-flex align-items-center">
+                                        <i class="bi bi-arrow-repeat me-2 text-primary fs-5"></i>
+                                        <div>
+                                            <div class="fw-semibold">{{ stock_movement.get_reference_type_display }} #{{ stock_movement.id }}</div>
+                                            <small class="text-muted">
+                                                <i class="bi bi-building me-1"></i>{{ stock_movement.warehouse.name }}
+                                            </small>
+                                        </div>
+                                    </div>
+                                    <span class="badge {% if stock_movement.status == 'CONFIRMED' %}bg-success{% else %}bg-warning{% endif %} fs-6">
+                                        {{ stock_movement.get_status_display }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Item SKU Selection -->
+                        <div class="mb-3">
+                            <label for="{{ form.item_sku.id_for_label }}" class="form-label">
+                                <i class="bi bi-box me-1"></i>{{ form.item_sku.label }} <span class="text-danger">*</span>
+                            </label>
+                            {{ form.item_sku|add_class:"form-select" }}
+                            {% if form.item_sku.help_text %}
+                                <div class="form-text">{{ form.item_sku.help_text }}</div>
+                            {% endif %}
+                            {% if form.item_sku.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.item_sku.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Movement Type -->
+                        <div class="mb-3">
+                            <label for="{{ form.movement_type.id_for_label }}" class="form-label">
+                                <i class="bi bi-arrow-up-down me-1"></i>{{ form.movement_type.label }} <span class="text-danger">*</span>
+                            </label>
+                            {{ form.movement_type|add_class:"form-select" }}
+                            {% if form.movement_type.help_text %}
+                                <div class="form-text">{{ form.movement_type.help_text }}</div>
+                            {% endif %}
+                            {% if form.movement_type.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.movement_type.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Quantity -->
+                        <div class="mb-3">
+                            <label for="{{ form.quantity.id_for_label }}" class="form-label">
+                                <i class="bi bi-123 me-1"></i>{{ form.quantity.label }} <span class="text-danger">*</span>
+                            </label>
+                            <div class="input-group">
+                                {{ form.quantity|add_class:"form-control" }}
+                                <span class="input-group-text">units</span>
+                            </div>
+                            {% if form.quantity.help_text %}
+                                <div class="form-text">{{ form.quantity.help_text }}</div>
+                            {% endif %}
+                            {% if form.quantity.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.quantity.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Lot Number -->
+                        <div class="mb-3">
+                            <label for="{{ form.lot_number.id_for_label }}" class="form-label">
+                                <i class="bi bi-tag me-1"></i>{{ form.lot_number.label }}
+                                {% if form.lot_number.field.required %}<span class="text-danger">*</span>{% endif %}
+                            </label>
+                            {{ form.lot_number|add_class:"form-control" }}
+                            {% if form.lot_number.help_text %}
+                                <div class="form-text">{{ form.lot_number.help_text }}</div>
+                            {% endif %}
+                            {% if form.lot_number.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.lot_number.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Expiry Date -->
+                        <div class="mb-3">
+                            <label for="{{ form.expiry_date.id_for_label }}" class="form-label">
+                                <i class="bi bi-calendar-event me-1"></i>{{ form.expiry_date.label }}
+                                {% if form.expiry_date.field.required %}<span class="text-danger">*</span>{% endif %}
+                            </label>
+                            {{ form.expiry_date|add_class:"form-control" }}
+                            {% if form.expiry_date.help_text %}
+                                <div class="form-text">{{ form.expiry_date.help_text }}</div>
+                            {% endif %}
+                            {% if form.expiry_date.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.expiry_date.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Note -->
+                        <div class="mb-3">
+                            <label for="{{ form.note.id_for_label }}" class="form-label">
+                                <i class="bi bi-chat-text me-1"></i>{{ form.note.label }}
+                                {% if form.note.field.required %}<span class="text-danger">*</span>{% endif %}
+                            </label>
+                            {{ form.note|add_class:"form-control" }}
+                            {% if form.note.help_text %}
+                                <div class="form-text">{{ form.note.help_text }}</div>
+                            {% endif %}
+                            {% if form.note.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.note.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Form Errors -->
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger mb-3">
+                                <i class="bi bi-exclamation-triangle me-2"></i>
+                                <strong>Please correct the following errors:</strong>
+                                <ul class="mb-0 mt-2">
+                                    {% for error in form.non_field_errors %}
+                                        <li>{{ error }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        {% endif %}
+
+                        <!-- Success Message (if redirected back with success) -->
+                        {% if messages %}
+                            {% for message in messages %}
+                                <div class="alert alert-{{ message.tags }} mb-3" role="alert">
+                                    {% if message.tags == 'success' %}
+                                        <i class="bi bi-check-circle me-2"></i>
+                                    {% elif message.tags == 'error' %}
+                                        <i class="bi bi-exclamation-triangle me-2"></i>
+                                    {% elif message.tags == 'warning' %}
+                                        <i class="bi bi-exclamation-circle me-2"></i>
+                                    {% else %}
+                                        <i class="bi bi-info-circle me-2"></i>
+                                    {% endif %}
+                                    {{ message }}
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+
+                        <!-- Action Buttons -->
+                        <div class="row g-2">
+                            <div class="col-8">
+                                <button type="submit" class="btn btn-primary w-100">
+                                    <i class="bi bi-plus-circle me-2"></i>Add Item
+                                </button>
+                            </div>
+                            <div class="col-4">
+                                <a href="{% url 'inventory:stock-movement-detail' stock_movement.pk %}" 
+                                   class="btn btn-outline-secondary w-100" 
+                                   title="View Movement">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Movement Items List Section -->
+        <div class="col-lg-8">
+            {% include './partials/stock-movement-item-list.html' with movement_items=movement_items stock_movement=stock_movement %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -101,11 +101,19 @@ class StockMovementItemLotValidator:
                 return "Lot number cannot exceed 64 characters"
         
         # Check uniqueness within the same movement, item, and movement type
-        if self.item.lot_number and self.item.stock_movement and self.item.item_sku:
+        if (self.item.lot_number and 
+            (hasattr(self.item, 'stock_movement') and self.item.stock_movement or 
+             getattr(self.item, 'stock_movement_id', None)) and 
+            (hasattr(self.item, 'item_sku') and getattr(self.item, 'item_sku', None))):
             from inventory.models.stock_movement_item import StockMovementItem
             
+            # Get stock_movement either from relation or ID
+            stock_movement = (self.item.stock_movement 
+                            if hasattr(self.item, 'stock_movement') and self.item.stock_movement
+                            else self.item.stock_movement_id)
+            
             existing_items = StockMovementItem.objects.filter(
-                stock_movement=self.item.stock_movement,
+                stock_movement=stock_movement,
                 item_sku=self.item.item_sku,
                 movement_type=self.item.movement_type,
                 lot_number=self.item.lot_number
@@ -119,7 +127,7 @@ class StockMovementItemLotValidator:
                 return f"Lot number '{self.item.lot_number}' already exists for this item in this movement"
         
         # For certain item types, lot number might be required (now always generated)
-        if (self.item.item_sku and 
+        if ((hasattr(self.item, 'item_sku') and getattr(self.item, 'item_sku', None)) and 
             hasattr(self.item.item_sku, 'type') and
             self.item.item_sku.type in ['RAW', 'PACKAGE']):
             if not self.item.lot_number:
@@ -156,7 +164,13 @@ class StockMovementItemDuplicateValidator:
     
     def validate(self):
         """Validate no duplicate items in same movement with same lot"""
-        if not self.item.stock_movement:
+        # Check if stock_movement is available (either as relation or ID)
+        has_stock_movement = (
+            (hasattr(self.item, 'stock_movement') and self.item.stock_movement) or
+            getattr(self.item, 'stock_movement_id', None)
+        )
+        
+        if not has_stock_movement:
             return "Stock movement is required"
         
         # This is now primarily a fallback check since lot numbers are auto-generated
@@ -165,10 +179,15 @@ class StockMovementItemDuplicateValidator:
         # Import here to avoid circular import
         from inventory.models.stock_movement_item import StockMovementItem
         
+        # Get stock_movement either from relation or ID
+        stock_movement = (self.item.stock_movement 
+                        if hasattr(self.item, 'stock_movement') and self.item.stock_movement
+                        else self.item.stock_movement_id)
+        
         # Only check if lot_number is explicitly empty/None (rare case)
         if self.item.lot_number is None or self.item.lot_number == '':
             existing_items = StockMovementItem.objects.filter(
-                stock_movement=self.item.stock_movement,
+                stock_movement=stock_movement,
                 item_sku=self.item.item_sku,
                 movement_type=self.item.movement_type,
                 lot_number__isnull=True
@@ -195,15 +214,25 @@ class StockMovementItemBusinessRulesValidator:
         errors = []
         
         # Validate item SKU is active
-        if self.item.item_sku and hasattr(self.item.item_sku, 'status'):
-            if self.item.item_sku.status != 'ACTIVE':
-                errors.append(f"Cannot move inactive item SKU ({self.item.item_sku.get_status_display()})")
+        item_sku = getattr(self.item, 'item_sku', None)
+        if item_sku and hasattr(item_sku, 'status'):
+            if item_sku.status != 'ACTIVE':
+                errors.append(f"Cannot move inactive item SKU ({item_sku.get_status_display()})")
         
         # Validate warehouse is active
-        if (self.item.stock_movement and 
-            self.item.stock_movement.warehouse and
-            hasattr(self.item.stock_movement.warehouse, 'is_active')):
-            if not self.item.stock_movement.warehouse.is_active:
+        stock_movement = None
+        if hasattr(self.item, 'stock_movement') and self.item.stock_movement_id:
+            try:
+                stock_movement = self.item.stock_movement
+            except self.item.stock_movement.RelatedObjectDoesNotExist:
+                if self.item.stock_movement_id:
+                    from inventory.models.stock_movement import StockMovement
+                    stock_movement = StockMovement.objects.get(id=self.item.stock_movement_id)
+        
+        if (stock_movement and 
+            stock_movement.warehouse and
+            hasattr(stock_movement.warehouse, 'is_active')):
+            if not stock_movement.warehouse.is_active:
                 errors.append("Cannot move items to/from inactive warehouse")
         
         # Validate note length
@@ -211,17 +240,76 @@ class StockMovementItemBusinessRulesValidator:
             errors.append("Note cannot exceed 500 characters")
         
         # Check if item requires special handling
-        if (self.item.item_sku and 
-            hasattr(self.item.item_sku, 'requires_temperature_control')):
-            if self.item.item_sku.requires_temperature_control and not self.item.expiry_date:
+        item_sku = getattr(self.item, 'item_sku', None)
+        if (item_sku and 
+            hasattr(item_sku, 'requires_temperature_control')):
+            if item_sku.requires_temperature_control and not self.item.expiry_date:
                 errors.append("Temperature controlled items must have expiry date")
         
         # Movement type consistency
         if not self.item.movement_type:
             errors.append("Movement type is required")
         
-        # Stock movement required
-        if not self.item.stock_movement:
+        # Stock movement required and status check
+        stock_movement = None
+        if self.item.stock_movement_id or getattr(self.item, 'stock_movement', None):
+            try:
+                stock_movement = (getattr(self.item, 'stock_movement', None) 
+                                if hasattr(self.item, 'stock_movement') 
+                                else None)
+                if not stock_movement and self.item.stock_movement_id:
+                    from inventory.models.stock_movement import StockMovement
+                    stock_movement = StockMovement.objects.get(id=self.item.stock_movement_id)
+            except:
+                pass
+        
+        if not stock_movement:
             errors.append("Stock movement is required")
+        else:
+            # Check if stock movement allows modifications
+            from inventory.models.stock_movement import StockMovement
+            if stock_movement.status in [
+                StockMovement.Status.CONFIRMED,
+                StockMovement.Status.PROCESSING,
+                StockMovement.Status.COMPLETED,
+                StockMovement.Status.FAILED
+            ]:
+                errors.append("Cannot add items to confirmed or completed stock movements")
         
         return "; ".join(errors) if errors else None
+
+
+class StockMovementItemImmutableFieldValidator:
+    """Validator to prevent modification of critical fields during updates"""
+    
+    def __init__(self, stock_movement_item):
+        self.item = stock_movement_item
+    
+    def validate(self):
+        """Validate that critical fields are not modified during updates"""
+        # Only validate during updates (when item has a pk)
+        if not self.item.pk:
+            return None
+            
+        try:
+            # Get the original item from database
+            from inventory.models.stock_movement_item import StockMovementItem
+            original = StockMovementItem.objects.get(pk=self.item.pk)
+            
+            errors = []
+            
+            # Check if critical fields have been modified
+            if self.item.stock_movement_id != original.stock_movement_id:
+                errors.append("Stock movement cannot be changed after creation")
+                
+            if self.item.item_sku_id != original.item_sku_id:
+                errors.append("Item SKU cannot be changed after creation")
+                
+            if self.item.movement_type != original.movement_type:
+                errors.append("Movement type cannot be changed after creation")
+            
+            return "; ".join(errors) if errors else None
+            
+        except Exception:
+            # If we can't get original, skip validation (likely during creation)
+            return None

@@ -26,7 +26,8 @@ from .stock_movement_item_validators import (
     StockMovementItemLotValidator,
     StockMovementItemExpiryValidator,
     StockMovementItemDuplicateValidator,
-    StockMovementItemBusinessRulesValidator
+    StockMovementItemBusinessRulesValidator,
+    StockMovementItemImmutableFieldValidator
 )
 
 from .stock_validators import (
@@ -55,6 +56,7 @@ __all__ = [
     'StockMovementItemExpiryValidator',
     'StockMovementItemDuplicateValidator',
     'StockMovementItemBusinessRulesValidator',
+    'StockMovementItemImmutableFieldValidator',
     
     # Stock validators
     'StockQuantityValidator',

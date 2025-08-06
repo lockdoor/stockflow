@@ -22,7 +22,8 @@ from inventory.validators import (
     StockMovementItemLotValidator,
     StockMovementItemBusinessRulesValidator,
     StockMovementItemExpiryValidator,
-    StockMovementItemDuplicateValidator
+    StockMovementItemDuplicateValidator,
+    StockMovementItemImmutableFieldValidator
 )
 
 class StockMovementItem(
@@ -39,7 +40,7 @@ class StockMovementItem(
     and movement direction (IN/OUT).
     
     Business Rules:
-    - Cannot modify items in COMPLETED stock movements
+    - Cannot modify items in CONFIRMED, PROCESSING, COMPLETED, or FAILED stock movements
     - Uses optimistic locking via AuditableMixin
     - Unique constraint on (stock_movement, item_sku, lot_number, movement_type)
     """
@@ -124,19 +125,23 @@ class StockMovementItem(
             StockMovementItemLotValidator(self),
             StockMovementItemExpiryValidator(self),
             StockMovementItemDuplicateValidator(self),
-            StockMovementItemBusinessRulesValidator(self)
+            StockMovementItemBusinessRulesValidator(self),
+            StockMovementItemImmutableFieldValidator(self)
         ]
 
     def save(self, *args, **kwargs):
         """
         Save with validation and business logic.
         
-        The order of mixins matters:
-        1. ValidatableMixin calls clean() first
-        2. ImmutableMixin handles immutability check
-        3. AuditableMixin sets audit fields and optimistic locking
-        4. Model.save() persists to database
+        The order of operations:
+        1. Run full_clean() to trigger all validators
+        2. ValidatableMixin calls clean() first
+        3. ImmutableMixin handles immutability check
+        4. AuditableMixin sets audit fields and optimistic locking
+        5. Model.save() persists to database
         """
+        # Always run validation before saving
+        self.full_clean()
         super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
@@ -148,10 +153,15 @@ class StockMovementItem(
 
     # ImmutableMixin implementation
     def is_immutable(self):
-        """Return True if parent stock movement is completed"""
+        """Return True if parent stock movement is confirmed or completed"""
         return (hasattr(self, 'stock_movement') and 
                 self.stock_movement and 
-                self.stock_movement.status == StockMovement.Status.COMPLETED)
+                self.stock_movement.status in [
+                    StockMovement.Status.CONFIRMED,
+                    StockMovement.Status.PROCESSING,
+                    StockMovement.Status.COMPLETED,
+                    StockMovement.Status.FAILED
+                ])
 
     def get_immutable_reason(self):
         """Return reason why this record is immutable"""

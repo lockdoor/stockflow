@@ -86,7 +86,7 @@
           <!-- New Movement -->
           <div class="col-sm-6 col-lg-3">
             <div class="dropdown">
-              <button class="quick-action action-primary w-100 text-start" type="button" data-bs-toggle="dropdown">
+              <a href="{% url 'inventory:stock-movement-create' %}" class="quick-action action-primary">
                 <div class="d-flex align-items-center">
                   <i class="bi bi-plus-circle me-3 fs-4 text-primary"></i>
                   <div>
@@ -94,23 +94,8 @@
                     <small class="text-primary">Select warehouse first</small>
                   </div>
                 </div>
-              </button>
-              <ul class="dropdown-menu">
-                {% if stock_by_warehouse %}
-                  {% for warehouse in stock_by_warehouse %}
-                  <li>
-                    <a class="dropdown-item" href="{% url 'inventory:stock-movement-create' warehouse.id %}">
-                      <div class="d-flex justify-content-between">
-                        <span>{{ warehouse.name }}</span>
-                        <small class="text-muted">{{ warehouse.items_count }} items</small>
-                      </div>
-                    </a>
-                  </li>
-                  {% endfor %}
-                {% else %}
-                  <li><span class="dropdown-item-text text-muted">No warehouses available</span></li>
-                {% endif %}
-              </ul>
+              </a>
+
             </div>
           </div>
 
@@ -143,7 +128,7 @@
           <!-- Movement History -->
           <div class="col-sm-6 col-lg-3">
             <div class="dropdown">
-              <button class="quick-action action-warning w-100 text-start" type="button" data-bs-toggle="dropdown">
+              <a href="{% url 'inventory:stock-movement-list' %}" class="quick-action action-warning w-100 text-start">
                 <div class="d-flex align-items-center">
                   <i class="bi bi-clock-history me-3 fs-4 text-warning"></i>
                   <div>
@@ -151,20 +136,7 @@
                     <small class="text-warning">Select warehouse</small>
                   </div>
                 </div>
-              </button>
-              <ul class="dropdown-menu">
-                {% if stock_by_warehouse %}
-                  {% for warehouse in stock_by_warehouse %}
-                  <li>
-                    <a class="dropdown-item" href="{% url 'inventory:stock-movement-list' warehouse.id %}">
-                      {{ warehouse.name }}
-                    </a>
-                  </li>
-                  {% endfor %}
-                {% else %}
-                  <li><span class="dropdown-item-text text-muted">No warehouses available</span></li>
-                {% endif %}
-              </ul>
+              </a>
             </div>
           </div>
         </div>
@@ -215,7 +187,7 @@
                     {% if stock_by_warehouse %}
                       {% for warehouse in stock_by_warehouse %}
                       <li>
-                        <a class="dropdown-item" href="{% url 'inventory:stock-movement-list' warehouse.id %}">
+                        <a class="dropdown-item" href="{% url 'inventory:stock-movement-list' %}">
                           {{ warehouse.name }}
                         </a>
                       </li>

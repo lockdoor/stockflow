@@ -133,13 +133,13 @@ class StockMovementBusinessRulesValidator:
         errors = []
         
         # Must have at least one stock movement item
-        if hasattr(self.stock_movement, 'stock_movement_items'):
-            if not self.stock_movement.stock_movement_items.exists():
+        if hasattr(self.stock_movement, 'movement_items'):
+            if not self.stock_movement.movement_items.exists():
                 errors.append("Cannot confirm stock movement without items")
         
         # All items must have valid quantities
-        if hasattr(self.stock_movement, 'stock_movement_items'):
-            for item in self.stock_movement.stock_movement_items.all():
+        if hasattr(self.stock_movement, 'movement_items'):
+            for item in self.stock_movement.movement_items.all():
                 if item.quantity <= 0:
                     errors.append(f"Item {item.item_sku} has invalid quantity: {item.quantity}")
         

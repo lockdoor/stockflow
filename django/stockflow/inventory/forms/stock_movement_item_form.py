@@ -101,9 +101,39 @@ class StockMovementItemForm(forms.ModelForm):
     def clean(self):
         """Validate form data with business rules"""
         cleaned_data = super().clean()
+        
+        # Set stock_movement on instance before validation if available
+        stock_movement = cleaned_data.get('stock_movement')
+        if stock_movement and self.instance:
+            if hasattr(stock_movement, 'id'):
+                # It's a model instance
+                self.instance.stock_movement = stock_movement
+                self.instance.stock_movement_id = stock_movement.id
+            else:
+                # It's probably an ID, need to fetch the object
+                from inventory.models.stock_movement import StockMovement
+                try:
+                    movement_obj = StockMovement.objects.get(id=stock_movement)
+                    self.instance.stock_movement = movement_obj
+                    self.instance.stock_movement_id = movement_obj.id
+                except StockMovement.DoesNotExist:
+                    pass
+        
+        # Also set other fields on instance for validation
+        item_sku = cleaned_data.get('item_sku')
+        if item_sku and self.instance:
+            self.instance.item_sku = item_sku
+        
+        movement_type = cleaned_data.get('movement_type')
+        if movement_type and self.instance:
+            self.instance.movement_type = movement_type
+        
+        quantity = cleaned_data.get('quantity')
+        if quantity is not None and self.instance:
+            self.instance.quantity = quantity
+        
         lot_number = cleaned_data.get('lot_number')
         expiry_date = cleaned_data.get('expiry_date')
-        quantity = cleaned_data.get('quantity')
         
         # If lot number is provided, expiry date should be provided for certain item types
         if lot_number and not expiry_date:
@@ -125,8 +155,8 @@ class StockMovementItemForm(forms.ModelForm):
             # Strip whitespace and normalize
             lot_number = lot_number.strip()
             if len(lot_number) == 0:
-                lot_number = None
-        return lot_number
+                return ''  # Return empty string instead of None
+        return lot_number or ''  # Ensure empty string for None values
     
     def clean_note(self):
         """Validate and normalize note field"""
@@ -135,5 +165,5 @@ class StockMovementItemForm(forms.ModelForm):
             # Strip whitespace and normalize
             note = note.strip()
             if len(note) == 0:
-                note = None
-        return note
+                return ''  # Return empty string instead of None
+        return note or ''  # Ensure empty string for None values

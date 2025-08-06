@@ -121,20 +121,25 @@ def breadcrumb(request):
                 {'name': 'Dashboard', 'url': 'dashboard', 'active': False},
                 {'name': 'Inventory', 'url': 'inventory:dashboard', 'active': False},
                 {'name': 'Warehouses', 'url': 'inventory:warehouse-list', 'active': False},
-                {'name': 'Stock Movements', 'url': 'inventory:stock-movement-list', 'active': False},
                 {'name': 'New Stock Movement', 'url': None, 'active': True}
             ],
             'inventory:stock-movement-detail': [
                 {'name': 'Dashboard', 'url': 'dashboard', 'active': False},
                 {'name': 'Inventory', 'url': 'inventory:dashboard', 'active': False},
-                {'name': 'Stock Movements', 'url': 'inventory:stock-movement-list', 'active': False},
+                {'name': 'Warehouses', 'url': 'inventory:warehouse-list', 'active': False},
                 {'name': 'Movement Details', 'url': None, 'active': True}
             ],
-            'inventory:stock-movement-edit': [
+            'inventory:stock-movement-update': [
+                {'name': 'Dashboard', 'url': 'dashboard', 'active': False},
+                {'name': 'Inventory', 'url': 'inventory:dashboard', 'active': False},
+                {'name': 'Warehouses', 'url': 'inventory:warehouse-list', 'active': False},
+                {'name': 'Edit Movement', 'url': None, 'active': True}
+            ],
+            'inventory:movement-create': [
                 {'name': 'Dashboard', 'url': 'dashboard', 'active': False},
                 {'name': 'Inventory', 'url': 'inventory:dashboard', 'active': False},
                 {'name': 'Stock Movements', 'url': 'inventory:stock-movement-list', 'active': False},
-                {'name': 'Edit Movement', 'url': None, 'active': True}
+                {'name': 'Add Items', 'url': None, 'active': True}
             ],
             
             # Stock management
