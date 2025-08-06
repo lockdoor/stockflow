@@ -1,0 +1,257 @@
+{% extends "base-dashboard-header.html" %}
+
+{% block title %}{{ item.name }} - Stock Details - StockFlow{% endblock %}
+
+{% block extra_css %}
+<style>
+.lot-card {
+    transition: transform 0.2s ease;
+}
+
+.lot-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.warehouse-section {
+    border-left: 4px solid var(--bs-primary);
+    padding-left: 1rem;
+    margin-bottom: 2rem;
+}
+
+.lot-badge {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+}
+
+.quantity-badge {
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+</style>
+{% endblock %}
+
+{% block title_text %}{{ item.name }}{% endblock %}
+{% block subtitle_text %}Stock Details by Warehouse & Lot{% endblock %}
+
+{% block header_actions %}
+<a href="{% url 'inventory:stock-overview' %}" class="btn btn-outline-secondary">
+  <i class="bi bi-arrow-left me-1"></i>Back to Overview
+</a>
+{% endblock %}
+
+{% block dashboard_content %}
+    <!-- Item Summary -->
+    <div class="row g-4 mb-6">
+        <!-- Item Information Card -->
+        <div class="col-lg-4">
+            <div class="dashboard-card h-100">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Item Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="item-type-badge me-2">
+                            {% if item.type == 'RAW' %}
+                                <span class="badge bg-secondary fs-6">Raw Material</span>
+                            {% elif item.type == 'PRODUCT' %}
+                                <span class="badge bg-primary fs-6">Product</span>
+                            {% else %}
+                                <span class="badge bg-info fs-6">Package</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label text-muted small">SKU Code</label>
+                            <div>
+                                <code class="text-primary fs-6">{{ item.sku_code }}</code>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-muted small">Unit</label>
+                            <div class="fw-medium">{{ item.unit }}</div>
+                        </div>
+                        {% if item.category %}
+                        <div class="col-6">
+                            <label class="form-label text-muted small">Category</label>
+                            <div class="fw-medium">{{ item.category.name }}</div>
+                        </div>
+                        {% endif %}
+                        {% if item.description %}
+                        <div class="col-12">
+                            <label class="form-label text-muted small">Description</label>
+                            <div class="text-muted">{{ item.description }}</div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Summary Statistics -->
+        <div class="col-lg-8">
+            <div class="row g-4">
+                <div class="col-sm-6 col-lg-3">
+                    <div class="stats-card">
+                        <div class="d-flex align-items-center">
+                            <div class="stats-card-icon bg-primary-light">
+                                <i class="bi bi-boxes"></i>
+                            </div>
+                            <div>
+                                <p class="text-muted small mb-1">Total Lots</p>
+                                <h3 class="h4 mb-1">{{ total_lots }}</h3>
+                                <small class="text-muted">Across warehouses</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-sm-6 col-lg-3">
+                    <div class="stats-card">
+                        <div class="d-flex align-items-center">
+                            <div class="stats-card-icon bg-success-light">
+                                <i class="bi bi-check-circle"></i>
+                            </div>
+                            <div>
+                                <p class="text-muted small mb-1">Available</p>
+                                <h3 class="h4 mb-1">{{ total_available|floatformat:0 }}</h3>
+                                <small class="text-muted">{{ item.unit }}</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-sm-6 col-lg-3">
+                    <div class="stats-card">
+                        <div class="d-flex align-items-center">
+                            <div class="stats-card-icon bg-warning-light">
+                                <i class="bi bi-clock"></i>
+                            </div>
+                            <div>
+                                <p class="text-muted small mb-1">Reserved</p>
+                                <h3 class="h4 mb-1">0</h3>
+                                <small class="text-muted">{{ item.unit }}</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-sm-6 col-lg-3">
+                    <div class="stats-card">
+                        <div class="d-flex align-items-center">
+                            <div class="stats-card-icon bg-info-light">
+                                <i class="bi bi-buildings"></i>
+                            </div>
+                            <div>
+                                <p class="text-muted small mb-1">Warehouses</p>
+                                <h3 class="h4 mb-1">{{ warehouses_count }}</h3>
+                                <small class="text-muted">With stock</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Warehouse Lot Details -->
+    {% if warehouse_lots %}
+        {% for warehouse, lots in warehouse_lots.items %}
+        <div class="warehouse-section">
+            <div class="dashboard-card">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="card-title mb-1">
+                                <i class="bi bi-building me-2"></i>{{ warehouse.name }}
+                            </h5>
+                            <small class="text-muted">Code: {{ warehouse.code }} • {{ lots|length }} lot{{ lots|length|pluralize }}</small>
+                        </div>
+                        <div class="text-end">
+                            {% with warehouse_total=0 %}
+                                {% for lot_data in lots %}
+                                    {% with warehouse_total=warehouse_total|add:lot_data.available_quantity %}
+                                    {% endwith %}
+                                {% endfor %}
+                                <span class="badge bg-primary fs-6">
+                                    Total: {{ lots|length|add:0 }} lot{{ lots|length|pluralize }}
+                                </span>
+                            {% endwith %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card-body">
+                    <div class="row g-3">
+                        {% for lot_data in lots %}
+                        <div class="col-md-6 col-lg-4">
+                            <div class="lot-card card h-100">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-start mb-3">
+                                        <div>
+                                            <h6 class="card-title mb-1">
+                                                {{ lot_data.lot_number }}
+                                            </h6>
+                                            <small class="text-muted">
+                                                Lot #{{ lot_data.stock.id }}
+                                            </small>
+                                        </div>
+                                        <span class="lot-badge badge bg-light text-dark">
+                                            Active
+                                        </span>
+                                    </div>
+                                    
+                                    <div class="row g-2 mb-3">
+                                        <div class="col-6">
+                                            <div class="text-center p-2 bg-success-light rounded">
+                                                <div class="quantity-badge text-success">
+                                                    {{ lot_data.available_quantity|floatformat:0 }}
+                                                </div>
+                                                <small class="text-muted d-block">Available</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-6">
+                                            <div class="text-center p-2 bg-warning-light rounded">
+                                                <div class="quantity-badge text-warning">
+                                                    0
+                                                </div>
+                                                <small class="text-muted d-block">Reserved</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    {% if lot_data.expiry_date %}
+                                    <div class="mb-2">
+                                        <small class="text-muted">
+                                            <i class="bi bi-calendar-event me-1"></i>
+                                            Expires: {{ lot_data.expiry_date|date:"M d, Y" }}
+                                        </small>
+                                    </div>
+                                    {% endif %}
+                                    
+                                    <div class="border-top pt-2 mt-2">
+                                        <small class="text-muted">
+                                            Total: <span class="fw-bold">{{ lot_data.available_quantity|floatformat:0 }} {{ item.unit }}</span>
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="dashboard-card">
+            <div class="card-body text-center py-5">
+                <i class="bi bi-inbox text-muted fs-1 mb-3 d-block"></i>
+                <h5 class="text-muted mb-2">No Stock Available</h5>
+                <p class="text-muted mb-0">This item has no available stock in any warehouse.</p>
+            </div>
+        </div>
+    {% endif %}
+{% endblock %}

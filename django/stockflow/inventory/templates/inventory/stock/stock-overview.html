@@ -1,0 +1,651 @@
+{% extends "base-dashboard-header.html" %}
+
+{% block title %}Stock Overview - StockFlow{% endblock %}
+
+{% block extra_css %}
+<style>
+.search-highlight {
+    background-color: #fff3cd;
+    font-weight: bold;
+    border-radius: 2px;
+    padding: 1px 2px;
+}
+
+.fade-out {
+    opacity: 0.3;
+    transition: opacity 0.2s ease;
+}
+
+.search-container {
+    position: relative;
+}
+
+.stock-row:hover {
+    background-color: #f8f9fa !important;
+}
+
+.stock-row {
+    transition: background-color 0.2s ease;
+}
+</style>
+{% endblock %}
+
+{% block title_text %}Stock Overview{% endblock %}
+{% block subtitle_text %}Inventory Balance by Item & Warehouse{% endblock %}
+
+{% block header_actions %}
+<a href="{% url 'inventory:dashboard' %}" class="btn btn-outline-secondary">
+  <i class="bi bi-arrow-left me-1"></i>Back to Inventory
+</a>
+{% endblock %}
+
+{% block dashboard_content %}
+    <!-- Summary Statistics -->
+    <div class="row g-4 mb-6">
+        <div class="col-sm-6 col-lg-3">
+            <div class="stats-card">
+                <div class="d-flex align-items-center">
+                    <div class="stats-card-icon bg-primary-light">
+                        <i class="bi bi-box"></i>
+                    </div>
+                    <div>
+                        <p class="text-muted small mb-1">Total Items</p>
+                        <h3 class="h4 mb-1">{{ total_items }}</h3>
+                        <small class="text-muted">With available stock</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-sm-6 col-lg-3">
+            <div class="stats-card">
+                <div class="d-flex align-items-center">
+                    <div class="stats-card-icon bg-success-light">
+                        <i class="bi bi-stack"></i>
+                    </div>
+                    <div>
+                        <p class="text-muted small mb-1">Total Stock Units</p>
+                        <h3 class="h4 mb-1">{{ total_stock_value|floatformat:0 }}</h3>
+                        <small class="text-muted">Across all warehouses</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-sm-6 col-lg-3">
+            <div class="stats-card">
+                <div class="d-flex align-items-center">
+                    <div class="stats-card-icon bg-warning-light">
+                        <i class="bi bi-exclamation-triangle"></i>
+                    </div>
+                    <div>
+                        <p class="text-muted small mb-1">Low Stock Items</p>
+                        <h3 class="h4 mb-1">{{ low_stock_count }}</h3>
+                        <small class="text-warning">Less than 10 units</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-sm-6 col-lg-3">
+            <div class="stats-card">
+                <div class="d-flex align-items-center">
+                    <div class="stats-card-icon bg-info-light">
+                        <i class="bi bi-buildings"></i>
+                    </div>
+                    <div>
+                        <p class="text-muted small mb-1">Active Warehouses</p>
+                        <h3 class="h4 mb-1">{{ warehouses.count }}</h3>
+                        <small class="text-muted">With stock data</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stock Overview Table -->
+    <div class="dashboard-card">
+        <div class="card-header">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                <h4 class="card-title mb-0">Stock Balance by Item</h4>
+                
+                <!-- Search and Filter Controls -->
+                <div class="d-flex gap-2 align-items-center flex-wrap">
+                    <!-- Search Box -->
+                    <div class="search-container">
+                        <div class="input-group input-group-sm" style="width: 300px;">
+                            <span class="input-group-text">
+                                <i class="bi bi-search"></i>
+                            </span>
+                            <input type="text" 
+                                   id="stockSearch" 
+                                   class="form-control" 
+                                   placeholder="Search by SKU, name, or category..."
+                                   autocomplete="off">
+                            <button class="btn btn-outline-secondary" type="button" id="clearSearch">
+                                <i class="bi bi-x"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Quick Filters -->
+                    <div class="btn-group btn-group-sm" role="group">
+                        <button type="button" class="btn btn-outline-secondary active" data-filter="all">
+                            All Items
+                        </button>
+                        <button type="button" class="btn btn-outline-warning" data-filter="low-stock">
+                            Low Stock
+                        </button>
+                        <button type="button" class="btn btn-outline-primary" data-filter="raw">
+                            Raw Materials
+                        </button>
+                        <button type="button" class="btn btn-outline-success" data-filter="product">
+                            Products
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Search Results Info with Pagination -->
+            <div class="mt-2">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                    <!-- Page Info -->
+                    <div id="pageInfoContainer">
+                        <small class="text-muted">
+                            <span id="pageStart">1</span> to <span id="pageEnd">5</span> of <span id="pageTotal">{{ total_items }}</span> items
+                        </small>
+                    </div>
+                    
+                    <!-- Pagination in Header -->
+                    <div id="paginationContainer" style="display: none;">
+                        <nav aria-label="Stock pagination">
+                            <ul class="pagination pagination-sm mb-0" id="paginationList">
+                                <!-- Pagination buttons will be generated here -->
+                            </ul>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card-body p-0">
+            {% if stock_overview %}
+                <!-- No Results Message (Hidden by default) -->
+                <div id="noResults" class="text-center py-5" style="display: none;">
+                    <i class="bi bi-search text-muted fs-1 mb-3 d-block"></i>
+                    <h5 class="text-muted mb-2">No Items Found</h5>
+                    <p class="text-muted mb-0">Try adjusting your search terms or filters.</p>
+                    <button class="btn btn-sm btn-outline-primary mt-2" onclick="clearAllFilters()">
+                        <i class="bi bi-arrow-clockwise me-1"></i>Show All Items
+                    </button>
+                </div>
+                
+                <div class="table-responsive" id="stockTable">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="border-0">Item</th>
+                                <th class="border-0">SKU Code</th>
+                                <th class="border-0">Unit</th>
+                                {% for warehouse in warehouses %}
+                                <th class="border-0 text-center">{{ warehouse.code }}</th>
+                                {% endfor %}
+                                <th class="border-0 text-center">Total Stock</th>
+                            </tr>
+                        </thead>
+                        <tbody id="stockTableBody">
+                            {% for item_data in stock_overview %}
+                            <tr class="stock-row" 
+                                data-total="{{ item_data.total_quantity }}"
+                                data-sku="{{ item_data.item.sku_code|lower }}"
+                                data-name="{{ item_data.item.name|lower }}"
+                                data-category="{{ item_data.item.category.name|lower|default:'' }}"
+                                data-type="{{ item_data.item.type|lower }}"
+                                data-item-id="{{ item_data.item.id }}"
+                                style="cursor: pointer;">
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="item-type-badge me-2">
+                                            {% if item_data.item.type == 'RAW' %}
+                                                <span class="badge bg-secondary">Raw</span>
+                                            {% elif item_data.item.type == 'PRODUCT' %}
+                                                <span class="badge bg-primary">Product</span>
+                                            {% else %}
+                                                <span class="badge bg-info">Package</span>
+                                            {% endif %}
+                                        </div>
+                                        <div>
+                                            <h6 class="mb-1" data-searchable="name">
+                                                <a href="{% url 'inventory:stock-item-detail' item_data.item.id %}" 
+                                                   class="text-decoration-none text-dark">
+                                                    {{ item_data.item.name }}
+                                                </a>
+                                            </h6>
+                                            {% if item_data.item.category %}
+                                                <small class="text-muted" data-searchable="category">{{ item_data.item.category.name }}</small>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <code class="text-primary" data-searchable="sku">{{ item_data.item.sku_code }}</code>
+                                </td>
+                                <td>
+                                    <span class="text-muted">{{ item_data.item.unit }}</span>
+                                </td>
+                                {% for warehouse in warehouses %}
+                                <td class="text-center">
+                                    {% with warehouse_found=False warehouse_stock=None %}
+                                        {% for wh_stock in item_data.warehouses %}
+                                            {% if wh_stock.warehouse__id == warehouse.id %}
+                                                <span class="fw-semibold">{{ wh_stock.total_quantity|floatformat:0 }}</span>
+                                                {% with warehouse_found=True %}{% endwith %}
+                                            {% endif %}
+                                        {% endfor %}
+                                        {% if not warehouse_found %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    {% endwith %}
+                                </td>
+                                {% endfor %}
+                                <td class="text-center">
+                                    <span class="fw-bold text-primary fs-6">{{ item_data.total_quantity|floatformat:0 }}</span>
+                                    {% if item_data.total_quantity < 10 %}
+                                        <br><small class="text-warning">
+                                            <i class="bi bi-exclamation-triangle"></i> Low Stock
+                                        </small>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-inbox text-muted fs-1 mb-3 d-block"></i>
+                    <h5 class="text-muted mb-2">No Stock Data</h5>
+                    <p class="text-muted mb-0">There are no items with available stock at this time.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Get DOM elements
+    const searchInput = document.getElementById('stockSearch');
+    const clearSearch = document.getElementById('clearSearch');
+    const filterButtons = document.querySelectorAll('[data-filter]');
+    const stockRows = document.querySelectorAll('.stock-row');
+    const noResults = document.getElementById('noResults');
+    const stockTable = document.getElementById('stockTable');
+    
+    // Current filter state
+    let currentFilter = 'all';
+    let currentSearchTerm = '';
+    let currentPage = 1;
+    const itemsPerPage = 5;
+    
+    // Original filter functionality for backward compatibility
+    filterButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            // Update active button
+            filterButtons.forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+            
+            const filter = this.dataset.filter;
+            currentFilter = filter;
+            currentPage = 1; // Reset to first page on filter change
+            
+            // Apply both filter and search with pagination
+            filterAndSearch();
+        });
+    });
+    
+    // Debounce function for search
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+    
+    // Clear all highlighting
+    function clearHighlights() {
+        document.querySelectorAll('.search-highlight').forEach(highlight => {
+            const parent = highlight.parentNode;
+            parent.replaceChild(document.createTextNode(highlight.textContent), highlight);
+            parent.normalize();
+        });
+    }
+    
+    // Highlight search terms in text
+    function highlightText(element, searchTerm) {
+        if (!searchTerm || searchTerm.length < 2) return;
+        
+        const searchableElements = element.querySelectorAll('[data-searchable]');
+        searchableElements.forEach(el => {
+            const text = el.textContent;
+            const regex = new RegExp(`(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+            const highlightedText = text.replace(regex, '<span class="search-highlight">$1</span>');
+            if (highlightedText !== text) {
+                el.innerHTML = highlightedText;
+            }
+        });
+    }
+    
+    // Enhanced filter and search function with pagination
+    function filterAndSearch() {
+        clearHighlights();
+        
+        let matchedRows = [];
+        const searchTerm = currentSearchTerm.toLowerCase();
+        
+        // First, collect all matching rows
+        stockRows.forEach(row => {
+            const type = row.dataset.type;
+            const name = row.dataset.name;
+            const sku = row.dataset.sku;
+            const category = row.dataset.category;
+            const totalStock = parseFloat(row.dataset.total);
+            
+            // Check filter match
+            let filterMatch = false;
+            if (currentFilter === 'all') {
+                filterMatch = true;
+            } else if (currentFilter === 'low-stock') {
+                filterMatch = totalStock < 10;
+            } else if (currentFilter === 'raw') {
+                filterMatch = type === 'raw';
+            } else if (currentFilter === 'product') {
+                filterMatch = type === 'product';
+            }
+            
+            // Check search match
+            const searchMatch = !searchTerm || 
+                name.includes(searchTerm) || 
+                sku.includes(searchTerm) || 
+                category.includes(searchTerm);
+            
+            if (filterMatch && searchMatch) {
+                matchedRows.push(row);
+                if (searchTerm) {
+                    highlightText(row, searchTerm);
+                }
+            }
+        });
+        
+        // Calculate pagination
+        const totalMatched = matchedRows.length;
+        const totalPages = Math.ceil(totalMatched / itemsPerPage);
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        const endIndex = startIndex + itemsPerPage;
+        
+        // Hide all rows first
+        stockRows.forEach(row => {
+            row.style.display = 'none';
+            row.classList.add('fade-out');
+        });
+        
+        // Show only current page items
+        const currentPageItems = matchedRows.slice(startIndex, endIndex);
+        currentPageItems.forEach(row => {
+            row.style.display = '';
+            row.classList.remove('fade-out');
+        });
+        
+        // Update pagination
+        updatePagination(currentPage, totalPages, totalMatched);
+        
+        // Show/hide no results message
+        if (totalMatched === 0) {
+            if (noResults) noResults.style.display = 'block';
+            if (stockTable) stockTable.style.display = 'none';
+        } else {
+            if (noResults) noResults.style.display = 'none';
+            if (stockTable) stockTable.style.display = 'block';
+        }
+    }
+    
+    // Update pagination UI
+    function updatePagination(currentPage, totalPages, totalItems) {
+        const paginationList = document.getElementById('paginationList');
+        const pageStart = document.getElementById('pageStart');
+        const pageEnd = document.getElementById('pageEnd');
+        const pageTotal = document.getElementById('pageTotal');
+        const paginationContainer = document.getElementById('paginationContainer');
+        const pageInfoContainer = document.getElementById('pageInfoContainer');
+        
+        if (!paginationList) return;
+        
+        // Update page info
+        const startItem = totalItems === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1;
+        const endItem = Math.min(currentPage * itemsPerPage, totalItems);
+        
+        if (pageStart) pageStart.textContent = startItem;
+        if (pageEnd) pageEnd.textContent = endItem;
+        if (pageTotal) pageTotal.textContent = totalItems;
+        
+        // Show/hide pagination and page info based on total pages
+        if (totalPages <= 1) {
+            if (paginationContainer) paginationContainer.style.display = 'none';
+            // Always show page info even with 1 page
+            if (pageInfoContainer) pageInfoContainer.style.display = 'block';
+            return;
+        } else {
+            if (paginationContainer) paginationContainer.style.display = 'block';
+            if (pageInfoContainer) pageInfoContainer.style.display = 'block';
+        }
+        
+        // Clear existing pagination
+        paginationList.innerHTML = '';
+        
+        // Previous button
+        const prevLi = document.createElement('li');
+        prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
+        prevLi.innerHTML = `<a class="page-link" href="#" data-page="${currentPage - 1}">Previous</a>`;
+        paginationList.appendChild(prevLi);
+        
+        // Page numbers
+        const maxVisiblePages = 5;
+        let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+        let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+        
+        // Adjust startPage if we're near the end
+        if (endPage - startPage + 1 < maxVisiblePages) {
+            startPage = Math.max(1, endPage - maxVisiblePages + 1);
+        }
+        
+        // First page and ellipsis
+        if (startPage > 1) {
+            const firstLi = document.createElement('li');
+            firstLi.className = 'page-item';
+            firstLi.innerHTML = `<a class="page-link" href="#" data-page="1">1</a>`;
+            paginationList.appendChild(firstLi);
+            
+            if (startPage > 2) {
+                const ellipsisLi = document.createElement('li');
+                ellipsisLi.className = 'page-item disabled';
+                ellipsisLi.innerHTML = `<span class="page-link">...</span>`;
+                paginationList.appendChild(ellipsisLi);
+            }
+        }
+        
+        // Page numbers
+        for (let i = startPage; i <= endPage; i++) {
+            const li = document.createElement('li');
+            li.className = `page-item ${i === currentPage ? 'active' : ''}`;
+            li.innerHTML = `<a class="page-link" href="#" data-page="${i}">${i}</a>`;
+            paginationList.appendChild(li);
+        }
+        
+        // Last page and ellipsis
+        if (endPage < totalPages) {
+            if (endPage < totalPages - 1) {
+                const ellipsisLi = document.createElement('li');
+                ellipsisLi.className = 'page-item disabled';
+                ellipsisLi.innerHTML = `<span class="page-link">...</span>`;
+                paginationList.appendChild(ellipsisLi);
+            }
+            
+            const lastLi = document.createElement('li');
+            lastLi.className = 'page-item';
+            lastLi.innerHTML = `<a class="page-link" href="#" data-page="${totalPages}">${totalPages}</a>`;
+            paginationList.appendChild(lastLi);
+        }
+        
+        // Next button
+        const nextLi = document.createElement('li');
+        nextLi.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
+        nextLi.innerHTML = `<a class="page-link" href="#" data-page="${currentPage + 1}">Next</a>`;
+        paginationList.appendChild(nextLi);
+    }
+    
+    // Pagination click handler using event delegation
+    document.addEventListener('click', function(e) {
+        // Handle stock row clicks for navigation
+        const stockRow = e.target.closest('.stock-row');
+        if (stockRow && !e.target.closest('a')) {
+            const itemId = stockRow.dataset.itemId;
+            if (itemId) {
+                window.location.href = `/inventory/stock/item/${itemId}/`;
+            }
+            return;
+        }
+        
+        // Check if clicked element is a pagination link
+        if (e.target.classList.contains('page-link') && e.target.dataset.page) {
+            e.preventDefault();
+            
+            // Check if parent li is disabled
+            const parentLi = e.target.closest('li');
+            if (parentLi && parentLi.classList.contains('disabled')) {
+                return; // Don't proceed if disabled
+            }
+            
+            const newPage = parseInt(e.target.dataset.page);
+            const paginationContainer = document.getElementById('paginationContainer');
+            
+            // Only handle pagination clicks if pagination is visible
+            if (paginationContainer && paginationContainer.style.display !== 'none') {
+                // Calculate total pages from current state
+                let matchedRows = [];
+                const searchTerm = currentSearchTerm.toLowerCase();
+                
+                stockRows.forEach(row => {
+                    const type = row.dataset.type;
+                    const name = row.dataset.name;
+                    const sku = row.dataset.sku;
+                    const category = row.dataset.category;
+                    const totalStock = parseFloat(row.dataset.total);
+                    
+                    // Check filter match
+                    let filterMatch = false;
+                    if (currentFilter === 'all') {
+                        filterMatch = true;
+                    } else if (currentFilter === 'low-stock') {
+                        filterMatch = totalStock < 10;
+                    } else if (currentFilter === 'raw') {
+                        filterMatch = type === 'raw';
+                    } else if (currentFilter === 'product') {
+                        filterMatch = type === 'product';
+                    }
+                    
+                    // Check search match
+                    const searchMatch = !searchTerm || 
+                        name.includes(searchTerm) || 
+                        sku.includes(searchTerm) || 
+                        category.includes(searchTerm);
+                    
+                    if (filterMatch && searchMatch) {
+                        matchedRows.push(row);
+                    }
+                });
+                
+                const totalPages = Math.ceil(matchedRows.length / itemsPerPage);
+                
+                if (newPage !== currentPage && newPage >= 1 && newPage <= totalPages) {
+                    currentPage = newPage;
+                    filterAndSearch();
+                }
+            }
+        }
+    });
+    
+    // Search input handler with debouncing
+    const debouncedSearch = debounce(() => {
+        currentSearchTerm = searchInput ? searchInput.value.trim() : '';
+        currentPage = 1; // Reset to first page on new search
+        filterAndSearch();
+    }, 300);
+    
+    if (searchInput) {
+        searchInput.addEventListener('input', debouncedSearch);
+    }
+    
+    // Clear search button
+    if (clearSearch) {
+        clearSearch.addEventListener('click', () => {
+            if (searchInput) {
+                searchInput.value = '';
+                currentSearchTerm = '';
+                currentPage = 1; // Reset to first page
+                filterAndSearch();
+                searchInput.focus();
+            }
+        });
+    }
+    
+    // Global clear function for no results button
+    window.clearAllFilters = function() {
+        if (searchInput) {
+            searchInput.value = '';
+        }
+        currentSearchTerm = '';
+        currentFilter = 'all';
+        currentPage = 1; // Reset to first page
+        
+        filterButtons.forEach(btn => btn.classList.remove('active'));
+        const allButton = document.querySelector('[data-filter="all"]');
+        if (allButton) {
+            allButton.classList.add('active');
+        }
+        
+        filterAndSearch();
+        if (searchInput) {
+            searchInput.focus();
+        }
+    };
+    
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+        // Ctrl/Cmd + K to focus search
+        if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+            e.preventDefault();
+            if (searchInput) {
+                searchInput.focus();
+                searchInput.select();
+            }
+        }
+        
+        // Escape to clear search
+        if (e.key === 'Escape' && searchInput && searchInput === document.activeElement) {
+            if (clearSearch) {
+                clearSearch.click();
+            }
+        }
+    });
+    
+    // Initialize with current state
+    filterAndSearch();
+});
+</script>
+{% endblock %}

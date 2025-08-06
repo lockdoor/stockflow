@@ -1,97 +1,211 @@
-from django.views.generic import ListView, TemplateView
+"""
+Stock Overview View
+
+Shows stock balance for all items grouped by warehouse with optimized queries and frontend search.
+
+Author: StockFlow Team
+Created: 2025
+"""
+
+from django.views.generic import TemplateView
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db import models
-from inventory.models import Stock
-from django.http import HttpResponseBadRequest
+from django.db.models import Sum, Count, Case, When, IntegerField, Prefetch
+from django.core.serializers import serialize
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404
+import json
+from inventory.models import Stock, Warehouse
+from catalog.models.item import ItemSKU
 
-class StockIndexView(LoginRequiredMixin, TemplateView):
-    template_name = 'inventory/stock/index.html'
 
-class StockListView(LoginRequiredMixin, ListView):
-    template_name = 'inventory/stock/partials/stock-list.html'
-    context_object_name = 'stock'
-    paginate_by = 20
-    
-    def get_queryset(self): 
-        return Stock.get_all_stock()
-    
-class StockItemListView(LoginRequiredMixin, ListView):
+class StockOverviewView(LoginRequiredMixin, TemplateView):
     """
-    List all stock records by lot number for a specific item and warehouse.
-    Shows individual lot records with quantities greater than zero by default.
+    Stock Overview View with Optimized Queries and Frontend Search
     
-    Query Parameters:
-    - item_sku_id: Required. ID of the ItemSKU to filter by
-    - warehouse_id: Required. ID of the Warehouse to filter by  
-    - all: Optional. If 'true', shows all records including zero quantities
+    Displays stock balances for all items grouped by warehouse.
+    Uses single optimized query and frontend filtering for better performance.
     """
-    template_name = 'inventory/stock/stock-item-lot.html'
-    context_object_name = 'stock_records'
-    paginate_by = 20
-
-    def get_queryset(self):
-        """
-        Get stock records filtered by item_sku and warehouse.
-        Orders by expiry_date and lot_number for FEFO.
-        """
-        # Get and validate parameters
-        item_sku_id = self.request.GET.get('item_sku_id')
-        warehouse_id = self.request.GET.get('warehouse_id')
-        show_all = self.request.GET.get('all', 'false').lower() == 'true'
-        
-        # Validate required parameters
-        if not item_sku_id:
-            return Stock.objects.none()
-        
-        if not warehouse_id:
-            return Stock.objects.none()
-        
-        # Build base queryset
-        queryset = Stock.objects.filter(
-            item_sku_id=item_sku_id,
-            warehouse_id=warehouse_id
-        ).select_related('item_sku', 'warehouse')
-        
-        # Filter by quantity if not showing all
-        if not show_all:
-            queryset = queryset.filter(available_quantity__gt=0)
-        
-        # Order by expiry date for FEFO, then by lot number
-        return queryset.order_by(
-            models.F('expiry_date').asc(nulls_last=True), 
-            'lot_number', 
-            'created_at'
-        )
+    template_name = 'inventory/stock/stock-overview.html'
     
     def get_context_data(self, **kwargs):
-        """Add additional context data"""
+        """Add optimized stock overview data to context"""
         context = super().get_context_data(**kwargs)
         
-        # Add filter parameters to context
-        context['item_sku_id'] = self.request.GET.get('item_sku_id')
-        context['warehouse_id'] = self.request.GET.get('warehouse_id')
-        context['show_all'] = self.request.GET.get('all', 'false').lower() == 'true'
+        # Get all active warehouses
+        warehouses = Warehouse.objects.filter(is_active=True).order_by('name')
+        context['warehouses'] = warehouses
         
-        # Add summary information
-        if context['item_sku_id'] and context['warehouse_id']:
-            try:
-                from inventory.models.stock import Stock
-                from catalog.models.item import ItemSKU
-                from inventory.models.warehouse import Warehouse
-                
-                # Get total available stock
-                total_stock = Stock.get_total_stock(
-                    ItemSKU.objects.get(id=context['item_sku_id']),
-                    Warehouse.objects.get(id=context['warehouse_id'])
-                )
-                context['total_available_stock'] = total_stock
-                
-                # Get item and warehouse info
-                context['item_sku'] = ItemSKU.objects.get(id=context['item_sku_id'])
-                context['warehouse'] = Warehouse.objects.get(id=context['warehouse_id'])
-                
-            except (ItemSKU.DoesNotExist, Warehouse.DoesNotExist):
-                context['total_available_stock'] = 0
-                context['error_message'] = "Item or Warehouse not found"
+        # Get optimized stock data
+        stock_data = self.get_optimized_stock_data()
+        context['stock_overview'] = stock_data['items']
+        context['stock_data_json'] = json.dumps(stock_data['json_data'])
+        
+        # Get summary statistics
+        context.update(self.get_summary_statistics(stock_data['items']))
         
         return context
+    
+    def get_optimized_stock_data(self):
+        """
+        Get stock overview data with optimized single query.
+        Returns both template data and JSON data for frontend search.
+        """
+        # Get all active warehouses for dynamic annotations
+        warehouses = list(Warehouse.objects.filter(is_active=True).order_by('name'))
+        
+        # Build dynamic annotations for each warehouse
+        warehouse_annotations = {}
+        for warehouse in warehouses:
+            warehouse_annotations[f'warehouse_{warehouse.id}_qty'] = Sum(
+                Case(
+                    When(stocks__warehouse=warehouse, then='stocks__available_quantity'),
+                    default=0,
+                    output_field=IntegerField()
+                )
+            )
+        
+        # Single optimized query with all data
+        items_queryset = ItemSKU.objects.filter(
+            stocks__available_quantity__gt=0,
+            status=ItemSKU.Status.ACTIVE
+        ).distinct().select_related('category').annotate(
+            total_quantity=Sum('stocks__available_quantity'),
+            **warehouse_annotations
+        ).order_by('-total_quantity', 'sku_code')
+        
+        # Prepare data for template and JSON
+        items_data = []
+        json_data = []
+        
+        for item in items_queryset:
+            # Prepare warehouse data
+            warehouses_data = []
+            for warehouse in warehouses:
+                qty = getattr(item, f'warehouse_{warehouse.id}_qty', 0) or 0
+                if qty > 0:
+                    warehouses_data.append({
+                        'warehouse__id': warehouse.id,
+                        'warehouse__name': warehouse.name,
+                        'warehouse__code': warehouse.code,
+                        'total_quantity': qty
+                    })
+            
+            # Template data structure (keeping compatibility)
+            item_data = {
+                'item': item,
+                'warehouses': warehouses_data,
+                'total_quantity': item.total_quantity or 0
+            }
+            items_data.append(item_data)
+            
+            # JSON data for frontend search
+            json_item = {
+                'id': item.id,
+                'sku_code': item.sku_code,
+                'name': item.name,
+                'unit': item.unit,
+                'type': item.type,
+                'category': item.category.name if item.category else '',
+                'total_quantity': float(item.total_quantity or 0),
+                'warehouses': {}
+            }
+            
+            # Add warehouse quantities to JSON
+            for warehouse in warehouses:
+                qty = getattr(item, f'warehouse_{warehouse.id}_qty', 0) or 0
+                json_item['warehouses'][warehouse.code] = float(qty)
+            
+            json_data.append(json_item)
+        
+        return {
+            'items': items_data,
+            'json_data': json_data
+        }
+    
+    def get_summary_statistics(self, stock_data):
+        """Get summary statistics from processed data"""
+        total_items = len(stock_data)
+        total_stock_value = sum(item['total_quantity'] for item in stock_data)
+        low_stock_count = sum(1 for item in stock_data if item['total_quantity'] < 10)
+        active_warehouses = Warehouse.objects.filter(is_active=True).count()
+        
+        return {
+            'total_items': total_items,
+            'total_stock_value': total_stock_value,
+            'low_stock_count': low_stock_count,
+            'active_warehouses': active_warehouses,
+        }
+
+
+class StockItemDetailView(LoginRequiredMixin, TemplateView):
+    """
+    Stock Item Detail View
+    
+    Shows detailed lot information for a specific item across all warehouses.
+    Displays lots with available quantity > 0 grouped by warehouse.
+    """
+    template_name = 'inventory/stock/stock-item-detail.html'
+    
+    def get_context_data(self, **kwargs):
+        """Add item and warehouse lot data to context"""
+        context = super().get_context_data(**kwargs)
+        
+        # Get the item
+        item_id = self.kwargs.get('item_id')
+        item = get_object_or_404(ItemSKU, id=item_id)
+        context['item'] = item
+        
+        # Get lot data grouped by warehouse
+        warehouse_lots = self.get_warehouse_lots(item)
+        context['warehouse_lots'] = warehouse_lots
+        
+        # Get summary statistics for this item
+        context.update(self.get_item_summary(warehouse_lots))
+        
+        return context
+    
+    def get_warehouse_lots(self, item):
+        """
+        Get lots for the item grouped by warehouse.
+        Only includes lots with available_quantity > 0.
+        """
+        # Get all stocks for this item with available quantity
+        stocks = Stock.objects.filter(
+            item_sku=item,
+            available_quantity__gt=0
+        ).select_related('warehouse').order_by(
+            'warehouse__name', 'lot_number'
+        )
+        
+        # Group by warehouse
+        warehouse_lots = {}
+        for stock in stocks:
+            warehouse = stock.warehouse
+            if warehouse not in warehouse_lots:
+                warehouse_lots[warehouse] = []
+            
+            warehouse_lots[warehouse].append({
+                'stock': stock,
+                'lot_number': stock.lot_number,
+                'available_quantity': stock.available_quantity,
+                'expiry_date': stock.expiry_date
+            })
+        
+        return warehouse_lots
+    
+    def get_item_summary(self, warehouse_lots):
+        """Get summary statistics for the item"""
+        total_lots = sum(len(lots) for lots in warehouse_lots.values())
+        total_available = sum(
+            lot_data['available_quantity'] 
+            for lots in warehouse_lots.values() 
+            for lot_data in lots
+        )
+        warehouses_count = len(warehouse_lots)
+        
+        return {
+            'total_lots': total_lots,
+            'total_available': total_available,
+            'warehouses_count': warehouses_count,
+        }
+

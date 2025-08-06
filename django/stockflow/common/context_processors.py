@@ -143,6 +143,17 @@ def breadcrumb(request):
             ],
             
             # Stock management
+            'inventory:stock-overview': [
+                {'name': 'Dashboard', 'url': 'dashboard', 'active': False},
+                {'name': 'Inventory', 'url': 'inventory:dashboard', 'active': False},
+                {'name': 'Stock Overview', 'url': 'inventory:stock-overview', 'active': True}
+            ],
+            'inventory:stock-item-detail': [
+                {'name': 'Dashboard', 'url': 'dashboard', 'active': False},
+                {'name': 'Inventory', 'url': 'inventory:dashboard', 'active': False},
+                {'name': 'Stock Overview', 'url': 'inventory:stock-overview', 'active': False},
+                {'name': 'Item Details', 'url': None, 'active': True}
+            ],
             'inventory:stock-index': [
                 {'name': 'Dashboard', 'url': 'dashboard', 'active': False},
                 {'name': 'Inventory', 'url': 'inventory:dashboard', 'active': False},
