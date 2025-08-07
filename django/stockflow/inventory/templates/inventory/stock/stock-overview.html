@@ -27,6 +27,11 @@
 .stock-row {
     transition: background-color 0.2s ease;
 }
+
+/* Custom margin class */
+.mb-6 {
+    margin-bottom: 3rem !important;
+}
 </style>
 {% endblock %}
 
@@ -79,9 +84,24 @@
                         <i class="bi bi-exclamation-triangle"></i>
                     </div>
                     <div>
-                        <p class="text-muted small mb-1">Low Stock Items</p>
-                        <h3 class="h4 mb-1">{{ low_stock_count }}</h3>
-                        <small class="text-warning">Less than 10 units</small>
+                        <p class="text-muted small mb-1">Low Stock Alerts</p>
+                        <h3 class="h4 mb-1">{{ warning_stock_count|default:0 }}</h3>
+                        <small class="text-warning">Warning Level</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-sm-6 col-lg-3">
+            <div class="stats-card">
+                <div class="d-flex align-items-center">
+                    <div class="stats-card-icon bg-danger-light">
+                        <i class="bi bi-exclamation-triangle-fill"></i>
+                    </div>
+                    <div>
+                        <p class="text-muted small mb-1">Critical Stock</p>
+                        <h3 class="h4 mb-1">{{ critical_stock_count|default:0 }}</h3>
+                        <small class="text-danger">Critical Level</small>
                     </div>
                 </div>
             </div>
@@ -202,6 +222,8 @@
                                 data-category="{{ item_data.item.category.name|lower|default:'' }}"
                                 data-type="{{ item_data.item.type|lower }}"
                                 data-item-id="{{ item_data.item.id }}"
+                                data-has-critical="{{ item_data.has_critical_alert|yesno:'true,false' }}"
+                                data-has-warning="{{ item_data.has_warning_alert|yesno:'true,false' }}"
                                 style="cursor: pointer;">
                                 <td>
                                     <div class="d-flex align-items-center">
@@ -250,7 +272,11 @@
                                 {% endfor %}
                                 <td class="text-center">
                                     <span class="fw-bold text-primary fs-6">{{ item_data.total_quantity|floatformat:0 }}</span>
-                                    {% if item_data.total_quantity < 10 %}
+                                    {% if item_data.has_critical_alert %}
+                                        <br><small class="text-danger">
+                                            <i class="bi bi-exclamation-triangle-fill"></i> Critical Alert
+                                        </small>
+                                    {% elif item_data.has_warning_alert %}
                                         <br><small class="text-warning">
                                             <i class="bi bi-exclamation-triangle"></i> Low Stock
                                         </small>
@@ -362,7 +388,10 @@ document.addEventListener('DOMContentLoaded', function() {
             if (currentFilter === 'all') {
                 filterMatch = true;
             } else if (currentFilter === 'low-stock') {
-                filterMatch = totalStock < 10;
+                // Use alert data instead of hard-coded threshold
+                const hasCritical = row.dataset.hasCritical === 'true';
+                const hasWarning = row.dataset.hasWarning === 'true';
+                filterMatch = hasCritical || hasWarning;
             } else if (currentFilter === 'raw') {
                 filterMatch = type === 'raw';
             } else if (currentFilter === 'product') {
@@ -552,7 +581,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (currentFilter === 'all') {
                         filterMatch = true;
                     } else if (currentFilter === 'low-stock') {
-                        filterMatch = totalStock < 10;
+                        // Use alert data instead of hard-coded threshold
+                        const hasCritical = row.dataset.hasCritical === 'true';
+                        const hasWarning = row.dataset.hasWarning === 'true';
+                        filterMatch = hasCritical || hasWarning;
                     } else if (currentFilter === 'raw') {
                         filterMatch = type === 'raw';
                     } else if (currentFilter === 'product') {

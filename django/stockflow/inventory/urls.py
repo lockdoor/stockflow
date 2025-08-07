@@ -26,7 +26,18 @@ from inventory.views.stock_movement_item_views import (
 
 from inventory.views.stock_view import (
      StockOverviewView,
-     StockItemDetailView
+     StockItemDetailView,
+     StockItemMovementHistoryView
+)
+
+from inventory.views.stock_alert_views import (
+    StockAlertListView,
+    StockAlertDetailView,
+    StockAlertCreateView,
+    StockAlertUpdateView,
+    StockAlertDeleteView,
+    StockAlertBulkActionView,
+    StockAlertToggleView
 )
 
 # namespaced URL patterns for the inventory app
@@ -54,6 +65,9 @@ urlpatterns = [
     path('stockmovement/', 
          StockMovementListView.as_view(), 
          name='stock-movement-list'),
+    path('stockmovement/history/', 
+         StockMovementListView.as_view(), 
+         name='stock-movement-history'),
     path('stockmovement/<int:pk>/', 
          StockMovementDetailView.as_view(), 
          name='stock-movement-detail'),
@@ -84,6 +98,16 @@ urlpatterns = [
      # Stock overview
      path('stock/overview/', StockOverviewView.as_view(), name='stock-overview'),
      path('stock/item/<int:item_id>/', StockItemDetailView.as_view(), name='stock-item-detail'),
+     path('stock/item/<int:item_id>/history/', StockItemMovementHistoryView.as_view(), name='stock-item-movement-history'),
+
+     # Stock alerts
+     path('stock-alerts/', StockAlertListView.as_view(), name='stock-alert-list'),
+     path('stock-alerts/<int:pk>/', StockAlertDetailView.as_view(), name='stock-alert-detail'),
+     path('stock-alerts/create/', StockAlertCreateView.as_view(), name='stock-alert-create'),
+     path('stock-alerts/<int:pk>/edit/', StockAlertUpdateView.as_view(), name='stock-alert-edit'),
+     path('stock-alerts/<int:pk>/delete/', StockAlertDeleteView.as_view(), name='stock-alert-delete'),
+     path('stock-alerts/bulk-action/', StockAlertBulkActionView.as_view(), name='stock-alert-bulk-action'),
+     path('stock-alerts/<int:pk>/toggle/', StockAlertToggleView.as_view(), name='stock-alert-toggle'),
 
      
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -28,6 +28,34 @@
     font-size: 0.85rem;
     font-weight: 600;
 }
+
+/* Stock Alert Styles */
+.alert-details {
+    background: rgba(var(--bs-light-rgb), 0.5);
+    border-radius: 0.375rem;
+    padding: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.alert-badge {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+}
+
+.text-sm {
+    font-size: 0.875rem;
+}
+
+.warehouse-alert-info {
+    background: linear-gradient(135deg, rgba(var(--bs-primary-rgb), 0.05), rgba(var(--bs-info-rgb), 0.05));
+    border-left: 3px solid var(--bs-primary);
+}
+
+/* Custom margin class */
+.mb-6 {
+    margin-bottom: 3rem !important;
+}
 </style>
 {% endblock %}
 
@@ -41,46 +69,50 @@
 {% endblock %}
 
 {% block dashboard_content %}
-    <!-- Item Summary -->
-    <div class="row g-4 mb-6">
-        <!-- Item Information Card -->
-        <div class="col-lg-4">
-            <div class="dashboard-card h-100">
+    <!-- Item Information -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="dashboard-card">
                 <div class="card-header">
                     <h5 class="card-title mb-0">Item Information</h5>
                 </div>
                 <div class="card-body">
-                    <div class="d-flex align-items-center mb-3">
-                        <div class="item-type-badge me-2">
-                            {% if item.type == 'RAW' %}
-                                <span class="badge bg-secondary fs-6">Raw Material</span>
-                            {% elif item.type == 'PRODUCT' %}
-                                <span class="badge bg-primary fs-6">Product</span>
-                            {% else %}
-                                <span class="badge bg-info fs-6">Package</span>
-                            {% endif %}
-                        </div>
-                    </div>
-                    
-                    <div class="row g-3">
-                        <div class="col-12">
-                            <label class="form-label text-muted small">SKU Code</label>
-                            <div>
-                                <code class="text-primary fs-6">{{ item.sku_code }}</code>
+                    <div class="row align-items-center">
+                        <div class="col-lg-8">
+                            <div class="row g-3">
+                                <div class="col-md-3">
+                                    <div class="d-flex align-items-center">
+                                        <div class="item-type-badge me-2">
+                                            {% if item.type == 'RAW' %}
+                                                <span class="badge bg-secondary fs-6">Raw Material</span>
+                                            {% elif item.type == 'PRODUCT' %}
+                                                <span class="badge bg-primary fs-6">Product</span>
+                                            {% else %}
+                                                <span class="badge bg-info fs-6">Package</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label text-muted small">SKU Code</label>
+                                    <div>
+                                        <code class="text-primary fs-6">{{ item.sku_code }}</code>
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label text-muted small">Unit</label>
+                                    <div class="fw-medium">{{ item.unit }}</div>
+                                </div>
+                                {% if item.category %}
+                                <div class="col-md-4">
+                                    <label class="form-label text-muted small">Category</label>
+                                    <div class="fw-medium">{{ item.category.name }}</div>
+                                </div>
+                                {% endif %}
                             </div>
                         </div>
-                        <div class="col-6">
-                            <label class="form-label text-muted small">Unit</label>
-                            <div class="fw-medium">{{ item.unit }}</div>
-                        </div>
-                        {% if item.category %}
-                        <div class="col-6">
-                            <label class="form-label text-muted small">Category</label>
-                            <div class="fw-medium">{{ item.category.name }}</div>
-                        </div>
-                        {% endif %}
                         {% if item.description %}
-                        <div class="col-12">
+                        <div class="col-lg-4">
                             <label class="form-label text-muted small">Description</label>
                             <div class="text-muted">{{ item.description }}</div>
                         </div>
@@ -89,65 +121,59 @@
                 </div>
             </div>
         </div>
-        
-        <!-- Summary Statistics -->
-        <div class="col-lg-8">
-            <div class="row g-4">
-                <div class="col-sm-6 col-lg-3">
-                    <div class="stats-card">
-                        <div class="d-flex align-items-center">
-                            <div class="stats-card-icon bg-primary-light">
-                                <i class="bi bi-boxes"></i>
-                            </div>
-                            <div>
-                                <p class="text-muted small mb-1">Total Lots</p>
-                                <h3 class="h4 mb-1">{{ total_lots }}</h3>
-                                <small class="text-muted">Across warehouses</small>
+    </div>
+
+    <!-- Summary Statistics -->
+    <div class="row g-4 mb-6">
+        <div class="col-12">
+            <div class="dashboard-card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Stock Summary</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-4">
+                        <div class="col-sm-6 col-lg-4">
+                            <div class="stats-card">
+                                <div class="d-flex align-items-center">
+                                    <div class="stats-card-icon bg-primary-light">
+                                        <i class="bi bi-boxes"></i>
+                                    </div>
+                                    <div>
+                                        <p class="text-muted small mb-1">Total Lots</p>
+                                        <h3 class="h4 mb-1">{{ total_lots }}</h3>
+                                        <small class="text-muted">Across warehouses</small>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                </div>
 
-                <div class="col-sm-6 col-lg-3">
-                    <div class="stats-card">
-                        <div class="d-flex align-items-center">
-                            <div class="stats-card-icon bg-success-light">
-                                <i class="bi bi-check-circle"></i>
-                            </div>
-                            <div>
-                                <p class="text-muted small mb-1">Available</p>
-                                <h3 class="h4 mb-1">{{ total_available|floatformat:0 }}</h3>
-                                <small class="text-muted">{{ item.unit }}</small>
+                        <div class="col-sm-6 col-lg-4">
+                            <div class="stats-card">
+                                <div class="d-flex align-items-center">
+                                    <div class="stats-card-icon bg-success-light">
+                                        <i class="bi bi-check-circle"></i>
+                                    </div>
+                                    <div>
+                                        <p class="text-muted small mb-1">Available</p>
+                                        <h3 class="h4 mb-1">{{ total_available|floatformat:0 }}</h3>
+                                        <small class="text-muted">{{ item.unit }}</small>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                </div>
 
-                <div class="col-sm-6 col-lg-3">
-                    <div class="stats-card">
-                        <div class="d-flex align-items-center">
-                            <div class="stats-card-icon bg-warning-light">
-                                <i class="bi bi-clock"></i>
-                            </div>
-                            <div>
-                                <p class="text-muted small mb-1">Reserved</p>
-                                <h3 class="h4 mb-1">0</h3>
-                                <small class="text-muted">{{ item.unit }}</small>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-sm-6 col-lg-3">
-                    <div class="stats-card">
-                        <div class="d-flex align-items-center">
-                            <div class="stats-card-icon bg-info-light">
-                                <i class="bi bi-buildings"></i>
-                            </div>
-                            <div>
-                                <p class="text-muted small mb-1">Warehouses</p>
-                                <h3 class="h4 mb-1">{{ warehouses_count }}</h3>
-                                <small class="text-muted">With stock</small>
+                        <div class="col-sm-6 col-lg-4">
+                            <div class="stats-card">
+                                <div class="d-flex align-items-center">
+                                    <div class="stats-card-icon bg-info-light">
+                                        <i class="bi bi-buildings"></i>
+                                    </div>
+                                    <div>
+                                        <p class="text-muted small mb-1">Warehouses</p>
+                                        <h3 class="h4 mb-1">{{ warehouses_count }}</h3>
+                                        <small class="text-muted">With stock</small>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -160,28 +186,111 @@
     {% if warehouse_lots %}
         {% for warehouse, lots in warehouse_lots.items %}
         <div class="warehouse-section">
-            <div class="dashboard-card">
+            <div class="dashboard-card" id="warehouse-{{ warehouse.id }}">
                 <div class="card-header">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <h5 class="card-title mb-1">
                                 <i class="bi bi-building me-2"></i>{{ warehouse.name }}
                             </h5>
-                            <small class="text-muted">Code: {{ warehouse.code }} • {{ lots|length }} lot{{ lots|length|pluralize }}</small>
+                            <div class="d-flex align-items-center gap-2 mb-1">
+                                <small class="text-muted">Code: {{ warehouse.code }} • {{ lots|length }} lot{{ lots|length|pluralize }}</small>
+                                
+                                <!-- Stock Alert Status -->
+                                {% if warehouse.existing_alert %}
+                                    {% with alert_level=warehouse.existing_alert.get_alert_level %}
+                                    <div class="d-flex align-items-center" id="alert-status-{{ warehouse.id }}">
+                                        {% if alert_level == 'critical' %}
+                                            <span class="badge bg-danger me-1">
+                                                <i class="bi bi-exclamation-triangle-fill me-1"></i>Critical Alert
+                                            </span>
+                                        {% elif alert_level == 'warning' %}
+                                            <span class="badge bg-warning me-1">
+                                                <i class="bi bi-exclamation-circle me-1"></i>Low Stock
+                                            </span>
+                                        {% elif alert_level == 'normal' %}
+                                            <span class="badge bg-success me-1">
+                                                <i class="bi bi-check-circle me-1"></i>Normal
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-secondary me-1">
+                                                <i class="bi bi-question-circle me-1"></i>Unknown
+                                            </span>
+                                        {% endif %}
+                                        
+                                        {% if not warehouse.existing_alert.is_enabled %}
+                                            <small class="text-muted">(Alert Disabled)</small>
+                                        {% endif %}
+                                    </div>
+                                    {% endwith %}
+                                {% else %}
+                                    <span class="badge bg-light text-dark">
+                                        <i class="bi bi-bell-slash me-1"></i>No Alert Set
+                                    </span>
+                                {% endif %}
+                            </div>
                         </div>
                         <div class="text-end">
-                            {% with warehouse_total=0 %}
-                                {% for lot_data in lots %}
-                                    {% with warehouse_total=warehouse_total|add:lot_data.available_quantity %}
-                                    {% endwith %}
-                                {% endfor %}
-                                <span class="badge bg-primary fs-6">
-                                    Total: {{ lots|length|add:0 }} lot{{ lots|length|pluralize }}
-                                </span>
-                            {% endwith %}
+                            <a href="{% url 'inventory:stock-item-movement-history' item.id %}?warehouse={{ warehouse.id }}" 
+                               class="btn btn-outline-primary btn-sm me-2" title="View Movement History">
+                                <i class="bi bi-clock-history me-1"></i>History
+                            </a>
+                            {% if warehouse.existing_alert %}
+                                <a href="{% url 'inventory:stock-alert-edit' warehouse.existing_alert.id %}?item={{ item.id }}&warehouse={{ warehouse.id }}" 
+                                   class="btn btn-outline-success btn-sm me-2" title="Edit Stock Alert">
+                                    <i class="bi bi-bell-fill me-1"></i>Edit Alert
+                                </a>
+                            {% else %}
+                                <a href="{% url 'inventory:stock-alert-create' %}?item={{ item.id }}&warehouse={{ warehouse.id }}" 
+                                   class="btn btn-outline-warning btn-sm me-2" title="Set Stock Alert">
+                                    <i class="bi bi-bell me-1"></i>Set Alert
+                                </a>
+                            {% endif %}
+                            <span class="badge bg-primary fs-6">
+                                Total: {{ lots|length }} lot{{ lots|length|pluralize }}
+                            </span>
                         </div>
                     </div>
                 </div>
+                
+                <!-- Stock Alert Details (if alert exists) -->
+                {% if warehouse.existing_alert %}
+                {% with alert_level=warehouse.existing_alert.get_alert_level %}
+                <div class="card-body border-bottom warehouse-alert-info py-3">
+                    <div class="row align-items-center text-sm">
+                        <div class="col-md-8">
+                            <div class="d-flex flex-wrap gap-4">
+                                <div class="d-flex align-items-center">
+                                    <i class="bi bi-exclamation-triangle text-warning me-1"></i>
+                                    <span class="text-muted">Min:</span>
+                                    <span class="fw-bold ms-1">{{ warehouse.existing_alert.minimum_threshold }} {{ item.unit }}</span>
+                                </div>
+                                <div class="d-flex align-items-center">
+                                    <i class="bi bi-exclamation-triangle-fill text-danger me-1"></i>
+                                    <span class="text-muted">Critical:</span>
+                                    <span class="fw-bold text-danger ms-1">{{ warehouse.existing_alert.critical_threshold }} {{ item.unit }}</span>
+                                </div>
+                                <div class="d-flex align-items-center">
+                                    <i class="bi bi-boxes me-1"></i>
+                                    <span class="text-muted">Current:</span>
+                                    <span class="fw-bold ms-1 {% if alert_level == 'critical' %}text-danger{% elif alert_level == 'warning' %}text-warning{% else %}text-success{% endif %}">
+                                        {{ warehouse.existing_alert.current_stock|default:"N/A" }}
+                                        {% if warehouse.existing_alert.current_stock %} {{ item.unit }}{% endif %}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            {% if warehouse.existing_alert.note %}
+                                <small class="text-muted">
+                                    <i class="bi bi-info-circle me-1"></i>{{ warehouse.existing_alert.note|truncatechars:50 }}
+                                </small>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endwith %}
+                {% endif %}
                 
                 <div class="card-body">
                     <div class="row g-3">
@@ -203,23 +312,11 @@
                                         </span>
                                     </div>
                                     
-                                    <div class="row g-2 mb-3">
-                                        <div class="col-6">
-                                            <div class="text-center p-2 bg-success-light rounded">
-                                                <div class="quantity-badge text-success">
-                                                    {{ lot_data.available_quantity|floatformat:0 }}
-                                                </div>
-                                                <small class="text-muted d-block">Available</small>
-                                            </div>
+                                    <div class="text-center p-3 bg-success-light rounded">
+                                        <div class="quantity-badge text-success">
+                                            {{ lot_data.available_quantity|floatformat:0 }}
                                         </div>
-                                        <div class="col-6">
-                                            <div class="text-center p-2 bg-warning-light rounded">
-                                                <div class="quantity-badge text-warning">
-                                                    0
-                                                </div>
-                                                <small class="text-muted d-block">Reserved</small>
-                                            </div>
-                                        </div>
+                                        <small class="text-muted d-block">Available Quantity</small>
                                     </div>
                                     
                                     {% if lot_data.expiry_date %}
@@ -232,9 +329,15 @@
                                     {% endif %}
                                     
                                     <div class="border-top pt-2 mt-2">
-                                        <small class="text-muted">
-                                            Total: <span class="fw-bold">{{ lot_data.available_quantity|floatformat:0 }} {{ item.unit }}</span>
-                                        </small>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <small class="text-muted">
+                                                Total: <span class="fw-bold">{{ lot_data.available_quantity|floatformat:0 }} {{ item.unit }}</span>
+                                            </small>
+                                            <a href="{% url 'inventory:stock-item-movement-history' item.id %}?warehouse={{ warehouse.id }}&lot={{ lot_data.lot_number }}" 
+                                               class="btn btn-outline-secondary btn-sm" title="View Lot History">
+                                                <i class="bi bi-clock-history"></i>
+                                            </a>
+                                        </div>
                                     </div>
                                 </div>
                             </div>

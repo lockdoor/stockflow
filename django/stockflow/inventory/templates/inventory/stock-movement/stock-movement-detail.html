@@ -27,7 +27,8 @@
         <div class="row">
             <!-- Main Details -->
             <div class="col-lg-8">
-                <div class="card shadow-sm">
+                <!-- Stock Movement Details -->
+                <div class="card shadow-sm mb-4">
                     <div class="card-header">
                         <h5 class="card-title mb-0">Movement Details</h5>
                     </div>
@@ -95,6 +96,11 @@
                         {% endif %}
                     </div>
                 </div>
+
+                <!-- Stock Movement Items -->
+                <div class="shadow-sm mb-4">
+                    {% include 'inventory/stock-movement-item/partials/stock-movement-item-list.html' with movement_items=movement_items stock_movement=stock_movement view_only=True %}
+                </div>
             </div>
 
             <!-- Sidebar -->
@@ -108,7 +114,7 @@
                     <div class="card-body">
                         <div class="d-grid gap-2">
                             <a href="{% url 'inventory:movement-create' stock_movement.id %}" class="btn btn-outline-secondary">
-                                <i class="bi bi-box me-1"></i>View Items
+                                <i class="bi bi-box me-1"></i>Management Items
                             </a>
                             <a href="{% url 'inventory:stock-movement-update' stock_movement.id %}" class="btn btn-outline-primary">
                                 <i class="bi bi-pencil-square me-1"></i>Edit Movement

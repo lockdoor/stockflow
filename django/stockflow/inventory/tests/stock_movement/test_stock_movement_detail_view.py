@@ -373,8 +373,8 @@ class StockMovementDetailViewTest(TestCase):
         
         # Should include section for stock movement items
         self.assertContains(response, 'Items')
-        # "Add Item" text might be "View Items" instead
-        self.assertContains(response, 'View Items')
+        # "Add Item" text might be "Management Items" instead
+        self.assertContains(response, 'Management Items')
 
     def test_empty_stock_movement_items_display(self):
         """Test display when no stock movement items exist"""

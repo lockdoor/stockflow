@@ -325,8 +325,8 @@ class StockItemDetailViewTestCase(TestCase):
         self.client.login(username='testuser', password='testpass123')
         view = StockItemDetailView()
         
-        # Should use minimal queries
-        with self.assertNumQueries(1):  # Only one query for stocks with select_related
+        # Should use minimal queries: 1 for stocks + 1 for stock alerts
+        with self.assertNumQueries(2):  # One query for stocks, one for stock alerts
             warehouse_lots = view.get_warehouse_lots(self.item)
         
         self.assertGreater(len(warehouse_lots), 0)

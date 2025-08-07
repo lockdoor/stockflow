@@ -69,6 +69,26 @@ erDiagram
     Stock }o--|| ItemSKU : "item_sku_id"
     Stock }o--|| Warehouse : "warehouse_id"
     
+    %% Stock Alert Configuration
+    StockAlert {
+        int id PK
+        int item_sku_id FK
+        int warehouse_id FK
+        decimal minimum_threshold
+        decimal critical_threshold
+        bool is_enabled
+        text note
+        timestamp created_at
+        int created_by FK
+        timestamp updated_at
+        int updated_by FK
+        int version
+    }
+    StockAlert }o--|| ItemSKU : "item_sku_id"
+    StockAlert }o--|| Warehouse : "warehouse_id"
+    StockAlert }o--|| User : "created_by"
+    StockAlert }o--|| User : "updated_by"
+    
     %% External Context Entities
     ItemSKU {
         int id PK

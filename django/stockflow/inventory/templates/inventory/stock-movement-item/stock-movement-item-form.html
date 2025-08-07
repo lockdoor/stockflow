@@ -113,7 +113,7 @@
                         </div>
 
                         <!-- Lot Number -->
-                        <div class="mb-3">
+                        <div class="mb-3" id="lot-number-field">
                             <label for="{{ form.lot_number.id_for_label }}" class="form-label">
                                 <i class="bi bi-tag me-1"></i>{{ form.lot_number.label }}
                                 {% if form.lot_number.field.required %}<span class="text-danger">*</span>{% endif %}
@@ -130,7 +130,7 @@
                         </div>
 
                         <!-- Expiry Date -->
-                        <div class="mb-3">
+                        <div class="mb-3" id="expiry-date-field">
                             <label for="{{ form.expiry_date.id_for_label }}" class="form-label">
                                 <i class="bi bi-calendar-event me-1"></i>{{ form.expiry_date.label }}
                                 {% if form.expiry_date.field.required %}<span class="text-danger">*</span>{% endif %}
@@ -221,4 +221,45 @@
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const movementTypeField = document.getElementById('{{ form.movement_type.id_for_label }}');
+    const lotNumberField = document.getElementById('lot-number-field');
+    const expiryDateField = document.getElementById('expiry-date-field');
+    
+    function toggleFields() {
+        const selectedValue = movementTypeField.value;
+        
+        if (selectedValue === 'OUT') {
+            // Hide lot number and expiry date fields for OUT movements
+            if (lotNumberField) {
+                lotNumberField.style.display = 'none';
+                // Clear value when hidden
+                const lotInput = lotNumberField.querySelector('input');
+                if (lotInput) lotInput.value = '';
+            }
+            
+            if (expiryDateField) {
+                expiryDateField.style.display = 'none';
+                // Clear value when hidden
+                const expiryInput = expiryDateField.querySelector('input');
+                if (expiryInput) expiryInput.value = '';
+            }
+        } else {
+            // Show fields for other movement types
+            if (lotNumberField) lotNumberField.style.display = 'block';
+            if (expiryDateField) expiryDateField.style.display = 'block';
+        }
+    }
+    
+    // Initial check when page loads
+    if (movementTypeField) {
+        toggleFields();
+        
+        // Listen for changes
+        movementTypeField.addEventListener('change', toggleFields);
+    }
+});
+</script>
 {% endblock %}

@@ -7,6 +7,7 @@ from django.core.exceptions import PermissionDenied, ValidationError
 
 # models
 from inventory.models.stock_movement import StockMovement
+from inventory.models.stock_movement_item import StockMovementItem
 from inventory.models.warehouse import Warehouse
 # forms
 from inventory.forms.stock_movement_form import StockMovementForm
@@ -74,6 +75,14 @@ class StockMovementDetailView(LoginRequiredMixin, DetailView):
     model = StockMovement
     template_name = 'inventory/stock-movement/stock-movement-detail.html'
     context_object_name = 'stock_movement'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Add movement items to context
+        context['movement_items'] = self.object.movement_items.select_related(
+            'item_sku', 'item_sku__category'
+        ).order_by('created_at')
+        return context
 
 class StockMovementDeleteView(WarehousePermissionMixin, LoginRequiredMixin, View):
     permission_required_base = 'delete_stockmovement'

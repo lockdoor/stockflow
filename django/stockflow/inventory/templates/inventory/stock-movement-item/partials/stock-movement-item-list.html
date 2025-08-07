@@ -1,6 +1,6 @@
 {% comment %}
 ------------------------------------------------------------------------------
-  inventory/item-movement/partials/item-movement-list.html
+  inventory/stock-movement-item/partials/stock-movement-item-list.html
 
   Description:
     - Render movement items list for redirect flow pattern
@@ -9,9 +9,10 @@
   Required context:
     - stock_movement: StockMovement object
     - movement_items: queryset of StockMovementItem objects
+    - view_only: boolean (optional) - if True, hide edit/delete actions
 
   Usage:
-    - include 'inventory/item-movement/partials/item-movement-list.html' with movement_items=movement_items stock_movement=stock_movement
+    - include 'inventory/stock-movement-item/partials/stock-movement-item-list.html' with movement_items=movement_items stock_movement=stock_movement view_only=True
 ------------------------------------------------------------------------------
 {% endcomment %}
 
@@ -33,7 +34,9 @@
                     <th class="text-end">Quantity</th>
                     <th>Expiry Date</th>
                     <th>Note</th>
+                    {% if not view_only %}
                     <th class="text-center">Actions</th>
+                    {% endif %}
                 </tr>
             </thead>
             <tbody>
@@ -69,6 +72,7 @@
                             <span class="text-muted">-</span>
                         {% endif %}
                     </td>
+                    {% if not view_only %}
                     <td class="text-center">
                         {% if stock_movement.status != 'CONFIRMED' %}
                         <div class="btn-group btn-group-sm">
@@ -91,6 +95,7 @@
                         </span>
                         {% endif %}
                     </td>
+                    {% endif %}
                 </tr>
                 {% endfor %}
             </tbody>
@@ -108,7 +113,7 @@
 </div>
 
 <!-- Edit Movement Item Modals -->
-{% if stock_movement.status != 'CONFIRMED' %}
+{% if not view_only and stock_movement.status != 'CONFIRMED' %}
     {% for item in movement_items %}
     <div class="modal fade" id="editMovementItemModal{{ item.pk }}" tabindex="-1" aria-labelledby="editMovementItemModalLabel{{ item.pk }}" aria-hidden="true">
         <div class="modal-dialog">
@@ -196,6 +201,7 @@
                         </div>
 
                         <!-- Lot Number -->
+                        {% if item.movement_type != 'OUT' %}
                         <div class="mb-3">
                             <label for="lot_number{{ item.pk }}" class="form-label">
                                 <i class="bi bi-tag me-1"></i>Lot Number
@@ -206,8 +212,10 @@
                                    name="lot_number" 
                                    value="{{ item.lot_number }}">
                         </div>
+                        {% endif %}
 
                         <!-- Expiry Date -->
+                        {% if item.movement_type != 'OUT' %}
                         <div class="mb-3">
                             <label for="expiry_date{{ item.pk }}" class="form-label">
                                 <i class="bi bi-calendar-event me-1"></i>Expiry Date
@@ -218,6 +226,7 @@
                                    name="expiry_date" 
                                    value="{% if item.expiry_date %}{{ item.expiry_date|date:'Y-m-d' }}{% endif %}">
                         </div>
+                        {% endif %}
 
                         <!-- Note -->
                         <div class="mb-3">

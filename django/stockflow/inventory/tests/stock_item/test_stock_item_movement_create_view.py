@@ -368,7 +368,7 @@ class StockItemMovementCreateViewTest(TestCase):
     def test_template_name_is_set(self):
         """Test that template_name is properly set"""
         view = StockItemMovementCreateView()
-        self.assertEqual(view.template_name, 'inventory/item-movement/item-movement-form.html')
+        self.assertEqual(view.template_name, 'inventory/stock-movement-item/stock-movement-item-form.html')
 
     def test_model_is_set(self):
         """Test that model is properly set"""
