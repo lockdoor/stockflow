@@ -1,0 +1,349 @@
+{% extends "base-dashboard-header.html" %}
+
+{% block title %}Stock Alerts - StockFlow{% endblock %}
+
+{% block title_text %}Stock Alerts{% endblock %}
+
+{% block subtitle_text %}Monitor and manage low stock alerts{% endblock %}
+
+{% block header_actions %}
+<a href="{% url 'inventory:stock-alert-create' %}" class="btn btn-primary">
+    <i class="bi bi-plus-circle me-1"></i>Create Alert
+</a>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="row">
+    <!-- Search and Filter -->
+    <div class="col-12">
+        <div class="dashboard-card mb-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-funnel me-2"></i>Search & Filter
+                </h6>
+            </div>
+            <div class="card-body">
+                <form method="get" class="row g-3">
+                    <div class="col-md-3">
+                        <label for="{{ search_form.item_sku.id_for_label }}" class="form-label">Item</label>
+                        {{ search_form.item_sku }}
+                    </div>
+                    <div class="col-md-3">
+                        <label for="{{ search_form.warehouse.id_for_label }}" class="form-label">Warehouse</label>
+                        {{ search_form.warehouse }}
+                    </div>
+                    <div class="col-md-2">
+                        <label for="{{ search_form.is_enabled.id_for_label }}" class="form-label">Status</label>
+                        {{ search_form.is_enabled }}
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-outline-primary me-2">
+                            <i class="bi bi-search me-1"></i>Search
+                        </button>
+                        <a href="{% url 'inventory:stock-alert-list' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-circle me-1"></i>Reset
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results -->
+    <div class="col-12">
+        <div class="dashboard-card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-list-ul me-2"></i>Stock Alerts ({{ page_obj.paginator.count }})
+                </h6>
+                {% if object_list %}
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-outline-primary btn-sm" 
+                            onclick="selectAll()">
+                        <i class="bi bi-check-all me-1"></i>Select All
+                    </button>
+                    <button type="button" class="btn btn-outline-danger btn-sm" 
+                            onclick="bulkAction('delete')" id="bulk-delete-btn" disabled>
+                        <i class="bi bi-trash me-1"></i>Delete Selected
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+            <div class="card-body p-0">
+                {% if object_list %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th width="40">
+                                    <input type="checkbox" id="select-all-checkbox" 
+                                           onchange="toggleSelectAll(this)">
+                                </th>
+                                <th>Item</th>
+                                <th>Warehouse</th>
+                                <th>Current Stock</th>
+                                <th>Alert Level</th>
+                                <th>Thresholds</th>
+                                <th>Status</th>
+                                <th width="120">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for alert in object_list %}
+                            <tr data-alert-id="{{ alert.id }}">
+                                <td>
+                                    <input type="checkbox" class="alert-checkbox" 
+                                           value="{{ alert.id }}" onchange="updateBulkActions()">
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div>
+                                            <strong>{{ alert.item_sku.sku_code }}</strong>
+                                            <br><small class="text-muted">{{ alert.item_sku.name }}</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-secondary">{{ alert.warehouse.name }}</span>
+                                </td>
+                                <td>
+                                    <span class="fw-bold">{{ alert.current_stock|default:"N/A" }}</span>
+                                    {% if alert.item_sku.unit %}
+                                        <small class="text-muted">{{ alert.item_sku.unit }}</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% with level=alert.get_alert_level %}
+                                        {% if level == 'critical' %}
+                                            <span class="badge bg-danger">
+                                                <i class="bi bi-exclamation-triangle-fill me-1"></i>Critical
+                                            </span>
+                                        {% elif level == 'warning' %}
+                                            <span class="badge bg-warning">
+                                                <i class="bi bi-exclamation-circle me-1"></i>Warning
+                                            </span>
+                                        {% elif level == 'normal' %}
+                                            <span class="badge bg-success">
+                                                <i class="bi bi-check-circle me-1"></i>Normal
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Unknown</span>
+                                        {% endif %}
+                                    {% endwith %}
+                                </td>
+                                <td>
+                                    <div class="small">
+                                        <div><strong>Min:</strong> {{ alert.minimum_threshold }}</div>
+                                        <div><strong>Critical:</strong> {{ alert.critical_threshold }}</div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" 
+                                               {% if alert.is_enabled %}checked{% endif %}
+                                               data-alert-id="{{ alert.id }}"
+                                               onchange="toggleAlert(this.dataset.alertId, this)">
+                                        <label class="form-check-label">
+                                            {% if alert.is_enabled %}Enabled{% else %}Disabled{% endif %}
+                                        </label>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        <a href="{% url 'inventory:stock-alert-detail' alert.id %}" 
+                                           class="btn btn-outline-secondary btn-sm" title="View Details">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                        <a href="{% url 'inventory:stock-alert-edit' alert.id %}" 
+                                           class="btn btn-outline-primary btn-sm" title="Edit">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        <a href="{% url 'inventory:stock-alert-delete' alert.id %}" 
+                                           class="btn btn-outline-danger btn-sm" title="Delete">
+                                            <i class="bi bi-trash"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="8" class="text-center py-4 text-muted">
+                                    <i class="bi bi-bell-slash display-4 d-block mb-2"></i>
+                                    No stock alerts found. <a href="{% url 'inventory:stock-alert-create' %}">Create one now</a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                {% if is_paginated %}
+                <div class="card-footer">
+                    <nav aria-label="Stock alerts pagination">
+                        <ul class="pagination justify-content-center mb-0">
+                            {% if page_obj.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page=1{% if request.GET.urlencode %}&{{ request.GET.urlencode }}{% endif %}">First</a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.urlencode %}&{{ request.GET.urlencode }}{% endif %}">Previous</a>
+                                </li>
+                            {% endif %}
+
+                            <li class="page-item active">
+                                <span class="page-link">
+                                    Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                                </span>
+                            </li>
+
+                            {% if page_obj.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.urlencode %}&{{ request.GET.urlencode }}{% endif %}">Next</a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.urlencode %}&{{ request.GET.urlencode }}{% endif %}">Last</a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+                {% endif %}
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-bell-slash display-1 text-muted mb-3"></i>
+                    <h5 class="text-muted">No Stock Alerts</h5>
+                    <p class="text-muted">Get started by creating your first stock alert to monitor inventory levels.</p>
+                    <a href="{% url 'inventory:stock-alert-create' %}" class="btn btn-primary">
+                        <i class="bi bi-plus-circle me-2"></i>Create Alert
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Action Form (Hidden) -->
+<form id="bulk-action-form" method="post" action="{% url 'inventory:stock-alert-bulk-action' %}" style="display: none;">
+    {% csrf_token %}
+    <input type="hidden" name="action" id="bulk-action-input">
+    <input type="hidden" name="alert_ids" id="bulk-alert-ids">
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function selectAll() {
+    document.querySelectorAll('.alert-checkbox').forEach(checkbox => {
+        checkbox.checked = true;
+    });
+    updateBulkActions();
+}
+
+function toggleSelectAll(selectAllCheckbox) {
+    document.querySelectorAll('.alert-checkbox').forEach(checkbox => {
+        checkbox.checked = selectAllCheckbox.checked;
+    });
+    updateBulkActions();
+}
+
+function updateBulkActions() {
+    const selectedCheckboxes = document.querySelectorAll('.alert-checkbox:checked');
+    const bulkDeleteBtn = document.getElementById('bulk-delete-btn');
+    
+    if (selectedCheckboxes.length > 0) {
+        bulkDeleteBtn.disabled = false;
+    } else {
+        bulkDeleteBtn.disabled = true;
+    }
+    
+    // Update select all checkbox state
+    const allCheckboxes = document.querySelectorAll('.alert-checkbox');
+    const selectAllCheckbox = document.getElementById('select-all-checkbox');
+    
+    if (selectedCheckboxes.length === allCheckboxes.length) {
+        selectAllCheckbox.checked = true;
+        selectAllCheckbox.indeterminate = false;
+    } else if (selectedCheckboxes.length > 0) {
+        selectAllCheckbox.checked = false;
+        selectAllCheckbox.indeterminate = true;
+    } else {
+        selectAllCheckbox.checked = false;
+        selectAllCheckbox.indeterminate = false;
+    }
+}
+
+function bulkAction(action) {
+    const selectedCheckboxes = document.querySelectorAll('.alert-checkbox:checked');
+    
+    if (selectedCheckboxes.length === 0) {
+        alert('Please select at least one alert.');
+        return;
+    }
+    
+    const selectedIds = Array.from(selectedCheckboxes).map(cb => cb.value);
+    
+    if (action === 'delete') {
+        if (confirm(`Are you sure you want to delete ${selectedIds.length} alert(s)?`)) {
+            document.getElementById('bulk-action-input').value = action;
+            document.getElementById('bulk-alert-ids').value = selectedIds.join(',');
+            document.getElementById('bulk-action-form').submit();
+        }
+    }
+}
+
+function toggleAlert(alertId, checkbox) {
+    fetch('/inventory/stock-alerts/' + alertId + '/toggle/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify({
+            is_enabled: checkbox.checked
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Update the label text
+            const label = checkbox.nextElementSibling;
+            label.textContent = data.is_enabled ? 'Enabled' : 'Disabled';
+            
+            // Show success message (optional)
+            const alertElement = document.createElement('div');
+            alertElement.className = 'alert alert-success alert-dismissible fade show position-fixed';
+            alertElement.style.cssText = 'top: 20px; right: 20px; z-index: 9999; width: auto;';
+            alertElement.innerHTML = `
+                <i class="bi bi-check-circle me-2"></i>
+                Alert ${data.is_enabled ? 'enabled' : 'disabled'} successfully.
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.body.appendChild(alertElement);
+            
+            // Auto remove after 3 seconds
+            setTimeout(() => {
+                if (alertElement.parentNode) {
+                    alertElement.remove();
+                }
+            }, 3000);
+        } else {
+            // Revert checkbox state on error
+            checkbox.checked = !checkbox.checked;
+            alert('Error updating alert status: ' + (data.message || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        // Revert checkbox state on error
+        checkbox.checked = !checkbox.checked;
+        alert('Error updating alert status: ' + error.message);
+    });
+}
+
+// Initialize bulk actions state on page load
+document.addEventListener('DOMContentLoaded', function() {
+    updateBulkActions();
+});
+</script>
+{% endblock %}

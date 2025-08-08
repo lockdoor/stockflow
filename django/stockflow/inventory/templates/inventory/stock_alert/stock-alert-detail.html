@@ -1,0 +1,268 @@
+{% extends "base-dashboard-header.html" %}
+
+{% block title %}Stock Alert Details - StockFlow{% endblock %}
+
+{% block title_text %}Stock Alert Details{% endblock %}
+
+{% block subtitle_text %}{{ object.item_sku.sku_code }} in {{ object.warehouse.name }}{% endblock %}
+
+{% block header_actions %}
+<div class="btn-group" role="group">
+    <a href="{% url 'inventory:stock-alert-list' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>Back to Alerts
+    </a>
+    <a href="{% url 'inventory:stock-alert-edit' object.id %}" class="btn btn-outline-primary">
+        <i class="bi bi-pencil me-1"></i>Edit Alert
+    </a>
+    <a href="{% url 'inventory:stock-alert-delete' object.id %}" class="btn btn-outline-danger">
+        <i class="bi bi-trash me-1"></i>Delete Alert
+    </a>
+</div>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="row">
+    <!-- Alert Status -->
+    <div class="col-12">
+        {% with level=object.get_alert_level %}
+        {% if level == 'critical' %}
+        <div class="alert alert-danger">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            <strong>Critical Alert:</strong> Stock level is critically low ({{ object.current_stock|default:"N/A" }} remaining)
+        </div>
+        {% elif level == 'warning' %}
+        <div class="alert alert-warning">
+            <i class="bi bi-exclamation-circle me-2"></i>
+            <strong>Warning:</strong> Stock level is below minimum threshold ({{ object.current_stock|default:"N/A" }} remaining)
+        </div>
+        {% elif level == 'normal' %}
+        <div class="alert alert-success">
+            <i class="bi bi-check-circle me-2"></i>
+            <strong>Normal:</strong> Stock level is above minimum threshold ({{ object.current_stock|default:"N/A" }} available)
+        </div>
+        {% endif %}
+        {% endwith %}
+    </div>
+
+    <!-- Alert Information -->
+    <div class="col-lg-8">
+        <div class="dashboard-card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-bell me-2"></i>Alert Configuration
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <h6 class="text-muted mb-2">Item Information</h6>
+                        <div class="mb-3">
+                            <strong>SKU Code:</strong> {{ object.item_sku.sku_code }}
+                        </div>
+                        <div class="mb-3">
+                            <strong>Item Name:</strong> {{ object.item_sku.name }}
+                        </div>
+                        {% if object.item_sku.unit %}
+                        <div class="mb-3">
+                            <strong>Unit:</strong> {{ object.item_sku.unit }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <h6 class="text-muted mb-2">Location & Thresholds</h6>
+                        <div class="mb-3">
+                            <strong>Warehouse:</strong> 
+                            <span class="badge bg-secondary">{{ object.warehouse.name }}</span>
+                        </div>
+                        <div class="mb-3">
+                            <strong>Minimum Threshold:</strong> {{ object.minimum_threshold }}
+                        </div>
+                        <div class="mb-3">
+                            <strong>Critical Threshold:</strong> {{ object.critical_threshold }}
+                        </div>
+                    </div>
+                    
+                    <div class="col-12">
+                        <h6 class="text-muted mb-2">Alert Status</h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <strong>Status:</strong>
+                                    {% if object.is_enabled %}
+                                        <span class="badge bg-success">
+                                            <i class="bi bi-check-circle me-1"></i>Enabled
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">
+                                            <i class="bi bi-x-circle me-1"></i>Disabled
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <strong>Current Alert Level:</strong>
+                                    {% with level=object.get_alert_level %}
+                                        {% if level == 'critical' %}
+                                            <span class="badge bg-danger">
+                                                <i class="bi bi-exclamation-triangle-fill me-1"></i>Critical
+                                            </span>
+                                        {% elif level == 'warning' %}
+                                            <span class="badge bg-warning">
+                                                <i class="bi bi-exclamation-circle me-1"></i>Warning
+                                            </span>
+                                        {% elif level == 'normal' %}
+                                            <span class="badge bg-success">
+                                                <i class="bi bi-check-circle me-1"></i>Normal
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Unknown</span>
+                                        {% endif %}
+                                    {% endwith %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {% if object.note %}
+                    <div class="col-12">
+                        <h6 class="text-muted mb-2">Notes</h6>
+                        <div class="bg-light p-3 rounded">
+                            {{ object.note|linebreaks }}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stock Information -->
+    <div class="col-lg-4">
+        <div class="dashboard-card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-boxes me-2"></i>Stock Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-4">
+                    <div class="display-6 fw-bold mb-2">
+                        {{ object.current_stock|default:"N/A" }}
+                    </div>
+                    <small class="text-muted">
+                        {% if object.item_sku.unit %}
+                            {{ object.item_sku.unit }}
+                        {% else %}
+                            units
+                        {% endif %}
+                        available
+                    </small>
+                </div>
+
+                <!-- Stock Level Progress -->
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between small text-muted mb-1">
+                        <span>Critical: {{ object.critical_threshold }}</span>
+                        <span>Minimum: {{ object.minimum_threshold }}</span>
+                    </div>
+                    {% if object.current_stock %}
+                    <div class="progress" style="height: 8px;">
+                        {% with current=object.current_stock|floatformat:0 critical=object.critical_threshold|floatformat:0 minimum=object.minimum_threshold|floatformat:0 %}
+                        {% if current <= critical %}
+                            <div class="progress-bar bg-danger" style="width: {% widthratio current minimum 100 %}%"></div>
+                        {% elif current <= minimum %}
+                            <div class="progress-bar bg-warning" style="width: {% widthratio current minimum 100 %}%"></div>
+                        {% else %}
+                            <div class="progress-bar bg-success" style="width: 100%"></div>
+                        {% endif %}
+                        {% endwith %}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="d-grid gap-2">
+                    <a href="{% url 'inventory:stock-item-detail' item_id=object.item_sku.id %}" 
+                       class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-eye me-1"></i>View Stock Details
+                    </a>
+                    {% if object.is_enabled %}
+                    <button type="button" class="btn btn-outline-warning btn-sm" 
+                            data-alert-id="{{ object.id }}" 
+                            data-action="disable" 
+                            onclick="toggleAlert(this.dataset.alertId, false)">
+                        <i class="bi bi-pause-circle me-1"></i>Disable Alert
+                    </button>
+                    {% else %}
+                    <button type="button" class="btn btn-outline-success btn-sm" 
+                            data-alert-id="{{ object.id }}" 
+                            data-action="enable" 
+                            onclick="toggleAlert(this.dataset.alertId, true)">
+                        <i class="bi bi-play-circle me-1"></i>Enable Alert
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Audit Information -->
+        <div class="dashboard-card mt-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-clock me-2"></i>Audit Information
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="small">
+                    <div class="mb-2">
+                        <strong>Created:</strong><br>
+                        {{ object.created_at|date:"M d, Y H:i" }}
+                        {% if object.created_by %}
+                            <br>by {{ object.created_by.username }}
+                        {% endif %}
+                    </div>
+                    {% if object.updated_at %}
+                    <div>
+                        <strong>Last Updated:</strong><br>
+                        {{ object.updated_at|date:"M d, Y H:i" }}
+                        {% if object.updated_by %}
+                            <br>by {{ object.updated_by.username }}
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleAlert(alertId, enableStatus) {
+    fetch('/inventory/stock-alerts/' + alertId + '/toggle/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify({
+            is_enabled: enableStatus
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload(); // Reload to update all status indicators
+        } else {
+            alert('Error updating alert status: ' + (data.message || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        alert('Error updating alert status: ' + error.message);
+    });
+}
+</script>
+{% endblock %}

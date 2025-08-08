@@ -45,6 +45,7 @@ app_name = 'inventory'
 
 urlpatterns = [
     # Dashboard
+    path('', inventory_dashboard_view, name='dashboard'),
     path('dashboard/', inventory_dashboard_view, name='dashboard'),
     
     # Warehouse management

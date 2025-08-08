@@ -1,0 +1,102 @@
+{% extends "base-dashboard-header.html" %}
+
+{% block title %}Delete Stock Alert - StockFlow{% endblock %}
+
+{% block title_text %}Delete Stock Alert{% endblock %}
+
+{% block subtitle_text %}{{ object.item_sku.sku_code }} in {{ object.warehouse.name }}{% endblock %}
+
+{% block header_actions %}
+<a href="{% url 'inventory:stock-alert-detail' object.id %}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i>Back to Alert
+</a>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="row justify-content-center">
+    <div class="col-xl-8">
+        <div class="dashboard-card">
+            <div class="card-header bg-danger text-white">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-exclamation-triangle me-2"></i>Confirm Deletion
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <strong>Warning:</strong> This action cannot be undone. The stock alert will be permanently deleted.
+                </div>
+
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <h6 class="text-muted mb-3">Alert Information</h6>
+                        <div class="mb-3">
+                            <strong>Item:</strong> {{ object.item_sku.sku_code }} - {{ object.item_sku.name }}
+                        </div>
+                        <div class="mb-3">
+                            <strong>Warehouse:</strong> {{ object.warehouse.name }}
+                        </div>
+                        <div class="mb-3">
+                            <strong>Minimum Threshold:</strong> {{ object.minimum_threshold }}
+                        </div>
+                        <div class="mb-3">
+                            <strong>Critical Threshold:</strong> {{ object.critical_threshold }}
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <h6 class="text-muted mb-3">Current Status</h6>
+                        <div class="mb-3">
+                            <strong>Alert Status:</strong>
+                            {% if object.is_enabled %}
+                                <span class="badge bg-success">Enabled</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Disabled</span>
+                            {% endif %}
+                        </div>
+                        <div class="mb-3">
+                            <strong>Current Stock:</strong> {{ object.current_stock|default:"N/A" }}
+                        </div>
+                        <div class="mb-3">
+                            <strong>Alert Level:</strong>
+                            {% with level=object.get_alert_level %}
+                                {% if level == 'critical' %}
+                                    <span class="badge bg-danger">Critical</span>
+                                {% elif level == 'warning' %}
+                                    <span class="badge bg-warning">Warning</span>
+                                {% elif level == 'normal' %}
+                                    <span class="badge bg-success">Normal</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Unknown</span>
+                                {% endif %}
+                            {% endwith %}
+                        </div>
+                        {% if object.note %}
+                        <div class="mb-3">
+                            <strong>Notes:</strong>
+                            <div class="bg-light p-2 rounded mt-1">
+                                {{ object.note|truncatewords:20 }}
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <hr class="my-4">
+
+                <div class="d-flex justify-content-end gap-3">
+                    <a href="{% url 'inventory:stock-alert-detail' object.id %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle me-1"></i>Cancel
+                    </a>
+                    <form method="post" class="d-inline">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger">
+                            <i class="bi bi-trash me-1"></i>Delete Alert
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

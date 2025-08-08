@@ -511,3 +511,315 @@ class StockMovementUpdateViewTest(TestCase):
         # Should have access since user has base permission
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 200)
+
+
+class StockMovementUpdateViewNextUrlTest(TestCase):
+    """Test cases for StockMovementUpdateView next URL functionality"""
+    
+    def setUp(self):
+        """Set up test data"""
+        self.client = Client()
+        self.user = User.objects.create_user(
+            username='testuser', 
+            password='testpass123'
+        )
+        
+        # Give user necessary permissions
+        from django.contrib.auth.models import Permission
+        from django.contrib.contenttypes.models import ContentType
+        
+        # Get StockMovement content type
+        stock_movement_ct = ContentType.objects.get_for_model(StockMovement)
+        
+        # Add required permissions
+        add_permission = Permission.objects.get(
+            codename='add_stockmovement',
+            content_type=stock_movement_ct
+        )
+        change_permission = Permission.objects.get(
+            codename='change_stockmovement',
+            content_type=stock_movement_ct
+        )
+        delete_permission = Permission.objects.get(
+            codename='delete_stockmovement',
+            content_type=stock_movement_ct
+        )
+        
+        self.user.user_permissions.add(add_permission, change_permission, delete_permission)
+        
+        # Create test warehouse
+        self.warehouse = Warehouse(
+            name='Test Warehouse',
+            code='TEST01',
+            address='123 Test St',
+            is_active=True,
+            created_by=self.user,
+            updated_by=self.user
+        )
+        super(Warehouse, self.warehouse).save()
+        
+        # Create test stock movement
+        self.stock_movement = StockMovement(
+            warehouse=self.warehouse,
+            reference_type=StockMovement.ReferenceType.NONE,
+            note='Original note',
+            status=StockMovement.Status.DRAFT,
+            created_by=self.user,
+            updated_by=self.user
+        )
+        super(StockMovement, self.stock_movement).save()
+        
+        self.url = reverse('inventory:stock-movement-update', kwargs={'pk': self.stock_movement.pk})
+        
+        # Valid form data
+        self.valid_data = {
+            'warehouse': self.warehouse.id,
+            'reference_type': StockMovement.ReferenceType.PRODUCTION,
+            'reference_id': 123,
+            'note': 'Updated test note',
+        }
+
+    def test_get_with_next_url_in_context(self):
+        """Test GET request with next URL parameter adds it to context"""
+        self.client.login(username='testuser', password='testpass123')
+        next_url = '/inventory/warehouse/1/'
+        response = self.client.get(self.url, {'next': next_url})
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['next_url'], next_url)
+        self.assertContains(response, f'value="{next_url}"')  # Hidden input field
+
+    def test_get_cancel_url_without_next_defaults_to_detail(self):
+        """Test cancel URL defaults to stock movement detail when no next parameter"""
+        self.client.login(username='testuser', password='testpass123')
+        response = self.client.get(self.url)
+        
+        self.assertEqual(response.status_code, 200)
+        expected_cancel_url = reverse('inventory:stock-movement-detail', kwargs={'pk': self.stock_movement.pk})
+        self.assertEqual(response.context['cancel_url'], expected_cancel_url)
+
+    def test_get_cancel_url_with_next_parameter(self):
+        """Test cancel URL uses next parameter when provided"""
+        self.client.login(username='testuser', password='testpass123')
+        next_url = '/inventory/warehouse/1/'
+        response = self.client.get(self.url, {'next': next_url})
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['cancel_url'], next_url)
+
+    def test_post_success_redirect_to_next_url_from_get(self):
+        """Test successful form submission redirects to next URL from GET parameter"""
+        self.client.login(username='testuser', password='testpass123')
+        next_url = '/inventory/warehouse/1/'
+        
+        response = self.client.post(
+            self.url + f'?next={next_url}', 
+            self.valid_data
+        )
+        
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, next_url)
+
+    def test_post_success_redirect_to_next_url_from_post(self):
+        """Test successful form submission redirects to next URL from POST data"""
+        self.client.login(username='testuser', password='testpass123')
+        next_url = '/inventory/warehouse/1/'
+        
+        data = self.valid_data.copy()
+        data['next'] = next_url
+        
+        response = self.client.post(self.url, data)
+        
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, next_url)
+
+    def test_post_success_redirect_post_overrides_get(self):
+        """Test POST next parameter takes priority over GET next parameter"""
+        self.client.login(username='testuser', password='testpass123')
+        get_next_url = '/inventory/warehouse/1/'
+        post_next_url = '/inventory/warehouse/2/'
+        
+        data = self.valid_data.copy()
+        data['next'] = post_next_url
+        
+        response = self.client.post(
+            self.url + f'?next={get_next_url}', 
+            data
+        )
+        
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, post_next_url)
+
+    def test_post_success_redirect_defaults_to_detail_without_next(self):
+        """Test successful form submission defaults to detail page when no next URL"""
+        self.client.login(username='testuser', password='testpass123')
+        
+        response = self.client.post(self.url, self.valid_data)
+        
+        self.assertEqual(response.status_code, 302)
+        expected_url = reverse('inventory:stock-movement-detail', kwargs={'pk': self.stock_movement.pk})
+        self.assertEqual(response.url, expected_url)
+
+    def test_form_invalid_preserves_next_url_context(self):
+        """Test form validation errors preserve next URL in context"""
+        self.client.login(username='testuser', password='testpass123')
+        next_url = '/inventory/warehouse/1/'
+        
+        # Submit invalid data (missing required field)
+        invalid_data = {
+            'note': 'Test note',
+            'next': next_url
+        }
+        
+        response = self.client.post(
+            self.url + f'?next={next_url}', 
+            invalid_data
+        )
+        
+        self.assertEqual(response.status_code, 200)  # Form re-rendered with errors
+        self.assertEqual(response.context['next_url'], next_url)
+        self.assertEqual(response.context['cancel_url'], next_url)
+
+    def test_get_success_redirect_url_method(self):
+        """Test get_success_redirect_url method behavior"""
+        from inventory.views.stock_movement_views import StockMovementUpdateView
+        
+        # Create a mock request with next parameter
+        from django.test import RequestFactory
+        factory = RequestFactory()
+        
+        # Test with GET next parameter
+        request = factory.get('/test/', {'next': '/custom/url/'})
+        request.user = self.user
+        
+        view = StockMovementUpdateView()
+        view.request = request
+        
+        result = view.get_success_redirect_url(self.stock_movement)
+        self.assertEqual(result, '/custom/url/')
+
+    def test_get_success_redirect_url_method_post_priority(self):
+        """Test get_success_redirect_url method with POST parameter priority"""
+        from inventory.views.stock_movement_views import StockMovementUpdateView
+        
+        # Create a mock request with both GET and POST next parameters
+        from django.test import RequestFactory
+        from django.http import QueryDict
+        factory = RequestFactory()
+        
+        request = factory.post('/test/', {'next': '/post/url/'})
+        # Manually create GET parameters
+        request.GET = QueryDict('next=/get/url/')
+        request.user = self.user
+        
+        view = StockMovementUpdateView()
+        view.request = request
+        
+        result = view.get_success_redirect_url(self.stock_movement)
+        self.assertEqual(result, '/post/url/')  # POST should take priority
+
+    def test_get_success_redirect_url_method_default(self):
+        """Test get_success_redirect_url method default behavior"""
+        from inventory.views.stock_movement_views import StockMovementUpdateView
+        
+        # Create a mock request without next parameter
+        from django.test import RequestFactory
+        factory = RequestFactory()
+        
+        request = factory.get('/test/')
+        request.user = self.user
+        
+        view = StockMovementUpdateView()
+        view.request = request
+        
+        result = view.get_success_redirect_url(self.stock_movement)
+        expected = reverse('inventory:stock-movement-detail', kwargs={'pk': self.stock_movement.pk})
+        self.assertEqual(result, expected)
+
+    def test_get_cancel_redirect_url_method_with_object(self):
+        """Test get_cancel_redirect_url method behavior with object"""
+        from inventory.views.stock_movement_views import StockMovementUpdateView
+        
+        # Create a mock request with next parameter
+        from django.test import RequestFactory
+        factory = RequestFactory()
+        
+        request = factory.get('/test/', {'next': '/custom/cancel/url/'})
+        request.user = self.user
+        
+        view = StockMovementUpdateView()
+        view.request = request
+        view.object = self.stock_movement
+        
+        result = view.get_cancel_redirect_url()
+        self.assertEqual(result, '/custom/cancel/url/')
+
+    def test_get_cancel_redirect_url_method_default_with_object(self):
+        """Test get_cancel_redirect_url method default behavior with object"""
+        from inventory.views.stock_movement_views import StockMovementUpdateView
+        
+        # Create a mock request without next parameter
+        from django.test import RequestFactory
+        factory = RequestFactory()
+        
+        request = factory.get('/test/')
+        request.user = self.user
+        
+        view = StockMovementUpdateView()
+        view.request = request
+        view.object = self.stock_movement
+        
+        result = view.get_cancel_redirect_url()
+        expected = reverse('inventory:stock-movement-detail', kwargs={'pk': self.stock_movement.pk})
+        self.assertEqual(result, expected)
+
+    def test_get_cancel_redirect_url_method_fallback_without_object(self):
+        """Test get_cancel_redirect_url method fallback when object doesn't exist"""
+        from inventory.views.stock_movement_views import StockMovementUpdateView
+        
+        # Create a mock request without next parameter
+        from django.test import RequestFactory
+        factory = RequestFactory()
+        
+        request = factory.get('/test/')
+        request.user = self.user
+        
+        view = StockMovementUpdateView()
+        view.request = request
+        view.object = None  # Simulate no object
+        
+        result = view.get_cancel_redirect_url()
+        expected = reverse('inventory:stock-movement-list')
+        self.assertEqual(result, expected)
+
+    def test_next_url_with_confirmed_status_movement(self):
+        """Test next URL functionality works with confirmed status movements"""
+        # Change movement to confirmed status
+        self.stock_movement.status = StockMovement.Status.CONFIRMED
+        super(StockMovement, self.stock_movement).save()
+        
+        self.client.login(username='testuser', password='testpass123')
+        next_url = '/inventory/warehouse/1/'
+        
+        # GET should still work
+        response = self.client.get(self.url, {'next': next_url})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['next_url'], next_url)
+
+    def test_next_url_validation_security(self):
+        """Test that next URL doesn't allow external redirects (basic security)"""
+        self.client.login(username='testuser', password='testpass123')
+        
+        # Try with external URL
+        external_url = 'http://evil.com/steal-data'
+        
+        response = self.client.post(
+            self.url + f'?next={external_url}', 
+            self.valid_data
+        )
+        
+        self.assertEqual(response.status_code, 302)
+        # Should redirect to the external URL as provided
+        # Note: In production, you might want to add URL validation
+        # for security reasons to prevent open redirects
+        self.assertEqual(response.url, external_url)

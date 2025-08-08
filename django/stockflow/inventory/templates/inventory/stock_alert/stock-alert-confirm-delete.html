@@ -1,0 +1,214 @@
+{% extends "base-dashboard-header.html" %}
+
+{% block title %}Delete Stock Alert - StockFlow{% endblock %}
+
+{% block title_text %}Delete Stock Alert{% endblock %}
+
+{% block subtitle_text %}{{ object.item_sku.sku_code }} in {{ object.warehouse.name }}{% endblock %}
+
+{% block header_actions %}
+<a href="{% url 'inventory:stock-alert-detail' object.id %}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i>Back to Details
+</a>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="row justify-content-center">
+    <div class="col-xl-8">
+        <div class="dashboard-card">
+            <div class="card-header bg-danger text-white">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-exclamation-triangle me-2"></i>Confirm Deletion
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    <strong>Warning:</strong> This action cannot be undone. The stock alert and all its settings will be permanently deleted.
+                </div>
+
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <h6 class="text-muted mb-3">Alert Information</h6>
+                        
+                        <div class="mb-3">
+                            <strong>Item:</strong>
+                            <div class="mt-1">
+                                <span class="badge bg-primary">{{ object.item_sku.sku_code }}</span>
+                                <br><small class="text-muted">{{ object.item_sku.name }}</small>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <strong>Warehouse:</strong>
+                            <div class="mt-1">
+                                <span class="badge bg-secondary">{{ object.warehouse.name }}</span>
+                                <br><small class="text-muted">{{ object.warehouse.address|default:"No address specified" }}</small>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <strong>Current Status:</strong>
+                            <div class="mt-1">
+                                {% if object.is_enabled %}
+                                    <span class="badge bg-success">
+                                        <i class="bi bi-check-circle me-1"></i>Enabled
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-secondary">
+                                        <i class="bi bi-x-circle me-1"></i>Disabled
+                                    </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <h6 class="text-muted mb-3">Threshold Settings</h6>
+                        
+                        <div class="mb-3">
+                            <strong>Minimum Threshold:</strong>
+                            <div class="mt-1">
+                                <span class="fs-5 fw-bold text-warning">{{ object.minimum_threshold }}</span>
+                                {% if object.item_sku.unit %}
+                                    <small class="text-muted ms-1">{{ object.item_sku.unit }}</small>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <strong>Critical Threshold:</strong>
+                            <div class="mt-1">
+                                <span class="fs-5 fw-bold text-danger">{{ object.critical_threshold }}</span>
+                                {% if object.item_sku.unit %}
+                                    <small class="text-muted ms-1">{{ object.item_sku.unit }}</small>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <strong>Current Alert Level:</strong>
+                            <div class="mt-1">
+                                {% with level=object.get_alert_level %}
+                                    {% if level == 'critical' %}
+                                        <span class="badge bg-danger fs-6">
+                                            <i class="bi bi-exclamation-triangle-fill me-1"></i>Critical
+                                        </span>
+                                    {% elif level == 'warning' %}
+                                        <span class="badge bg-warning fs-6">
+                                            <i class="bi bi-exclamation-circle me-1"></i>Warning
+                                        </span>
+                                    {% elif level == 'normal' %}
+                                        <span class="badge bg-success fs-6">
+                                            <i class="bi bi-check-circle me-1"></i>Normal
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-secondary fs-6">Unknown</span>
+                                    {% endif %}
+                                {% endwith %}
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if object.note %}
+                    <div class="col-12">
+                        <h6 class="text-muted mb-2">Notes</h6>
+                        <div class="bg-light p-3 rounded border-start border-4 border-info">
+                            {{ object.note|linebreaks }}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="col-12">
+                        <h6 class="text-muted mb-2">Created Information</h6>
+                        <div class="small text-muted">
+                            <div><strong>Created:</strong> {{ object.created_at|date:"M d, Y H:i" }}</div>
+                            {% if object.created_by %}
+                                <div><strong>By:</strong> {{ object.created_by.username }}</div>
+                            {% endif %}
+                            {% if object.updated_at %}
+                                <div><strong>Last Updated:</strong> {{ object.updated_at|date:"M d, Y H:i" }}</div>
+                                {% if object.updated_by %}
+                                    <div><strong>By:</strong> {{ object.updated_by.username }}</div>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="my-4">
+
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="text-muted">
+                        <i class="bi bi-info-circle me-1"></i>
+                        This will permanently delete the stock alert configuration.
+                    </div>
+                    
+                    <div class="d-flex gap-2">
+                        <a href="{% url 'inventory:stock-alert-detail' object.id %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-circle me-1"></i>Cancel
+                        </a>
+                        
+                        <form method="post" class="d-inline">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-danger" 
+                                    onclick="return confirm('Are you absolutely sure you want to delete this stock alert? This action cannot be undone.')">
+                                <i class="bi bi-trash me-1"></i>Delete Alert
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Impact Information -->
+        <div class="dashboard-card mt-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-info-circle me-2"></i>What happens when you delete this alert?
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-start">
+                            <i class="bi bi-bell-slash text-warning me-2 mt-1"></i>
+                            <div>
+                                <strong>No more notifications</strong>
+                                <br><small class="text-muted">You will stop receiving alerts when stock levels are low for this item in this warehouse.</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-start">
+                            <i class="bi bi-archive text-info me-2 mt-1"></i>
+                            <div>
+                                <strong>Configuration lost</strong>
+                                <br><small class="text-muted">All threshold settings and notes will be permanently removed.</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-start">
+                            <i class="bi bi-shield-check text-success me-2 mt-1"></i>
+                            <div>
+                                <strong>Stock data safe</strong>
+                                <br><small class="text-muted">Your actual stock quantities and item data will remain unchanged.</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-start">
+                            <i class="bi bi-arrow-counterclockwise text-primary me-2 mt-1"></i>
+                            <div>
+                                <strong>Can recreate later</strong>
+                                <br><small class="text-muted">You can always create a new alert for this item and warehouse combination.</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

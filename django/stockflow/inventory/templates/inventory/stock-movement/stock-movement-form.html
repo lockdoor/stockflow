@@ -19,7 +19,11 @@ Create new stock movement
 {% endblock %}
 
 {% block header_actions %}
-{% if form.instance.id %}
+{% if cancel_url %}
+<a href="{{ cancel_url }}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i>Back
+</a>
+{% elif form.instance.id %}
 <a href="{% url 'inventory:stock-movement-detail' form.instance.id %}" class="btn btn-outline-secondary">
     <i class="bi bi-arrow-left me-1"></i>Back to Details
 </a>
@@ -47,6 +51,11 @@ Create new stock movement
         {% if form %}
         <form method="post" novalidate>
             {% csrf_token %}
+            
+            <!-- Include next URL as hidden field if provided -->
+            {% if next_url %}
+            <input type="hidden" name="next" value="{{ next_url }}">
+            {% endif %}
             
             <div class="row">
                 <!-- Warehouse Selection -->
@@ -138,7 +147,11 @@ Create new stock movement
 
             <!-- Form Actions -->
             <div class="d-flex justify-content-end gap-2 pt-3 border-top">
-                {% if form.instance.id %}
+                {% if cancel_url %}
+                <a href="{{ cancel_url }}" class="btn btn-secondary">
+                    Cancel
+                </a>
+                {% elif form.instance.id %}
                 <a href="{% url 'inventory:stock-movement-detail' form.instance.id %}" class="btn btn-secondary">
                     Cancel
                 </a>

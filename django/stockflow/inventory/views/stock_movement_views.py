@@ -32,6 +32,40 @@ class StockMovementCreateView(WarehousePermissionMixin, LoginRequiredMixin, Crea
     template_name = 'inventory/stock-movement/stock-movement-form.html'
     permission_required_base = 'add_stockmovement'
     
+    def get_success_redirect_url(self, stock_movement):
+        """
+        Determine where to redirect after successful creation.
+        Priority:
+        1. 'next' parameter from request (POST takes priority over GET)
+        2. stock movement detail page (default)
+        """
+        # Check for next parameter in request (POST has priority)
+        next_url = self.request.POST.get('next') or self.request.GET.get('next')
+        if next_url:
+            return next_url
+            
+        # Default to stock movement detail page
+        return reverse('inventory:stock-movement-detail', kwargs={'pk': stock_movement.pk})
+    
+    def get_cancel_redirect_url(self):
+        """
+        Determine where to redirect when user cancels.
+        Priority:
+        1. 'next' parameter from request
+        2. stock movement list (default)
+        """
+        # Check for next parameter in request
+        next_url = self.request.GET.get('next')
+        if next_url:
+            return next_url
+            
+        # Default to stock movement list
+        try:
+            return reverse('inventory:stock-movement-list')
+        except:
+            # Ultimate fallback
+            return '/inventory/stockmovement/'
+    
     def form_valid(self, form):
         try:
             stock_movement = form.save(commit=False)
@@ -39,15 +73,18 @@ class StockMovementCreateView(WarehousePermissionMixin, LoginRequiredMixin, Crea
             stock_movement.updated_by = self.request.user
             stock_movement.save()
             
-            # Redirect to stock movement detail page
-            return redirect('inventory:stock-movement-detail', pk=stock_movement.pk)
+            # Get success redirect URL
+            success_url = self.get_success_redirect_url(stock_movement)
+            return redirect(success_url)
         except ValueError as e:
             form.add_error(None, str(e))
             return self.form_invalid(form)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # Add any additional context if needed
+        # Add next URL to context for template usage
+        context['next_url'] = self.request.GET.get('next', '')
+        context['cancel_url'] = self.get_cancel_redirect_url()
         return context
 
 class StockMovementUpdateView(WarehousePermissionMixin, LoginRequiredMixin, UpdateView):
@@ -55,6 +92,40 @@ class StockMovementUpdateView(WarehousePermissionMixin, LoginRequiredMixin, Upda
     form_class = StockMovementForm
     template_name = 'inventory/stock-movement/stock-movement-form.html'
     permission_required_base = 'change_stockmovement'
+    
+    def get_success_redirect_url(self, stock_movement):
+        """
+        Determine where to redirect after successful update.
+        Priority:
+        1. 'next' parameter from request (POST takes priority over GET)
+        2. stock movement detail page (default)
+        """
+        # Check for next parameter in request (POST has priority)
+        next_url = self.request.POST.get('next') or self.request.GET.get('next')
+        if next_url:
+            return next_url
+            
+        # Default to stock movement detail page
+        return reverse('inventory:stock-movement-detail', kwargs={'pk': stock_movement.pk})
+    
+    def get_cancel_redirect_url(self):
+        """
+        Determine where to redirect when user cancels.
+        Priority:
+        1. 'next' parameter from request
+        2. stock movement detail page (default for update)
+        """
+        # Check for next parameter in request
+        next_url = self.request.GET.get('next')
+        if next_url:
+            return next_url
+            
+        # Default to stock movement detail page for update
+        try:
+            return reverse('inventory:stock-movement-detail', kwargs={'pk': self.object.pk})
+        except:
+            # Fallback to stock movement list
+            return reverse('inventory:stock-movement-list')
 
     def form_valid(self, form):            
         try:
@@ -62,14 +133,23 @@ class StockMovementUpdateView(WarehousePermissionMixin, LoginRequiredMixin, Upda
             stock_movement.updated_by = self.request.user
             stock_movement.save()
             
-            # Redirect to stock movement detail page
-            return redirect('inventory:stock-movement-detail', pk=stock_movement.pk)
+            # Get success redirect URL
+            success_url = self.get_success_redirect_url(stock_movement)
+            return redirect(success_url)
         except ValueError as e:
             form.add_error(None, str(e))
             return self.form_invalid(form)
 
     def form_invalid(self, form):
-        return render(self.request, self.template_name, {'form': form})
+        context = self.get_context_data(form=form)
+        return render(self.request, self.template_name, context)
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Add next URL to context for template usage
+        context['next_url'] = self.request.GET.get('next', '')
+        context['cancel_url'] = self.get_cancel_redirect_url()
+        return context
 
 class StockMovementDetailView(LoginRequiredMixin, DetailView):
     model = StockMovement
