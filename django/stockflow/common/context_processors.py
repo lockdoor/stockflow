@@ -169,6 +169,31 @@ def breadcrumb(request):
                 {'name': 'Inventory', 'url': 'inventory:dashboard', 'active': False},
                 {'name': 'Stock Items', 'url': 'inventory:stock-item-list', 'active': True}
             ],
+            
+            # Stock alerts
+            'inventory:stock-alert-list': [
+                {'name': 'Dashboard', 'url': 'dashboard', 'active': False},
+                {'name': 'Inventory', 'url': 'inventory:dashboard', 'active': False},
+                {'name': 'Stock Alerts', 'url': 'inventory:stock-alert-list', 'active': True}
+            ],
+            'inventory:stock-alert-create': [
+                {'name': 'Dashboard', 'url': 'dashboard', 'active': False},
+                {'name': 'Inventory', 'url': 'inventory:dashboard', 'active': False},
+                {'name': 'Stock Alerts', 'url': 'inventory:stock-alert-list', 'active': False},
+                {'name': 'Create Alert', 'url': None, 'active': True}
+            ],
+            'inventory:stock-alert-edit': [
+                {'name': 'Dashboard', 'url': 'dashboard', 'active': False},
+                {'name': 'Inventory', 'url': 'inventory:dashboard', 'active': False},
+                {'name': 'Stock Alerts', 'url': 'inventory:stock-alert-list', 'active': False},
+                {'name': 'Edit Alert', 'url': None, 'active': True}
+            ],
+            'inventory:stock-alert-detail': [
+                {'name': 'Dashboard', 'url': 'dashboard', 'active': False},
+                {'name': 'Inventory', 'url': 'inventory:dashboard', 'active': False},
+                {'name': 'Stock Alerts', 'url': 'inventory:stock-alert-list', 'active': False},
+                {'name': 'Alert Details', 'url': None, 'active': True}
+            ],
         }
         
         # Get breadcrumb for current URL

@@ -149,7 +149,7 @@ View and manage all stock movements
                                     <i class="bi bi-eye"></i>
                                 </a>
                                 {% if movement.status == 'DRAFT' %}
-                                <a href="{% url 'inventory:stock-movement-update' movement.id %}" 
+                                <a href="{% url 'inventory:stock-movement-update' movement.id %}?prev={{ request.path }}" 
                                    class="btn btn-outline-secondary btn-sm" 
                                    title="Edit">
                                     <i class="bi bi-pencil"></i>

@@ -148,6 +148,24 @@
   background-color: rgba(var(--bs-info-rgb), 0.1);
 }
 
+.quick-action.action-danger {
+  background-color: rgba(var(--bs-danger-rgb), 0.05);
+  border-color: rgba(var(--bs-danger-rgb), 0.1);
+}
+
+.quick-action.action-danger:hover {
+  background-color: rgba(var(--bs-danger-rgb), 0.1);
+}
+
+.quick-action.action-secondary {
+  background-color: rgba(108, 117, 125, 0.05);
+  border-color: rgba(108, 117, 125, 0.1);
+}
+
+.quick-action.action-secondary:hover {
+  background-color: rgba(108, 117, 125, 0.1);
+}
+
 /* Dashboard Cards */
 .dashboard-card {
   background: white;

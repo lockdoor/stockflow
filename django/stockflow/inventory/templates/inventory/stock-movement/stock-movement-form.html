@@ -19,8 +19,8 @@ Create new stock movement
 {% endblock %}
 
 {% block header_actions %}
-{% if cancel_url %}
-<a href="{{ cancel_url }}" class="btn btn-outline-secondary">
+{% if prev_url %}
+<a href="{{ prev_url }}" class="btn btn-outline-secondary">
     <i class="bi bi-arrow-left me-1"></i>Back
 </a>
 {% elif form.instance.id %}
@@ -147,8 +147,8 @@ Create new stock movement
 
             <!-- Form Actions -->
             <div class="d-flex justify-content-end gap-2 pt-3 border-top">
-                {% if cancel_url %}
-                <a href="{{ cancel_url }}" class="btn btn-secondary">
+                {% if prev_url %}
+                <a href="{{ prev_url }}" class="btn btn-secondary">
                     Cancel
                 </a>
                 {% elif form.instance.id %}

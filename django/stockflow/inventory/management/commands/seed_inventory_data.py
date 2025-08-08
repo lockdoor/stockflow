@@ -61,13 +61,9 @@ class Command(BaseCommand):
         items = self._create_items_and_skus(user, items_count)
         
         # 3. Create stock movements
-        movements = self._create_stock_movements(warehouses, items, user, movements_count)
+        movements = self._create_stock_movements(warehouses, items, user, movements_count, skip_confirm)
         
-        # 4. Confirm movements (unless skipped)
-        if not skip_confirm:
-            self._confirm_movements(movements, user)
-        
-        # 5. Summary
+        # 4. Summary
         self._print_summary(warehouses, items, movements, skip_confirm)
 
     def _create_warehouses(self, user):
@@ -182,75 +178,68 @@ class Command(BaseCommand):
         self.stdout.write(f"   ✅ Created {len(items)} items with SKUs")
         return items
 
-    def _create_stock_movements(self, warehouses, items, user, movements_count):
+    def _create_stock_movements(self, warehouses, items, user, movements_count, skip_confirm):
         """Create sample stock movements (one per warehouse due to business constraint)"""
         self.stdout.write(f"\n📊 Creating stock movements (1 per warehouse due to business rules)...")
         
         movements = []
         
+        if skip_confirm:
+            movements_count = 1  # Ensure we only create one draft movement per warehouse
+        
         for warehouse in warehouses:
-            # Only create one movement per warehouse due to unique constraint
-            movement = StockMovement.objects.create(
-                warehouse=warehouse,
-                reference_type=StockMovement.ReferenceType.ADJUST,
-                note=f"Initial stock adjustment for {warehouse.name}",
-                status=StockMovement.Status.DRAFT,  # Start as DRAFT for confirmation
-                created_by=user,
-                updated_by=user
-            )
-            
-            # Create StockMovementItems (use more items per movement since we only have one)
-            items_in_movement = random.sample(items, random.randint(5, len(items)))
-            
-            for item_sku in items_in_movement:
-                # Generate realistic quantities (always IN for initial stock)
-                quantity = Decimal(str(random.randint(50, 200)))
-                
-                # Generate lot number and expiry date
-                lot_number = f"LOT{random.randint(1000, 9999)}"
-                
-                # Expiry date: 30-365 days from now
-                days_to_expire = random.randint(30, 365)
-                expiry_date = date.today() + timedelta(days=days_to_expire)
-                
-                StockMovementItem.objects.create(
-                    stock_movement=movement,
-                    item_sku=item_sku,
-                    quantity=quantity,
-                    movement_type='IN',  # Always IN for initial seeding
-                    lot_number=lot_number,
-                    expiry_date=expiry_date,
-                    note=f"Initial stock for {item_sku.sku_code}",
+            for _ in range(movements_count):
+                movement = StockMovement.objects.create(
+                    warehouse=warehouse,
+                    reference_type=StockMovement.ReferenceType.ADJUST,
+                    note=f"Initial stock adjustment for {warehouse.name}",
+                    status=StockMovement.Status.DRAFT,  # Start as DRAFT for confirmation
                     created_by=user,
                     updated_by=user
                 )
-            
-            movements.append(movement)
+                
+                # Create StockMovementItems (use more items per movement since we only have one)
+                items_in_movement = random.sample(items, random.randint(5, len(items)))
+                
+                for item_sku in items_in_movement:
+                    # Generate realistic quantities (always IN for initial stock)
+                    quantity = Decimal(str(random.randint(50, 200)))
+                    
+                    # Generate lot number and expiry date
+                    lot_number = f"LOT{random.randint(1000, 9999)}"
+                    
+                    # Expiry date: 30-365 days from now
+                    days_to_expire = random.randint(30, 365)
+                    expiry_date = date.today() + timedelta(days=days_to_expire)
+                    
+                    StockMovementItem.objects.create(
+                        stock_movement=movement,
+                        item_sku=item_sku,
+                        quantity=quantity,
+                        movement_type='IN',  # Always IN for initial seeding
+                        lot_number=lot_number,
+                        expiry_date=expiry_date,
+                        note=f"Initial stock for {item_sku.sku_code}",
+                        created_by=user,
+                        updated_by=user
+                    )
+                    
+                try:
+                    # Movement should still be in DRAFT status, so confirm() should work
+                    movement.confirm(user)
+                    # confirmed_count += 1
+                    self.stdout.write(f"   ✅ Confirmed movement {movement.id}")
+                
+                except Exception as e:
+                    # failed_count += 1
+                    self.stdout.write(
+                        self.style.WARNING(f"   ⚠️  Failed to confirm movement {movement.id}: {str(e)}")
+                    )
+                
+                movements.append(movement)
                 
         self.stdout.write(f"   ✅ Created {len(movements)} stock movements")
         return movements
-
-    def _confirm_movements(self, movements, user):
-        """Confirm stock movements to create actual stock records"""
-        self.stdout.write(f"\n🔄 Confirming {len(movements)} stock movements...")
-        
-        confirmed_count = 0
-        failed_count = 0
-        
-        for movement in movements:
-            try:
-                # Movement should still be in DRAFT status, so confirm() should work
-                movement.confirm(user)
-                confirmed_count += 1
-                self.stdout.write(f"   ✅ Confirmed movement {movement.id}")
-                
-            except Exception as e:
-                failed_count += 1
-                self.stdout.write(
-                    self.style.WARNING(f"   ⚠️  Failed to confirm movement {movement.id}: {str(e)}")
-                )
-        
-        self.stdout.write(f"   📊 Confirmation results: {confirmed_count} success, {failed_count} failed")
 
     def _print_summary(self, warehouses, items, movements, skip_confirm):
         """Print summary of created data"""

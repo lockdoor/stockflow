@@ -16,6 +16,7 @@
 </a>
 <form method="post" action="{% url 'inventory:stock-movement-confirm' stock_movement.id %}" class="d-inline">
     {% csrf_token %}
+    <input type="hidden" name="prev" value="{{ request.get_full_path }}">
     <button type="submit" class="btn btn-success" onclick="return confirm('Are you sure you want to confirm this stock movement? This action cannot be undone.')">
         <i class="bi bi-check-lg me-1"></i>Confirm Movement
     </button>

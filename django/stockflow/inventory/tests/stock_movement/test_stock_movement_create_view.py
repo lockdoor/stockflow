@@ -548,23 +548,23 @@ class StockMovementCreateViewNextUrlTest(TestCase):
         self.assertEqual(response.context['next_url'], next_url)
         self.assertContains(response, f'value="{next_url}"')  # Hidden input field
 
-    def test_get_cancel_url_without_next_defaults_to_list(self):
-        """Test cancel URL defaults to stock movement list when no next parameter"""
+    def test_get_cancel_url_without_prev_defaults_to_list(self):
+        """Test cancel URL defaults to stock movement list when no prev parameter"""
         self.client.login(username='testuser', password='testpass123')
         response = self.client.get(self.url)
         
         self.assertEqual(response.status_code, 200)
         expected_cancel_url = reverse('inventory:stock-movement-list')
-        self.assertEqual(response.context['cancel_url'], expected_cancel_url)
+        self.assertEqual(response.context['prev_url'], expected_cancel_url)
 
-    def test_get_cancel_url_with_next_parameter(self):
-        """Test cancel URL uses next parameter when provided"""
+    def test_get_cancel_url_with_prev_parameter(self):
+        """Test cancel URL uses prev parameter when provided"""
         self.client.login(username='testuser', password='testpass123')
-        next_url = '/inventory/warehouse/1/'
-        response = self.client.get(self.url, {'next': next_url})
+        prev_url = '/inventory/warehouse/1/'
+        response = self.client.get(self.url, {'prev': prev_url})
         
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.context['cancel_url'], next_url)
+        self.assertEqual(response.context['prev_url'], prev_url)
 
     def test_post_success_redirect_to_next_url_from_get(self):
         """Test successful form submission redirects to next URL from GET parameter"""
@@ -622,10 +622,11 @@ class StockMovementCreateViewNextUrlTest(TestCase):
         expected_url = reverse('inventory:stock-movement-detail', kwargs={'pk': movement.pk})
         self.assertEqual(response.url, expected_url)
 
-    def test_form_invalid_preserves_next_url_context(self):
-        """Test form validation errors preserve next URL in context"""
+    def test_form_invalid_preserves_next_and_prev_url_context(self):
+        """Test form validation errors preserve next and prev URL in context"""
         self.client.login(username='testuser', password='testpass123')
         next_url = '/inventory/warehouse/1/'
+        prev_url = '/inventory/list/'
         
         # Submit invalid data (missing required field)
         invalid_data = {
@@ -634,13 +635,13 @@ class StockMovementCreateViewNextUrlTest(TestCase):
         }
         
         response = self.client.post(
-            self.url + f'?next={next_url}', 
+            self.url + f'?next={next_url}&prev={prev_url}', 
             invalid_data
         )
         
         self.assertEqual(response.status_code, 200)  # Form re-rendered with errors
         self.assertEqual(response.context['next_url'], next_url)
-        self.assertEqual(response.context['cancel_url'], next_url)
+        self.assertEqual(response.context['prev_url'], prev_url)
 
     def test_get_success_redirect_url_method(self):
         """Test get_success_redirect_url method behavior"""
@@ -707,28 +708,28 @@ class StockMovementCreateViewNextUrlTest(TestCase):
         expected = reverse('inventory:stock-movement-detail', kwargs={'pk': 123})
         self.assertEqual(result, expected)
 
-    def test_get_cancel_redirect_url_method(self):
-        """Test get_cancel_redirect_url method behavior"""
+    def test_get_prev_redirect_url_method(self):
+        """Test get_prev_redirect_url method behavior"""
         from inventory.views.stock_movement_views import StockMovementCreateView
         
-        # Create a mock request with next parameter
+        # Create a mock request with prev parameter
         from django.test import RequestFactory
         factory = RequestFactory()
         
-        request = factory.get('/test/', {'next': '/custom/cancel/url/'})
+        request = factory.get('/test/', {'prev': '/custom/cancel/url/'})
         request.user = self.user
         
         view = StockMovementCreateView()
         view.request = request
         
-        result = view.get_cancel_redirect_url()
+        result = view.get_prev_redirect_url()
         self.assertEqual(result, '/custom/cancel/url/')
 
-    def test_get_cancel_redirect_url_method_default(self):
-        """Test get_cancel_redirect_url method default behavior"""
+    def test_get_prev_redirect_url_method_default(self):
+        """Test get_prev_redirect_url method default behavior"""
         from inventory.views.stock_movement_views import StockMovementCreateView
         
-        # Create a mock request without next parameter
+        # Create a mock request without prev parameter
         from django.test import RequestFactory
         factory = RequestFactory()
         
@@ -738,9 +739,25 @@ class StockMovementCreateViewNextUrlTest(TestCase):
         view = StockMovementCreateView()
         view.request = request
         
-        result = view.get_cancel_redirect_url()
+        result = view.get_prev_redirect_url()
         expected = reverse('inventory:stock-movement-list')
         self.assertEqual(result, expected)
+
+    def test_separate_next_and_prev_parameters(self):
+        """Test that next and prev parameters work independently"""
+        self.client.login(username='testuser', password='testpass123')
+        
+        next_url = '/inventory/warehouse/1/'
+        prev_url = '/inventory/dashboard/'
+        
+        response = self.client.get(self.url, {
+            'next': next_url,
+            'prev': prev_url
+        })
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['next_url'], next_url)
+        self.assertEqual(response.context['prev_url'], prev_url)
 
     def test_next_url_validation_security(self):
         """Test that next URL doesn't allow external redirects (basic security)"""

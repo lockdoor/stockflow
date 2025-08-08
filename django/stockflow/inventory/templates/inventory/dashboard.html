@@ -83,21 +83,6 @@
       
       <div class="card-body">
         <div class="row g-3">
-          <!-- New Movement -->
-          <div class="col-sm-6 col-lg-3">
-            <div class="dropdown">
-              <a href="{% url 'inventory:stock-movement-create' %}?next={{ request.get_full_path }}" class="quick-action action-primary">
-                <div class="d-flex align-items-center">
-                  <i class="bi bi-plus-circle me-3 fs-4 text-primary"></i>
-                  <div>
-                    <h6 class="text-primary mb-1">New Movement</h6>
-                    <small class="text-primary">Select warehouse first</small>
-                  </div>
-                </div>
-              </a>
-
-            </div>
-          </div>
 
           <!-- Warehouse List -->
           <div class="col-sm-6 col-lg-3">
@@ -138,6 +123,19 @@
                 </div>
               </a>
             </div>
+          </div>
+
+          <!-- Stock Alerts -->
+          <div class="col-sm-6 col-lg-3">
+            <a href="{% url 'inventory:stock-alert-list' %}" class="quick-action action-danger">
+              <div class="d-flex align-items-center">
+                <i class="bi bi-bell me-3 fs-4 text-danger"></i>
+                <div>
+                  <h6 class="text-danger mb-1">Stock Alerts</h6>
+                  <small class="text-danger">Manage thresholds</small>
+                </div>
+              </div>
+            </a>
           </div>
         </div>
       </div>

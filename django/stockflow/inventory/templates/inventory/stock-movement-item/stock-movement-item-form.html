@@ -7,9 +7,24 @@
 {% block subtitle_text %}Manage items in stock movement <span class="fw-bold">{{ stock_movement.reference_type|capfirst }} #{{ stock_movement.id }}</span>{% endblock %}
 
 {% block header_actions %}
+<!-- Confirm Movement Button (only for DRAFT status with items) -->
+{% if stock_movement.status == 'DRAFT' and movement_items %}
+    <form method="post" action="{% url 'inventory:stock-movement-confirm' stock_movement.pk %}" class="d-inline">
+        {% csrf_token %}
+        <input type="hidden" name="prev" value="{{ request.get_full_path }}">
+        <button type="submit" class="btn btn-success" 
+                onclick="return confirm('Are you sure you want to confirm this stock movement? This action cannot be undone.')">
+            <i class="bi bi-check-circle me-1"></i>Confirm Movement
+        </button>
+    </form>
+{% endif %}
+
+<!-- Back to Movement Detail -->
 <a href="{% url 'inventory:stock-movement-detail' stock_movement.pk %}" class="btn btn-outline-secondary">
     <i class="bi bi-arrow-left me-1"></i>Back to Movement
 </a>
+
+<!-- All Movements List -->
 <a href="{% url 'inventory:stock-movement-list' %}" class="btn btn-outline-secondary">
     <i class="bi bi-list me-1"></i>All Movements
 </a>
@@ -174,24 +189,6 @@
                                     {% endfor %}
                                 </ul>
                             </div>
-                        {% endif %}
-
-                        <!-- Success Message (if redirected back with success) -->
-                        {% if messages %}
-                            {% for message in messages %}
-                                <div class="alert alert-{{ message.tags }} mb-3" role="alert">
-                                    {% if message.tags == 'success' %}
-                                        <i class="bi bi-check-circle me-2"></i>
-                                    {% elif message.tags == 'error' %}
-                                        <i class="bi bi-exclamation-triangle me-2"></i>
-                                    {% elif message.tags == 'warning' %}
-                                        <i class="bi bi-exclamation-circle me-2"></i>
-                                    {% else %}
-                                        <i class="bi bi-info-circle me-2"></i>
-                                    {% endif %}
-                                    {{ message }}
-                                </div>
-                            {% endfor %}
                         {% endif %}
 
                         <!-- Action Buttons -->

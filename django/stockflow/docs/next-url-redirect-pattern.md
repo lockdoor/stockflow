@@ -1,12 +1,32 @@
 # Next URL Redirect Pattern
 
 ## Overview
-This pattern allows forms to redirect back to the originating page after successful submission, improving user experience by maintaining context.
+This pattern allows forms to redirect to different destinations after successful submission or cancellation, improving user experience by maintaining context. The system uses two separate parameters:
+- **`next`**: For success redirects (after form submission)
+- **`prev`**: For cancel redirects (when user cancels form)
 
 ## Implementation
 
 ### Views Pattern
 ```python
+def get_success_redirect_url(self, instance):
+    """Determine where to redirect after successful form submission."""
+    # Check for next parameter in request (POST takes priority over GET)
+    next_url = self.request.POST.get('next') or self.request.GET.get('next')
+    if next_url:
+        return next_url
+    # Default redirect
+    return reverse('app:detail-view', kwargs={'pk': instance.pk})
+
+def get_prev_redirect_url(self):
+    """Determine where to redirect when user cancels."""
+    # Check for prev parameter in request
+    prev_url = self.request.GET.get('prev')
+    if prev_url:
+        return prev_url
+    # Default redirect
+    return reverse('app:list-view')
+
 def form_valid(self, form):
     # Save the form
     instance = form.save(commit=False)
@@ -16,16 +36,15 @@ def form_valid(self, form):
     # Add success message
     messages.success(self.request, f'{model_name} was updated successfully.')
     
-    # Redirect to next URL if provided, otherwise default
-    next_url = self.request.GET.get('next') or self.request.POST.get('next')
-    if next_url:
-        return redirect(next_url)
-    return redirect('app:default-view', pk=instance.pk)
+    # Use success redirect method
+    success_url = self.get_success_redirect_url(instance)
+    return redirect(success_url)
 
 def get_context_data(self, **kwargs):
     context = super().get_context_data(**kwargs)
-    # Pass next URL to template
+    # Pass URLs to template
     context['next_url'] = self.request.GET.get('next', '')
+    context['prev_url'] = self.get_prev_redirect_url()
     return context
 ```
 
@@ -34,13 +53,18 @@ def get_context_data(self, **kwargs):
 #### Links to Forms
 ```html
 <!-- From detail page to edit form -->
-<a href="{% url 'app:model-edit' object.pk %}?next={{ request.get_full_path|urlencode }}">
+<a href="{% url 'app:model-edit' object.pk %}?next={{ request.get_full_path|urlencode }}&prev={{ request.get_full_path|urlencode }}">
     Edit
 </a>
 
 <!-- From list page to create form -->
-<a href="{% url 'app:model-create' %}?next={{ request.get_full_path|urlencode }}">
+<a href="{% url 'app:model-create' %}?next={{ request.get_full_path|urlencode }}&prev={{ request.get_full_path|urlencode }}">
     Add New
+</a>
+
+<!-- Different destinations for success vs cancel -->
+<a href="{% url 'app:model-create' %}?next={% url 'app:dashboard' %}&prev={{ request.get_full_path|urlencode }}">
+    Add New (redirect to dashboard on success, back here on cancel)
 </a>
 ```
 
@@ -49,7 +73,7 @@ def get_context_data(self, **kwargs):
 <form id="model-form" method="post">
     {% csrf_token %}
     
-    <!-- Hidden field for next URL -->
+    <!-- Hidden field for next URL (success redirect) -->
     {% if next_url %}
         <input type="hidden" name="next" value="{{ next_url }}">
     {% endif %}
@@ -63,7 +87,7 @@ def get_context_data(self, **kwargs):
     <button type="submit" form="model-form" class="btn btn-primary">
         <i class="bi bi-check-lg"></i> Save
     </button>
-    <a href="{% if next_url %}{{ next_url }}{% else %}{% url 'app:default-back' %}{% endif %}" class="btn btn-secondary">
+    <a href="{{ prev_url }}" class="btn btn-secondary">
         <i class="bi bi-arrow-left"></i> Cancel
     </a>
 </div>
@@ -82,6 +106,24 @@ class CategoryUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView
     template_name = 'catalog/category/category-form.html'
     permission_required = 'catalog.change_category'
 
+    def get_success_redirect_url(self, category):
+        """Determine where to redirect after successful update."""
+        # Check for next parameter in request (POST takes priority over GET)
+        next_url = self.request.POST.get('next') or self.request.GET.get('next')
+        if next_url:
+            return next_url
+        # Default to category detail page
+        return reverse('catalog:category-detail', kwargs={'pk': category.pk})
+    
+    def get_prev_redirect_url(self):
+        """Determine where to redirect when user cancels."""
+        # Check for prev parameter in request
+        prev_url = self.request.GET.get('prev')
+        if prev_url:
+            return prev_url
+        # Default to category detail page for update
+        return reverse('catalog:category-detail', kwargs={'pk': self.object.pk})
+
     def form_valid(self, form):
         category = form.save(commit=False)
         category.updated_by = self.request.user
@@ -89,22 +131,21 @@ class CategoryUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView
         
         messages.success(self.request, f'Category "{category.name}" was updated successfully.')
         
-        # Redirect to next URL if provided
-        next_url = self.request.GET.get('next') or self.request.POST.get('next')
-        if next_url:
-            return redirect(next_url)
-        return redirect('catalog:category-detail', pk=category.pk)
+        # Use success redirect method
+        success_url = self.get_success_redirect_url(category)
+        return redirect(success_url)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['next_url'] = self.request.GET.get('next', '')
+        context['prev_url'] = self.get_prev_redirect_url()
         return context
 ```
 
 #### Category Detail Template
 ```html
-<!-- Edit button with next parameter -->
-<a href="{% url 'catalog:category-edit' category.pk %}?next={{ request.get_full_path|urlencode }}" class="btn btn-primary">
+<!-- Edit button with next and prev parameters -->
+<a href="{% url 'catalog:category-edit' category.pk %}?next={{ request.get_full_path|urlencode }}&prev={{ request.get_full_path|urlencode }}" class="btn btn-primary">
     <i class="bi bi-pencil-square"></i> Edit Category
 </a>
 ```
@@ -126,7 +167,7 @@ class CategoryUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView
     <button type="submit" form="category-form" class="btn btn-primary">
         <i class="bi bi-check-lg"></i> Save Category
     </button>
-    <a href="{% if next_url %}{{ next_url }}{% else %}{% url 'catalog:category-list' %}{% endif %}" class="btn btn-secondary">
+    <a href="{{ prev_url }}" class="btn btn-secondary">
         <i class="bi bi-arrow-left"></i> Cancel
     </a>
 </div>
@@ -135,20 +176,27 @@ class CategoryUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView
 
 ## User Experience Flow
 
+### Parameters Usage
+- **`next`**: Controls where to go after successful form submission
+- **`prev`**: Controls where to go when user cancels the form
+
 ### Scenario 1: Edit from Detail Page
 1. User views Category Detail page
-2. Clicks "Edit Category" → Goes to form with `?next=/category/detail/1/`
-3. Submits form → Redirects back to Category Detail page
+2. Clicks "Edit Category" → Goes to form with `?next=/category/detail/1/&prev=/category/detail/1/`
+3. **Success**: Submits form → Redirects to Category Detail page (using `next`)
+4. **Cancel**: Clicks Cancel → Redirects to Category Detail page (using `prev`)
 
 ### Scenario 2: Edit from List Page  
 1. User views Category List page
-2. Clicks "Edit" on a category → Goes to form with `?next=/category/list/`
-3. Submits form → Redirects back to Category List page
+2. Clicks "Edit" on a category → Goes to form with `?next=/category/list/&prev=/category/list/`
+3. **Success**: Submits form → Redirects to Category List page (using `next`)
+4. **Cancel**: Clicks Cancel → Redirects to Category List page (using `prev`)
 
-### Scenario 3: Create from Dashboard
+### Scenario 3: Different Success/Cancel Destinations
 1. User views Dashboard
-2. Clicks "Add Category" → Goes to form with `?next=/dashboard/`
-3. Submits form → Redirects back to Dashboard
+2. Clicks "Add Category" → Goes to form with `?next=/dashboard/&prev=/category/list/`
+3. **Success**: Submits form → Redirects to Dashboard (using `next`)
+4. **Cancel**: Clicks Cancel → Redirects to Category List (using `prev`)
 
 ## Security Considerations
 
@@ -199,6 +247,6 @@ $('#form').on('submit', function(e) {
 
 ---
 
-**Last Updated**: August 4, 2025  
-**Version**: 1.0  
+**Last Updated**: August 8, 2025  
+**Version**: 2.0  
 **Maintainer**: StockFlow Development Team
