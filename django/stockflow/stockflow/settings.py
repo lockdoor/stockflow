@@ -25,8 +25,7 @@ SECRET_KEY = SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "fallback-secret-key-fo
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
-
+ALLOWED_HOSTS = os.getenv("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 
 # Application definition
 
