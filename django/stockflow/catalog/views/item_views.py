@@ -163,5 +163,9 @@ class ItemDetailView(LoginRequiredMixin, DetailView):
             ).order_by('-created_at')
         else:
             context['boms'] = None
+            
+        # Add primary image if exists
+        if self.object.has_primary_image():
+            context['primary_image'] = self.object.images.filter(is_primary=True).first()
         
         return context

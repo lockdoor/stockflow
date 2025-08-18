@@ -1,0 +1,218 @@
+{% extends "base-dashboard-header.html" %}
+{% load widget_tweaks %}
+
+{% block title %}Bulk Upload Images - StockFlow{% endblock %}
+
+{% block title_text %}Bulk Upload Images{% endblock %}
+{% block subtitle_text %}Upload multiple images for an item at once{% endblock %}
+
+{% block header_actions %}
+<a href="{% url 'catalog:item-list' %}" class="btn btn-outline-secondary">
+  <i class="bi bi-arrow-left me-1"></i>Back to Items
+</a>
+<a href="{% url 'catalog:dashboard' %}" class="btn btn-outline-primary">
+  <i class="bi bi-speedometer2 me-1"></i>Catalog Dashboard
+</a>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="main-content">`
+
+  <!-- Form Content -->
+  <div class="container-fluid">
+    <div class="row">
+      <div class="col-lg-8 mx-auto">
+        <div class="card border-0 shadow-sm">
+          <div class="card-body p-4">
+            <form method="post" enctype="multipart/form-data" novalidate>
+              {% csrf_token %}
+              
+              <!-- Error Summary -->
+              {% if form.non_field_errors %}
+              <div class="alert alert-danger mb-4">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                <strong>Please correct the following errors:</strong>
+                <ul class="mb-0 mt-2">
+                  {% for error in form.non_field_errors %}
+                  <li>{{ error }}</li>
+                  {% endfor %}
+                </ul>
+              </div>
+              {% endif %}
+
+              <div class="row">
+                <!-- Item Selection -->
+                <div class="col-md-6 mb-3">
+                  <label for="{{ form.item.id_for_label }}" class="form-label">
+                    <i class="bi bi-box me-1"></i>{{ form.item.label }}
+                    {% if form.item.field.required %}<span class="text-danger">*</span>{% endif %}
+                  </label>
+                  {{ form.item|add_class:"form-select" }}
+                  {% if form.item.help_text %}
+                  <div class="form-text">{{ form.item.help_text }}</div>
+                  {% endif %}
+                  {% if form.item.errors %}
+                  <div class="invalid-feedback d-block">
+                    {% for error in form.item.errors %}
+                    {{ error }}
+                    {% endfor %}
+                  </div>
+                  {% endif %}
+                </div>
+
+                <!-- Set First as Primary -->
+                <div class="col-md-6 mb-3">
+                  <div class="form-check mt-4">
+                    {{ form.set_first_as_primary|add_class:"form-check-input" }}
+                    <label class="form-check-label" for="{{ form.set_first_as_primary.id_for_label }}">
+                      <i class="bi bi-star me-1"></i>{{ form.set_first_as_primary.label }}
+                    </label>
+                    {% if form.set_first_as_primary.help_text %}
+                    <div class="form-text">{{ form.set_first_as_primary.help_text }}</div>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+
+              <!-- Multiple Images Upload -->
+              <div class="mb-4">
+                <label for="id_images" class="form-label">
+                  <i class="bi bi-cloud-upload me-1"></i>Images
+                  <span class="text-danger">*</span>
+                </label>
+                <input type="file" 
+                       name="images" 
+                       id="id_images" 
+                       class="form-control" 
+                       accept="image/*" 
+                       multiple 
+                       required>
+                <div class="form-text">Select multiple image files to upload (use Ctrl+Click or Cmd+Click)</div>
+                
+                <!-- Image Previews Container -->
+                <div id="image-previews" class="mt-3"></div>
+              </div>
+
+              <!-- Submit Buttons -->
+              <div class="d-flex justify-content-between">
+                <div>
+                  <a href="{% url 'catalog:item-list' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-x-lg me-1"></i>Cancel
+                  </a>
+                </div>
+                <div>
+                  <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-cloud-upload me-1"></i>Upload Images
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- Help Card -->
+        <div class="card border-0 shadow-sm mt-4">
+          <div class="card-body p-4">
+            <h5 class="card-title">
+              <i class="bi bi-info-circle me-2"></i>Bulk Upload Guidelines
+            </h5>
+            <div class="row">
+              <div class="col-md-6">
+                <h6>How it Works</h6>
+                <ul class="list-unstyled text-muted">
+                  <li><i class="bi bi-1-circle text-primary me-1"></i>Select an item from the dropdown</li>
+                  <li><i class="bi bi-2-circle text-primary me-1"></i>Choose multiple image files</li>
+                  <li><i class="bi bi-3-circle text-primary me-1"></i>Optionally set first image as primary</li>
+                  <li><i class="bi bi-4-circle text-primary me-1"></i>Click upload to save all images</li>
+                </ul>
+              </div>
+              <div class="col-md-6">
+                <h6>File Requirements</h6>
+                <ul class="list-unstyled text-muted">
+                  <li><i class="bi bi-file-earmark me-1"></i>Formats: JPG, PNG, GIF, BMP, WebP</li>
+                  <li><i class="bi bi-file-earmark me-1"></i>Max size per file: 10MB</li>
+                  <li><i class="bi bi-aspect-ratio me-1"></i>Max dimensions: 4000x4000px</li>
+                  <li><i class="bi bi-images me-1"></i>Max 10 images per item total</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Multiple Images Preview Script -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const imagesInput = document.querySelector('input[type="file"][name="images"]');
+    const previewsContainer = document.getElementById('image-previews');
+    
+    if (imagesInput && previewsContainer) {
+        imagesInput.addEventListener('change', function(e) {
+            const files = Array.from(e.target.files);
+            previewsContainer.innerHTML = '';
+            
+            if (files.length === 0) return;
+            
+            // Validate total number of files
+            if (files.length > 10) {
+                alert('You can upload maximum 10 images at once.');
+                this.value = '';
+                return;
+            }
+            
+            const maxSize = 10 * 1024 * 1024; // 10MB
+            let hasError = false;
+            
+            files.forEach((file, index) => {
+                // Validate file size
+                if (file.size > maxSize) {
+                    alert(`File "${file.name}" is too large. Maximum size is 10MB.`);
+                    hasError = true;
+                    return;
+                }
+                
+                // Validate file type
+                const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/bmp', 'image/webp'];
+                if (!allowedTypes.includes(file.type)) {
+                    alert(`File "${file.name}" is not a supported image format.`);
+                    hasError = true;
+                    return;
+                }
+                
+                // Create preview
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const previewDiv = document.createElement('div');
+                    previewDiv.className = 'col-md-4 mb-3';
+                    
+                    previewDiv.innerHTML = `
+                        <div class="card">
+                            <img src="${e.target.result}" class="card-img-top" style="height: 150px; object-fit: cover;">
+                            <div class="card-body p-2">
+                                <p class="card-text small text-muted mb-0">${file.name}</p>
+                                <small class="text-muted">${(file.size / 1024).toFixed(1)} KB</small>
+                                ${index === 0 ? '<span class="badge bg-primary ms-2">Primary</span>' : ''}
+                            </div>
+                        </div>
+                    `;
+                    
+                    if (previewsContainer.children.length === 0) {
+                        previewsContainer.innerHTML = '<div class="row" id="preview-row"></div>';
+                    }
+                    document.getElementById('preview-row').appendChild(previewDiv);
+                };
+                reader.readAsDataURL(file);
+            });
+            
+            if (hasError) {
+                this.value = '';
+                previewsContainer.innerHTML = '';
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

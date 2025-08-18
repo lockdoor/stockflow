@@ -47,6 +47,20 @@
             "console": "integratedTerminal",
             "cwd": "${workspaceFolder}",
             "python": "${workspaceFolder}/venv/bin/python"
+        },
+        {
+            "name": "Django Test Debug Specific",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/manage.py",
+            "args": [
+                "test",
+                "catalog.tests.image.views.test_item_image_create_view.ItemImageCreateViewTest.test_image_upload_view_form_initialization"
+            ],
+            "django": true,
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "python": "${workspaceFolder}/venv/bin/python"
         }
     ]
 }

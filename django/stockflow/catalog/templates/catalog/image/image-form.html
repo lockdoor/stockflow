@@ -1,0 +1,263 @@
+{% extends "base-dashboard-header.html" %}
+{% load widget_tweaks %}
+
+{% block title %}
+{% if form.instance.id %}
+Edit Image - {{ item.name }}
+{% else %}
+Add New Image
+{% endif %} - StockFlow
+{% endblock %}
+
+{% block title_text %}
+{% if form.instance.id %}
+Edit Image - {{ item.name }}
+{% else %}
+Add New Image
+{% endif %}
+{% endblock %}
+
+{% block subtitle_text %}
+Image management for {{ item.name }}
+{% endblock %}
+
+{% block header_actions %}
+<a href="{{ prev_url }}" class="btn btn-outline-secondary">
+  <i class="bi bi-arrow-left me-1"></i>Back
+</a>
+{% endblock %}
+
+
+{% block dashboard_content %}
+<div class="main-content">
+  <!-- Form Content -->
+  <div class="container-fluid">
+    <div class="row">
+      <div class="col-lg-8 mx-auto">
+        <div class="card border-0 shadow-sm">
+          <div class="card-body p-4">
+            
+            <!-- Messages -->
+            {% if messages %}
+            <div class="mb-4">
+              {% for message in messages %}
+              <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+              </div>
+              {% endfor %}
+            </div>
+            {% endif %}
+            
+            <!-- Current Image Preview (for edit mode) -->
+            {% if form.instance.id and form.instance.image %}
+            <div class="mb-4">
+              <h5 class="card-title mb-3">Current Image</h5>
+              <div class="text-center">
+                <img src="{{ form.instance.image.url }}" 
+                     alt="{{ form.instance.caption|default:'Item Image' }}" 
+                     class="img-fluid rounded shadow-sm" 
+                     style="max-height: 300px;">
+                {% if form.instance.caption %}
+                <p class="text-muted mt-2 mb-0">{{ form.instance.caption }}</p>
+                {% endif %}
+                {% if form.instance.is_primary %}
+                <span class="badge bg-primary mt-2">Primary Image</span>
+                {% endif %}
+              </div>
+              <hr class="my-4">
+            </div>
+            {% endif %}
+
+            <form method="post" enctype="multipart/form-data" novalidate>
+              {% csrf_token %}
+              
+              <!-- Error Summary -->
+              {% if form.non_field_errors %}
+              <div class="alert alert-danger mb-4">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                <strong>Please correct the following errors:</strong>
+                <ul class="mb-0 mt-2">
+                  {% for error in form.non_field_errors %}
+                  <li>{{ error }}</li>
+                  {% endfor %}
+                </ul>
+              </div>
+              {% endif %}
+
+              <div class="row">
+                <!-- Item Selection -->
+                {% if not form.instance.id %}
+                <div class="col-md-6 mb-3">
+                  <label for="{{ form.item.id_for_label }}" class="form-label">
+                    <i class="bi bi-box me-1"></i>{{ form.item.label }}
+                    {% if form.item.field.required %}<span class="text-danger">*</span>{% endif %}
+                  </label>
+                  {{ form.item|add_class:"form-select" }}
+                  {% if form.item.help_text %}
+                  <div class="form-text">{{ form.item.help_text }}</div>
+                  {% endif %}
+                  {% if form.item.errors %}
+                  <div class="invalid-feedback d-block">
+                    {% for error in form.item.errors %}
+                    {{ error }}
+                    {% endfor %}
+                  </div>
+                  {% endif %}
+                </div>
+                {% endif %}
+
+                <!-- Primary Image Checkbox -->
+                <div class="col-md-6 mb-3">
+                  <div class="form-check mt-4">
+                    {{ form.is_primary|add_class:"form-check-input" }}
+                    <label class="form-check-label" for="{{ form.is_primary.id_for_label }}">
+                      <i class="bi bi-star me-1"></i>{{ form.is_primary.label }}
+                    </label>
+                    {% if form.is_primary.help_text %}
+                    <div class="form-text">{{ form.is_primary.help_text }}</div>
+                    {% endif %}
+                    {% if form.is_primary.errors %}
+                    <div class="invalid-feedback d-block">
+                      {% for error in form.is_primary.errors %}
+                      {{ error }}
+                      {% endfor %}
+                    </div>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+
+              <!-- Image Upload -->
+              {% if not form.instance.id %}
+              <div class="mb-3">
+                <label for="{{ form.image.id_for_label }}" class="form-label">
+                  <i class="bi bi-cloud-upload me-1"></i>{{ form.image.label }}
+                  {% if form.image.field.required %}<span class="text-danger">*</span>{% endif %}
+                </label>
+                {{ form.image|add_class:"form-control" }}
+                {% if form.image.help_text %}
+                <div class="form-text">{{ form.image.help_text }}</div>
+                {% endif %}
+                {% if form.image.errors %}
+                <div class="invalid-feedback d-block">
+                  {% for error in form.image.errors %}
+                  {{ error }}
+                  {% endfor %}
+                </div>
+                {% endif %}
+              </div>
+              {% endif %}
+
+              <!-- Caption -->
+              <div class="mb-4">
+                <label for="{{ form.caption.id_for_label }}" class="form-label">
+                  <i class="bi bi-card-text me-1"></i>{{ form.caption.label }}
+                </label>
+                {{ form.caption|add_class:"form-control" }}
+                {% if form.caption.help_text %}
+                <div class="form-text">{{ form.caption.help_text }}</div>
+                {% endif %}
+                {% if form.caption.errors %}
+                <div class="invalid-feedback d-block">
+                  {% for error in form.caption.errors %}
+                  {{ error }}
+                  {% endfor %}
+                </div>
+                {% endif %}
+              </div>
+
+              <!-- Submit Buttons -->
+              <div class="d-flex justify-content-between">
+                <div>
+                  <a href="{{ prev_url }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-x-lg me-1"></i>Cancel
+                  </a>
+                </div>
+                <div>
+                  <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check-lg me-1"></i>
+                    {% if form.instance.id %}Update Image{% else %}Upload Image{% endif %}
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- Help Card -->
+        <div class="card border-0 shadow-sm mt-4">
+          <div class="card-body p-4">
+            <h5 class="card-title">
+              <i class="bi bi-info-circle me-2"></i>Image Guidelines
+            </h5>
+            <div class="row">
+              <div class="col-md-6">
+                <h6>Supported Formats</h6>
+                <ul class="list-unstyled text-muted">
+                  <li><i class="bi bi-check-circle text-success me-1"></i>JPEG (.jpg, .jpeg)</li>
+                  <li><i class="bi bi-check-circle text-success me-1"></i>PNG (.png)</li>
+                  <li><i class="bi bi-check-circle text-success me-1"></i>GIF (.gif)</li>
+                  <li><i class="bi bi-check-circle text-success me-1"></i>BMP (.bmp)</li>
+                  <li><i class="bi bi-check-circle text-success me-1"></i>WebP (.webp)</li>
+                </ul>
+              </div>
+              <div class="col-md-6">
+                <h6>File Restrictions</h6>
+                <ul class="list-unstyled text-muted">
+                  <li><i class="bi bi-file-earmark me-1"></i>Maximum file size: 10MB</li>
+                  <li><i class="bi bi-aspect-ratio me-1"></i>Maximum dimensions: 4000x4000px</li>
+                  <li><i class="bi bi-aspect-ratio me-1"></i>Minimum dimensions: 50x50px</li>
+                  <li><i class="bi bi-images me-1"></i>Maximum 10 images per item</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Image Preview Script -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const imageInput = document.querySelector('input[type="file"][name="image"]');
+    if (imageInput) {
+        imageInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                // Validate file size
+                const maxSize = 10 * 1024 * 1024; // 10MB
+                if (file.size > maxSize) {
+                    alert('File is too large. Maximum size is 10MB.');
+                    this.value = '';
+                    return;
+                }
+                
+                // Show preview
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    // Create or update preview
+                    let preview = document.getElementById('image-preview');
+                    if (!preview) {
+                        preview = document.createElement('div');
+                        preview.id = 'image-preview';
+                        preview.className = 'mt-3 text-center';
+                        imageInput.parentNode.appendChild(preview);
+                    }
+                    
+                    preview.innerHTML = `
+                        <div class="border rounded p-3">
+                            <img src="${e.target.result}" class="img-fluid rounded" style="max-height: 200px;">
+                            <p class="text-muted mt-2 mb-0">Preview: ${file.name}</p>
+                        </div>
+                    `;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

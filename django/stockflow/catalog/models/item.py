@@ -142,6 +142,10 @@ class ItemSKU(AuditableMixin, ItemStatusMixin, ValidatableMixin, models.Model):
     def get_display_type(self):
         """Get human-readable type display"""
         return self.get_type_display()
+    
+    def has_primary_image(self):
+        """Check if this item has a primary image"""
+        return self.images.filter(is_primary=True).exists()
 
     @classmethod
     def get_active(cls):

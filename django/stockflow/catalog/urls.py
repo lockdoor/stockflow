@@ -15,12 +15,25 @@ from catalog.views.bom_views import (
     BomListByParentIDView, BomCreateView, BomUpdateView, BomDeleteView
 )
 
+from catalog.views.image_views import (
+    ItemImageCreateView,
+    ItemImageBulkUploadView,
+    ItemImageListView,
+    ItemImageDetailView,
+    ItemImageUpdateView,
+    ItemImageDeleteView,
+    ItemImageSetPrimaryView,
+    ImageUploadProgressAPIView,
+    ItemImagesAPIView,
+)
+
 from catalog.views.dashboard import catalog_dashboard_view
 
 # namespaced URL patterns for the catalog app
 app_name = 'catalog'
 
 urlpatterns = [
+    path('', catalog_dashboard_view, name='dashboard'),
     path('dashboard/', catalog_dashboard_view, name='dashboard'),
     
     path('items/new/', ItemCreateView.as_view(), name='item-form'),
@@ -38,4 +51,17 @@ urlpatterns = [
     path('categories/<int:pk>/edit/', CategoryUpdateView.as_view(), name='category-edit'),
     path('categories/<int:pk>/', CategoryDetailView.as_view(), name='category-detail'),
     path('categories/<int:pk>/delete/', CategoryDeleteView.as_view(), name='category-delete'),
+    
+        # Image management
+    path('items/<int:item_id>/images/upload/', ItemImageCreateView.as_view(), name='image-upload'),
+    path('items/<int:item_id>/images/bulk-upload/', ItemImageBulkUploadView.as_view(), name='image-bulk-upload'),
+    path('items/<int:item_id>/images/', ItemImageListView.as_view(), name='image-list'),
+    path('images/<int:pk>/', ItemImageDetailView.as_view(), name='image-detail'),
+    path('images/<int:pk>/edit/', ItemImageUpdateView.as_view(), name='image-edit'),
+    path('images/<int:pk>/delete/', ItemImageDeleteView.as_view(), name='image-delete'),
+    path('images/<int:pk>/set-primary/', ItemImageSetPrimaryView.as_view(), name='image-set-primary'),
+    
+    # API endpoints
+    path('api/images/upload-progress/', ImageUploadProgressAPIView.as_view(), name='image-upload-progress-api'),
+    path('api/items/<int:pk>/images/', ItemImagesAPIView.as_view(), name='item-images-api'),
 ]  + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

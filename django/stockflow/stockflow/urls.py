@@ -20,6 +20,10 @@ from django.contrib.auth import views as auth_views
 from django.shortcuts import redirect
 from stockflow import views
 
+# from django.urls import path
+from django.conf import settings
+from django.conf.urls.static import static
+
 def redirect_to_dashboard(request):
     return redirect('dashboard')
 
@@ -31,4 +35,4 @@ urlpatterns = [
     path('login/', auth_views.LoginView.as_view(template_name='registration/login.html'), name='login'),
     path('logout/', auth_views.LogoutView.as_view(), name='logout'),
     path('dashboard/', views.dashboard_view, name='dashboard')
-]
+]  + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

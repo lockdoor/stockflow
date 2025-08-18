@@ -1,0 +1,211 @@
+{% extends "base-dashboard-header.html" %}
+
+{% block title %}Item Images - {{ item.name }} - StockFlow{% endblock %}
+{% block title_text %}Images for {{ item.name }}{% endblock %}
+{% block subtitle_text %}View and manage images{% endblock %}
+
+{% block header_actions %}
+<a href="{% url 'catalog:item-detail' item.pk %}" class="btn btn-outline-secondary">
+  <i class="bi bi-arrow-left me-1"></i>Back to Item
+</a>
+<a href="{% url 'catalog:image-upload' item.pk %}" class="btn btn-success">
+  <i class="bi bi-plus-lg me-1"></i>Add Image
+</a>
+
+<a href="{% url 'catalog:image-bulk-upload' item.pk %}" class="btn btn-primary">
+  <i class="bi bi-cloud-upload me-1"></i>Bulk Upload
+</a>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="main-content">
+
+  <!-- Images Grid -->
+  <div class="container-fluid">
+    {% if images %}
+    <div class="row">
+      {% for image in images %}
+      <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
+        <div class="card border-0 shadow-sm h-100">
+          <!-- Image -->
+          <div class="position-relative">
+            <img src="{{ image.image.url }}" 
+                 alt="{{ image.caption|default:'Item Image' }}" 
+                 class="card-img-top" 
+                 style="height: 200px; object-fit: cover; cursor: pointer;"
+                 data-bs-toggle="modal" 
+                 data-bs-target="#imageModal"
+                 data-image-url="{{ image.image.url }}"
+                 data-image-caption="{{ image.caption|default:'Item Image' }}"
+                 data-image-primary="{{ image.is_primary|yesno:'true,false' }}">
+            
+            <!-- Primary Badge -->
+            {% if image.is_primary %}
+            <span class="position-absolute top-0 start-0 m-2">
+              <span class="badge bg-primary">
+                <i class="bi bi-star-fill me-1"></i>Primary
+              </span>
+            </span>
+            {% endif %}
+            
+            <!-- Actions Overlay -->
+            <div class="position-absolute top-0 end-0 m-2">
+              <div class="dropdown">
+                <button class="btn btn-sm btn-dark btn-opacity-75" type="button" data-bs-toggle="dropdown">
+                  <i class="bi bi-three-dots-vertical"></i>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                  <li>
+                    <a class="dropdown-item" href="{% url 'catalog:image-edit' image.pk %}">
+                      <i class="bi bi-pencil me-2"></i>Edit
+                    </a>
+                  </li>
+                  {% if not image.is_primary %}
+                  <li>
+                    <a class="dropdown-item" href="{% url 'catalog:image-set-primary' image.pk %}?next={{ request.path }}">
+                      <i class="bi bi-star me-2"></i>Set as Primary
+                    </a>
+                  </li>
+                  {% endif %}
+                  <li><hr class="dropdown-divider"></li>
+                  <li>
+                    <a class="dropdown-item text-danger" 
+                       href="{% url 'catalog:image-delete' image.pk %}">
+                      <i class="bi bi-trash me-2"></i>Delete
+                    </a>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Card Body -->
+          <div class="card-body p-3">
+            {% if image.caption %}
+            <h6 class="card-title mb-2">{{ image.caption }}</h6>
+            {% else %}
+            <h6 class="card-title text-muted mb-2">No caption</h6>
+            {% endif %}
+            
+            <!-- Image Info -->
+            <div class="small text-muted">
+              <div class="d-flex justify-content-between mb-1">
+                <span>Size:</span>
+                <span>{{ image.file_size|filesizeformat }}</span>
+              </div>
+              <div class="d-flex justify-content-between mb-1">
+                <span>Format:</span>
+                <span>{{ image.file_extension|upper }}</span>
+              </div>
+              <div class="d-flex justify-content-between">
+                <span>Uploaded:</span>
+                <span>{{ image.created_at|date:"M d, Y" }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    
+    <!-- Pagination -->
+    {% if is_paginated %}
+    <nav aria-label="Images pagination">
+      <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+          <a class="page-link" href="?page=1">&laquo; First</a>
+        </li>
+        <li class="page-item">
+          <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
+        </li>
+        {% endif %}
+        
+        {% for num in page_obj.paginator.page_range %}
+        {% if page_obj.number == num %}
+        <li class="page-item active">
+          <span class="page-link">{{ num }}</span>
+        </li>
+        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+        <li class="page-item">
+          <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+        </li>
+        {% endif %}
+        {% endfor %}
+        
+        {% if page_obj.has_next %}
+        <li class="page-item">
+          <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
+        </li>
+        <li class="page-item">
+          <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Last &raquo;</a>
+        </li>
+        {% endif %}
+      </ul>
+    </nav>
+    {% endif %}
+    
+    {% else %}
+    <!-- Empty State -->
+    <div class="text-center py-5">
+      <div class="empty-state">
+        <i class="bi bi-images display-1 text-muted mb-4"></i>
+        <h3>No Images Found</h3>
+        <p class="text-muted mb-4">This item doesn't have any images yet. Add some to showcase your product!</p>
+        <div>
+          <a href="{% url 'catalog:image-upload' item.id %}" class="btn btn-success me-2">
+            <i class="bi bi-plus-lg me-1"></i>Add First Image
+          </a>
+          {% comment %}
+          <a href="{% url 'catalog:image-bulk-upload' item.pk %}" class="btn btn-primary">
+            <i class="bi bi-cloud-upload me-1"></i>Bulk Upload
+          </a>
+          {% endcomment %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Image Modal -->
+<div class="modal fade" id="imageModal" tabindex="-1" aria-labelledby="imageModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="imageModalLabel">Image Preview</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body text-center">
+        <img id="modalImage" src="" alt="" class="img-fluid rounded">
+        <div id="modalCaption" class="mt-3"></div>
+        <div id="modalPrimary" class="mt-2"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle image modal
+    const imageModal = document.getElementById('imageModal');
+    if (imageModal) {
+        imageModal.addEventListener('show.bs.modal', function(event) {
+            const trigger = event.relatedTarget;
+            const imageUrl = trigger.getAttribute('data-image-url');
+            const imageCaption = trigger.getAttribute('data-image-caption');
+            const isPrimary = trigger.getAttribute('data-image-primary') === 'true';
+            
+            const modalImage = document.getElementById('modalImage');
+            const modalCaption = document.getElementById('modalCaption');
+            const modalPrimary = document.getElementById('modalPrimary');
+            
+            modalImage.src = imageUrl;
+            modalImage.alt = imageCaption;
+            modalCaption.innerHTML = imageCaption ? `<p class="text-muted mb-0">${imageCaption}</p>` : '';
+            modalPrimary.innerHTML = isPrimary ? '<span class="badge bg-primary"><i class="bi bi-star-fill me-1"></i>Primary Image</span>' : '';
+        });
+    }
+});
+</script>
+{% endblock %}
