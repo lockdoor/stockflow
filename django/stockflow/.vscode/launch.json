@@ -55,7 +55,7 @@
             "program": "${workspaceFolder}/manage.py",
             "args": [
                 "test",
-                "catalog.tests.image.views.test_item_image_create_view.ItemImageCreateViewTest.test_image_upload_view_form_initialization"
+                "production.tests.production_order.test_production_order_model.ProductionOrderBussinessTests.test_can_not_change_draft_to_created_with_no_item"
             ],
             "django": true,
             "console": "integratedTerminal",

@@ -1,0 +1,156 @@
+{% extends "base-dashboard-header.html" %}
+{% load widget_tweaks %}
+
+{% block title %}
+{% if form.instance.id %}
+Edit Production Order - StockFlow
+{% else %}
+Add New Production Order - StockFlow
+{% endif %}
+{% endblock %}
+
+{% block title_text %}Production Order Management{% endblock %}
+{% block subtitle_text %}
+{% if form.instance.id %}
+Edit production order #{{ form.instance.id }}
+{% else %}
+Create new production order
+{% endif %}
+{% endblock %}
+
+{% block header_actions %}
+{% if prev_url %}
+<a href="{{ prev_url }}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i>Back
+</a>
+{% elif form.instance.id %}
+<a href="{#% url 'production:production-order-detail' form.instance.id %#}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i>Back to Details
+</a>
+{% else %}
+<a href="{#% url 'production:production-order-list' %#}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i>Back to Production Orders
+</a>
+{% endif %}
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="row justify-content-center">
+  <div class="col-md-8 col-lg-6">
+    <div class="card shadow-sm">
+      <div class="card-header">
+        <h5 class="card-title mb-0">
+          {% if form.instance.id %}
+          <i class="bi bi-pencil-square me-2"></i>Edit Production Order
+          {% else %}
+          <i class="bi bi-plus-circle me-2"></i>Add New Production Order
+          {% endif %}
+        </h5>
+      </div>
+      <div class="card-body">
+        {% if form %}
+        <form method="post" novalidate>
+            {% csrf_token %}
+            {% if next_url %}
+            <input type="hidden" name="next" value="{{ next_url }}">
+            {% endif %}
+            <div class="row">
+                <!-- Warehouse Selection -->
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.warehouse.id_for_label }}" class="form-label">
+                        Warehouse
+                        {% if form.warehouse.field.required %}
+                        <span class="text-danger">*</span>
+                        {% endif %}
+                    </label>
+                    {{ form.warehouse|add_class:"form-select" }}
+                    {% if form.warehouse.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.warehouse.errors %}{{ error }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                        </div>
+                    {% endif %}
+                    {% if form.warehouse.help_text %}
+                        <div class="form-text">{{ form.warehouse.help_text }}</div>
+                    {% endif %}
+                </div>
+                <!-- Status Selection -->
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.status.id_for_label }}" class="form-label">
+                        Status
+                        {% if form.status.field.required %}
+                        <span class="text-danger">*</span>
+                        {% endif %}
+                    </label>
+                    {{ form.status|add_class:"form-select" }}
+                    {% if form.status.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.status.errors %}{{ error }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                        </div>
+                    {% endif %}
+                    {% if form.status.help_text %}
+                        <div class="form-text">{{ form.status.help_text }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            <!-- Notes -->
+            <div class="mb-3">
+                <label for="{{ form.note.id_for_label }}" class="form-label">
+                    Notes
+                    {% if form.note.field.required %}
+                    <span class="text-danger">*</span>
+                    {% endif %}
+                </label>
+                {{ form.note|add_class:"form-control"|attr:"rows:3" }}
+                {% if form.note.errors %}
+                    <div class="invalid-feedback d-block">
+                        {% for error in form.note.errors %}{{ error }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                    </div>
+                {% endif %}
+                {% if form.note.help_text %}
+                    <div class="form-text">{{ form.note.help_text }}</div>
+                {% endif %}
+            </div>
+            <!-- Non-field errors -->
+            {% if form.non_field_errors %}
+            <div class="alert alert-danger mb-3">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                {% for error in form.non_field_errors %}
+                <div>{{ error }}</div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            <!-- Form Actions -->
+            <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+                {% if prev_url %}
+                <a href="{{ prev_url }}" class="btn btn-secondary">
+                    Cancel
+                </a>
+                {% elif form.instance.id %}
+                <a href="{#% url 'production:production-order-detail' form.instance.id %#}" class="btn btn-secondary">
+                    Cancel
+                </a>
+                {% else %}
+                <a href="{#% url 'production:production-order-list' %#}" class="btn btn-secondary">
+                    Cancel
+                </a>
+                {% endif %}
+                <button type="submit" class="btn btn-primary">
+                    {% if form.instance.id %}
+                    <i class="bi bi-check-circle me-1"></i>Update Order
+                    {% else %}
+                    <i class="bi bi-plus-circle me-1"></i>Create Order
+                    {% endif %}
+                </button>
+            </div>
+        </form>
+        {% else %}
+        <div class="alert alert-warning">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            <strong>Warning!</strong> No form data available.
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

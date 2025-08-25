@@ -12,5 +12,6 @@ addopts = [
 testpaths = [
     "catalog/tests",
     "inventory/tests",
+    "production/tests",
     "common"
 ]

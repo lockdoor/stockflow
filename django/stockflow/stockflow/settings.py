@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'widget_tweaks',  # For customizing form widgets in templates
     'catalog',  # Your app for managing items and BOMs
     'inventory',  # Your app for managing warehouses and stock
+    'production',  # Your app for managing production orders
     'simple_history',  # For tracking changes in models
 ]
 

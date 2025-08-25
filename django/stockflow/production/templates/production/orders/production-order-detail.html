@@ -1,0 +1,187 @@
+{% extends "base-dashboard-header.html" %}
+{% load widget_tweaks %}
+
+{% block title %}Production Order #{{ production_order.id }} - StockFlow{% endblock %}
+
+{% block title_text %}Production Management{% endblock %}
+{% block subtitle_text %}Production Order #{{ production_order.id }} - {{ production_order.warehouse.name }}{% endblock %}
+
+{% block header_actions %}
+<a href="{% url 'production:dashboard' %}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i>Back to Dashboard
+</a>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="row">
+    <!-- Main Details -->
+    <div class="col-lg-8">
+        <!-- Production Order Details -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Order Details</h5>
+            </div>
+            <div class="card-body">
+                <!-- Status Badge -->
+                <div class="mb-3">
+                    <label class="form-label text-muted">Status</label>
+                    <div>
+                        {% if production_order.status == 'DRAFT' %}
+                            <span class="badge bg-warning fs-6">
+                                <i class="bi bi-clock me-1"></i>Draft
+                            </span>
+                        {% elif production_order.status == 'CREATED' %}
+                            <span class="badge bg-info fs-6">
+                                <i class="bi bi-check me-1"></i>Created
+                            </span>
+                        {% elif production_order.status == 'PROCESSING' %}
+                            <span class="badge bg-primary fs-6">
+                                <i class="bi bi-arrow-repeat me-1"></i>Processing
+                            </span>
+                        {% elif production_order.status == 'COMPLETED' %}
+                            <span class="badge bg-success fs-6">
+                                <i class="bi bi-check-circle me-1"></i>Completed
+                            </span>
+                        {% elif production_order.status == 'CANCELLED' %}
+                            <span class="badge bg-danger fs-6">
+                                <i class="bi bi-x-circle me-1"></i>Cancelled
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="row">
+                    <!-- Reference/Order Number -->
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label text-muted">Order Number</label>
+                            <div>
+                                <span class="badge bg-secondary fs-6">#{{ production_order.id }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Warehouse -->
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label text-muted">Warehouse</label>
+                            <div>
+                                {{ production_order.warehouse.name }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Notes -->
+                {% if production_order.note %}
+                <div class="mb-3">
+                    <label class="form-label text-muted">Notes</label>
+                    <div class="bg-light p-3 rounded">
+                        {{ production_order.note|linebreaksbr }}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Production Items -->
+        <div class="shadow-sm mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">Production Items</h6>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover mb-0">
+                            <thead class="thead-light">
+                                <tr>
+                                    <th>SKU</th>
+                                    <th>Name</th>
+                                    <th>Planned Qty</th>
+                                    <th>Actual Qty</th>
+                                    <th>Unit</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for bom in production_order.boms.all %}
+                                <tr>
+                                    <td>{{ bom.item_sku.sku }}</td>
+                                    <td>{{ bom.item_sku.name }}</td>
+                                    <td>{{ bom.planned_quantity }}</td>
+                                    <td>{{ bom.actual_quantity }}</td>
+                                    <td>{{ bom.item_sku.unit }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr><td colspan="5" class="text-center">No items in this production order.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <!-- Actions Card -->
+        {% if production_order.status == 'DRAFT' %}
+        <div class="card shadow-sm mb-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">Actions</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'production:production-order-edit' production_order.id %}?prev={{ request.path }}" class="btn btn-outline-primary">
+                        <i class="bi bi-pencil-square me-1"></i>Edit Order
+                    </a>
+                    <!-- Add more actions as needed -->
+                    <a href="{% url 'production:production-order-delete' production_order.id %}?prev={{ request.path }}" class="btn btn-outline-danger"
+                       onclick="return confirm('Are you sure you want to delete this production order?');">
+                        <i class="bi bi-trash me-1"></i>Delete Order
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Info Card -->
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <h6 class="card-title mb-0">Information</h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label text-muted small">Warehouse</label>
+                    <div>
+                        {{ production_order.warehouse.name }}
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label text-muted small">Created</label>
+                    <div>
+                        <span title="{{ production_order.created_at|date:'Y-m-d H:i:s' }}">
+                            {{ production_order.created_at|date:'M d, Y H:i' }}
+                        </span>
+                        <br>
+                        <small class="text-muted">by {# production_order.created_by.get_full_name|default:production_order.created_by.username #}</small>
+                    </div>
+                </div>
+
+                {% if production_order.updated_at != production_order.created_at %}
+                <div class="mb-3">
+                    <label class="form-label text-muted small">Last Updated</label>
+                    <div>
+                        <span title="{{ production_order.updated_at|date:'Y-m-d H:i:s' }}">
+                            {{ production_order.updated_at|date:'M d, Y H:i' }}
+                        </span>
+                        <br>
+                        <small class="text-muted">by {{ production_order.updated_by.get_full_name|default:production_order.updated_by.username }}</small>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
