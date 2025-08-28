@@ -44,6 +44,15 @@ class StockOverviewView(LoginRequiredMixin, TemplateView):
         
         # Get summary statistics
         context.update(self.get_summary_statistics(stock_data['items']))
+
+        # Calculate over_reserved_count: items with any warehouse reserved > available
+        over_reserved_count = 0
+        for item in stock_data['items']:
+            for wh in item['warehouses']:
+                if wh['reserved_quantity'] > wh['total_quantity']:
+                    over_reserved_count += 1
+                    break  # Count item only once
+        context['over_reserved_count'] = over_reserved_count
         
         return context
     
@@ -53,6 +62,7 @@ class StockOverviewView(LoginRequiredMixin, TemplateView):
         Returns both template data and JSON data for frontend search.
         """
         from inventory.models.stock_alert import StockAlert
+        from inventory.models.material_reservation import MaterialReservation
         
         # Get all active warehouses for dynamic annotations
         warehouses = list(Warehouse.objects.filter(is_active=True).order_by('name'))
@@ -70,7 +80,7 @@ class StockOverviewView(LoginRequiredMixin, TemplateView):
         
         # Single optimized query with all data
         items_queryset = ItemSKU.objects.filter(
-            stocks__available_quantity__gt=0,
+            # stocks__available_quantity__gt=0,
             status=ItemSKU.Status.ACTIVE
         ).distinct().select_related('category').annotate(
             total_quantity=Sum('stocks__available_quantity'),
@@ -98,12 +108,21 @@ class StockOverviewView(LoginRequiredMixin, TemplateView):
             warehouses_data = []
             for warehouse in warehouses:
                 qty = getattr(item, f'warehouse_{warehouse.id}_qty', 0) or 0
-                if qty > 0:
+                # Calculate reserved quantity for this item/warehouse
+                reserved_qty = MaterialReservation.objects.filter(
+                    item_sku=item,
+                    warehouse=warehouse,
+                    status=MaterialReservation.Status.RESERVED
+                ).aggregate(total=Sum('reserved_quantity'))['total'] or 0
+                available_after_reservation = qty - reserved_qty
+                if qty > 0 or reserved_qty > 0:
                     warehouses_data.append({
                         'warehouse__id': warehouse.id,
                         'warehouse__name': warehouse.name,
                         'warehouse__code': warehouse.code,
-                        'total_quantity': qty
+                        'total_quantity': qty,
+                        'reserved_quantity': reserved_qty,
+                        'available_after_reservation': available_after_reservation
                     })
             
             # Get alert levels for this item
@@ -197,21 +216,40 @@ class StockItemDetailView(LoginRequiredMixin, TemplateView):
     template_name = 'inventory/stock/stock-item-detail.html'
     
     def get_context_data(self, **kwargs):
-        """Add item and warehouse lot data to context"""
+        """Add item, warehouse lot data, and reservation info to context"""
         context = super().get_context_data(**kwargs)
-        
+        from inventory.models.material_reservation import MaterialReservation
         # Get the item
         item_id = self.kwargs.get('item_id')
         item = get_object_or_404(ItemSKU, id=item_id)
         context['item'] = item
-        
         # Get lot data grouped by warehouse
         warehouse_lots = self.get_warehouse_lots(item)
         context['warehouse_lots'] = warehouse_lots
-        
+        # Add reservation summary and details per warehouse
+        reservation_by_warehouse = {}
+        for warehouse in warehouse_lots.keys():
+            reservations = MaterialReservation.objects.filter(
+                item_sku=item,
+                warehouse=warehouse,
+                status=MaterialReservation.Status.RESERVED
+            )
+            total_reserved = sum(r.reserved_quantity for r in reservations)
+            reservation_details = [
+                {
+                    'reference_type': r.get_reference_type_display(),
+                    'reference_id': r.reference_id,
+                    'reserved_quantity': r.reserved_quantity
+                }
+                for r in reservations
+            ]
+            reservation_by_warehouse[warehouse.id] = {
+                'total_reserved': total_reserved,
+                'details': reservation_details
+            }
+        context['reservation_by_warehouse'] = reservation_by_warehouse
         # Get summary statistics for this item
         context.update(self.get_item_summary(warehouse_lots))
-        
         return context
     
     def get_warehouse_lots(self, item):

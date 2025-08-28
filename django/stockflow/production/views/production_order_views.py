@@ -1,4 +1,4 @@
-from django.views.generic import CreateView, DetailView, UpdateView, DeleteView, ListView
+from django.views.generic import CreateView, DetailView, UpdateView, DeleteView, ListView, RedirectView
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.urls import reverse
 
@@ -61,6 +61,50 @@ class ProductionOrderDetailView(PermissionRequiredMixin, LoginRequiredMixin, Det
             {'name': 'Production', 'url': reverse('production:dashboard')},
             {'name': 'Production Order', 'url': None}
         ]
+
+        # --- BOM Material Stock Sufficiency ---
+        from production.models.production_order_bom import ProductionOrderBOM
+        from inventory.models.stock import Stock
+        from inventory.models.material_reservation import MaterialReservation
+        from django.db.models import Sum
+
+        production_order = self.object
+        warehouse = getattr(production_order, 'warehouse', None)
+        bom_items = ProductionOrderBOM.objects.filter(production_order=production_order).select_related('item_sku')
+        material_stock_status = []
+        if warehouse:
+            for bom in bom_items:
+                total_stock = Stock.get_total_stock(bom.item_sku, warehouse)
+                material_stock_status.append({
+                    'item_sku': bom.item_sku,
+                    'planned_quantity': bom.planned_quantity,
+                    'available_stock': total_stock,
+                    'is_sufficient': total_stock >= bom.planned_quantity if total_stock is not None else False
+                })
+        context['material_stock_status'] = material_stock_status
+
+        # --- Over Reserved Reservations ---
+        over_reserved_reservations = []
+        reservations = MaterialReservation.objects.filter(
+            reference_type=MaterialReservation.ReferenceType.PRODUCTION,
+            reference_id=production_order.id
+        ).select_related('item_sku', 'warehouse')
+        for r in reservations:
+            available = r.item_sku.stocks.filter(warehouse=r.warehouse).aggregate(total=Sum('available_quantity'))['total'] or 0
+            if r.reserved_quantity > available:
+                over_reserved_reservations.append({
+                    'id': r.id,
+                    'item_sku': r.item_sku,
+                    'warehouse': r.warehouse,
+                    'reserved_quantity': r.reserved_quantity,
+                    'available_quantity': available,
+                    'status': r.status,
+                    'reference_type': r.reference_type,
+                    'reference_id': r.reference_id,
+                    'created_at': r.created_at,
+                    'get_status_display': r.get_status_display(),
+                })
+        context['over_reserved_reservations'] = over_reserved_reservations
         return context
 
 
@@ -104,6 +148,7 @@ class ProductionOrderUpdateView(PermissionRequiredMixin, LoginRequiredMixin, Upd
             return prev_url
         # Default redirect
         return reverse('production:production-order-detail', kwargs={'pk': object.id})
+
 
 class ProductionOrderListView(PermissionRequiredMixin, LoginRequiredMixin, ListView):
     model = ProductionOrder
@@ -152,4 +197,23 @@ class ProductionOrderDeleteView(PermissionRequiredMixin, LoginRequiredMixin, Del
             return prev_url
         # Default redirect
         return reverse('production:production-order-detail', kwargs={'pk': object.id})
+    
+
+
+from django.contrib import messages
+from django.shortcuts import get_object_or_404
+from django.http import HttpResponseRedirect
+
+class ProductionOrderCreatedStatusView(PermissionRequiredMixin, LoginRequiredMixin, RedirectView):
+    permission_required = 'production.change_productionorder'
+
+    def get_redirect_url(self, *args, **kwargs):
+        pk = kwargs.get('pk')
+        order = get_object_or_404(ProductionOrder, pk=pk)
+
+        try:
+            order.created_production_order(self.request.user)  # Use the new method to set status to CREATED
+        except Exception as e:
+            messages.error(self.request, f"Error occurred while changing Production Order #{order.id}: {str(e)}")
+            return reverse('production:production-order-detail', args=[order.id])
     

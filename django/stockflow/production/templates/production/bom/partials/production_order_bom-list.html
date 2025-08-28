@@ -1,0 +1,101 @@
+{% comment %}
+------------------------------------------------------------------------------
+  production/bom/partials/production_order_bom-list.html
+
+  Description:
+    - Render production order BOM items list for redirect flow pattern
+    - Shows table of BOM items with edit/delete actions
+
+  Required context:
+    - production_order: ProductionOrder object
+    - bom_items: queryset of ProductionOrderBOM objects
+    - view_only: boolean (optional) - if True, hide edit/delete actions
+
+  Usage:
+    - include 'production/bom/partials/production_order_bom-list.html' with bom_items=bom_items production_order=production_order view_only=True
+------------------------------------------------------------------------------
+{% endcomment %}
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">
+            <i class="bi bi-list-ul me-2"></i>BOM Items
+        </h5>
+        <span class="badge bg-secondary">{{ bom_items|length }} items</span>
+    </div>
+    
+    {% if bom_items %}
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Material SKU</th>
+                    <th>Planned Quantity</th>
+                    <th>Note</th>
+                    {% if not view_only %}
+                    <th class="text-center">Actions</th>
+                    {% endif %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in bom_items %}
+                <tr>
+                    <td>
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-box me-2 text-primary"></i>
+                            <div>
+                                <div class="fw-semibold">{{ item.item_sku.sku_code }}</div>
+                                <small class="text-muted">{{ item.item_sku.name }}</small>
+                            </div>
+                        </div>
+                    </td>
+                    
+                    <td>
+                        <span class="badge bg-light text-dark">{{ item.planned_quantity }}</span>
+                    </td>
+                    
+                    <td>
+                        {% if item.note %}
+                            <small class="text-muted">{{ item.note|truncatechars:30 }}</small>
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    {% if not view_only %}
+                    <td class="text-center">
+                        {% if production_order.status != 'CONFIRMED' %}
+                        <div class="btn-group btn-group-sm">
+                            <a class="btn btn-outline-warning btn-sm" href="{% url 'production:production-order-edit-bom' production_order.id item.pk %}">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <form method="post" action="{% url 'production:production-order-delete-bom' production_order.id item.pk %}" class="d-inline"
+                                  onsubmit="return confirm('Are you sure you want to delete this BOM item?');">
+                                {% csrf_token %}
+                                <input type="hidden" name="_method" value="DELETE">
+                                <button type="submit" class="btn btn-outline-danger btn-sm" title="Delete">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                        {% else %}
+                        <span class="text-muted">
+                            <i class="bi bi-lock"></i>
+                        </span>
+                        {% endif %}
+                    </td>
+                    {% endif %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="card-body text-center py-5">
+        <div class="text-muted">
+            <i class="bi bi-inbox display-6"></i>
+            <h5 class="mt-3">No BOM items yet</h5>
+            <p>Add BOM items to this production order using the form on the left.</p>
+        </div>
+    </div>
+    {% endif %}
+</div>

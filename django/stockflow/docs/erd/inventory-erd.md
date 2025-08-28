@@ -1,5 +1,25 @@
 ```mermaid
 erDiagram
+    %% Material Reservation Entity (for production order reservation)
+    MaterialReservation {
+        int id PK
+        enum reference_type "PRODUCTION, SALES, ..."
+        int reference_id
+        int item_sku_id FK
+        int warehouse_id FK
+        decimal reserved_quantity
+        enum status "RESERVED, RELEASED, COMMITTED, CANCELLED"
+        timestamp created_at
+        int created_by FK
+        timestamp updated_at
+        int updated_by FK
+        int version
+    }
+    %% reference_type/reference_id ใช้สำหรับรองรับ context การจองหลายแบบ เช่น ProductionOrder, SalesOrder ฯลฯ
+    MaterialReservation }o--|| ItemSKU : "item_sku_id"
+    MaterialReservation }o--|| Warehouse : "warehouse_id"
+    MaterialReservation }o--|| User : "created_by"
+    MaterialReservation }o--|| User : "updated_by"
     %% Inventory Context - Updated to current StockFlow structure
     
     StockMovement {

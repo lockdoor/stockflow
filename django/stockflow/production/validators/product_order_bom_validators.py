@@ -11,3 +11,14 @@ class ProductionOrderBOMUpdateValidator(BaseValidator):
         if self.instance.production_order.status != 'DRAFT':
             errors.append("ProductionOrderBOM can only be updated when the production order status is DRAFT.")
         return errors
+    
+class ProductionOrderBOMItemMustBeTypeProduct(BaseValidator):
+    
+    def validate(self):
+        error = []
+        from catalog.models.item import ItemSKU
+        # for item in self.instance.items.all():
+        item_sku: ItemSKU = self.instance.item_sku
+        if item_sku.type != ItemSKU.Type.PRODUCT:
+            error.append(f"Item {self.instance.item_sku.id} must be of type PRODUCT.")
+        return error

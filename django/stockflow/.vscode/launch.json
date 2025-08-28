@@ -55,7 +55,7 @@
             "program": "${workspaceFolder}/manage.py",
             "args": [
                 "test",
-                "production.tests.production_order.test_production_order_model.ProductionOrderBussinessTests.test_can_not_change_draft_to_created_with_no_item"
+                "production.tests.production_order_bom.test_production_order_bom_forms.ProductionOrderBOMFormTests.test_form_valid_with_minimal_data"
             ],
             "django": true,
             "console": "integratedTerminal",

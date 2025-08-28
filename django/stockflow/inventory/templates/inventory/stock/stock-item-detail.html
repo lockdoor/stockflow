@@ -1,4 +1,5 @@
 {% extends "base-dashboard-header.html" %}
+{% load dict_key sum_attr %}
 
 {% block title %}{{ item.name }} - Stock Details - StockFlow{% endblock %}
 
@@ -195,8 +196,54 @@
                             </h5>
                             <div class="d-flex align-items-center gap-2 mb-1">
                                 <small class="text-muted">Code: {{ warehouse.code }} • {{ lots|length }} lot{{ lots|length|pluralize }}</small>
+                                {% with total_available=lots|sum_attr:'available_quantity' %}
+                                    <span class="badge bg-success text-light ms-2">
+                                        <i class="bi bi-boxes me-1"></i>
+                                        Available: {{ total_available|floatformat:0 }} {{ item.unit }}
+                                    </span>
+                                {% endwith %}
                                 
+
+                                
+                                {% with reservation=reservation_by_warehouse|dict_key:warehouse.id %}
+                                    <span class="badge bg-info text-dark ms-2">
+                                        <i class="bi bi-bookmark-check me-1"></i>
+                                        Reserved: {{ reservation.total_reserved|default:0 }} {{ item.unit }}
+                                    </span>
+                                        {% if reservation.total_reserved and reservation.total_reserved > lots|sum_attr:'available_quantity' %}
+                                        <span class="badge bg-danger text-light ms-2">
+                                            <i class="bi bi-exclamation-triangle me-1"></i>
+                                            Over Reserved! ({{ reservation.total_reserved|floatformat:0 }} / {{ lots|sum_attr:'available_quantity'|floatformat:0 }})
+                                        </span>
+                                        {% endif %}
+                                    {% if reservation.details %}
+                                    <span class="ms-2">
+                                        <a class="text-decoration-underline text-info" data-bs-toggle="collapse" href="#reservation-details-{{ warehouse.id }}" role="button" aria-expanded="false" aria-controls="reservation-details-{{ warehouse.id }}">
+                                            Details
+                                        </a>
+                                    </span>
+                                    {% endif %}
+                                {% endwith %}
                                 <!-- Stock Alert Status -->
+                                {% with reservation=reservation_by_warehouse|dict_key:warehouse.id %}
+                <div class="collapse mt-2" id="reservation-details-{{ warehouse.id }}">
+                    <div class="card card-body bg-light border-info">
+                        <h6 class="mb-2"><i class="bi bi-bookmark-check me-1"></i>Reservation Details</h6>
+                        {% if reservation.details %}
+                        <ul class="mb-0 ps-3">
+                            {% for r in reservation.details %}
+                            <li>
+                                <span class="fw-bold">{{ r.reference_type }}</span> #{{ r.reference_id }}:
+                                <span class="text-primary">{{ r.reserved_quantity|floatformat:0 }}</span> {{ item.unit }}
+                            </li>
+                            {% endfor %}
+                        </ul>
+                        {% else %}
+                        <span class="text-muted">No active reservations.</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endwith %}
                                 {% if warehouse.existing_alert %}
                                     {% with alert_level=warehouse.existing_alert.get_alert_level %}
                                     <div class="d-flex align-items-center" id="alert-status-{{ warehouse.id }}">

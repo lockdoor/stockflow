@@ -222,7 +222,9 @@
                       <small class="text-muted">{{ warehouse.code }}</small>
                     </div>
                     <div class="text-end">
-                      <h6 class="text-primary mb-1">{{ warehouse.total_quantity|floatformat:0 }}</h6>
+                      <div><span class="fw-bold">Total:</span> <span class="text-primary">{{ warehouse.total_quantity|floatformat:0 }}</span></div>
+                      <div><span class="fw-bold">Reserved:</span> <span class="text-danger">{{ warehouse.reserved_quantity|floatformat:0 }}</span></div>
+                      <div><span class="fw-bold">Available:</span> <span class="text-success">{{ warehouse.available_after_reservation|floatformat:0 }}</span></div>
                       <small class="text-muted">{{ warehouse.items_count }} items</small>
                     </div>
                   </div>

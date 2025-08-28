@@ -121,6 +121,26 @@
                 </div>
             </div>
         </div>
+
+        <!-- Over Reserved Card -->
+        <div class="col-sm-6 col-lg-3">
+            <div class="stats-card border-danger">
+                <div class="d-flex align-items-center">
+                    <div class="stats-card-icon bg-danger-light">
+                        <i class="bi bi-exclamation-triangle"></i>
+                    </div>
+                    <div>
+                        <p class="text-danger small mb-1">Over Reserved Items</p>
+                        <h3 class="h4 mb-1 text-danger">{{ over_reserved_count|default:0 }}</h3>
+                        <!-- <small class="text-muted">Items with reservations exceeding stock</small> -->
+                    </div>
+                </div>
+                <div class="mt-2 text-end">
+                    <a href="{% url 'inventory:material-over-reservation-list' %}" class="btn btn-outline-danger btn-sm">View</a>
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <!-- Stock Overview Table -->
@@ -260,7 +280,9 @@
                                     {% with warehouse_found=False warehouse_stock=None %}
                                         {% for wh_stock in item_data.warehouses %}
                                             {% if wh_stock.warehouse__id == warehouse.id %}
-                                                <span class="fw-semibold">{{ wh_stock.total_quantity|floatformat:0 }}</span>
+                                                <div><span class="fw-semibold">{{ wh_stock.total_quantity|floatformat:0 }}</span> <small class="text-muted">Total</small></div>
+                                                <div><span class="text-danger">{{ wh_stock.reserved_quantity|floatformat:0 }}</span> <small class="text-danger">Reserved</small></div>
+                                                <div><span class="text-success">{{ wh_stock.available_after_reservation|floatformat:0 }}</span> <small class="text-success">Available</small></div>
                                                 {% with warehouse_found=True %}{% endwith %}
                                             {% endif %}
                                         {% endfor %}

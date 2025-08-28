@@ -4,7 +4,10 @@ from production.models.production_order import ProductionOrder
 from catalog.models.item import ItemSKU
 from common.mixins.auditable import AuditableMixin
 from common.mixins.validatable import ValidatableMixin
-from production.validators import ProductionOrderBOMUpdateValidator
+from production.validators import (
+    ProductionOrderBOMUpdateValidator,
+    ProductionOrderBOMItemMustBeTypeProduct
+)
 
 class ProductionOrderBOM(AuditableMixin, ValidatableMixin, models.Model):
     production_order = models.ForeignKey(
@@ -68,4 +71,7 @@ class ProductionOrderBOM(AuditableMixin, ValidatableMixin, models.Model):
         """Return list of validators for this BOM (implement as needed)"""
         # from production.validators.product_order_bom_validators import ProductionOrderBOMBusinessRulesValidator
         # return [ProductionOrderBOMBusinessRulesValidator(self)]
-        return [ProductionOrderBOMUpdateValidator(self)]
+        return [
+            ProductionOrderBOMUpdateValidator(self),
+            ProductionOrderBOMItemMustBeTypeProduct(self)
+        ]

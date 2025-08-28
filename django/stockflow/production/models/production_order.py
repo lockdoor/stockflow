@@ -6,7 +6,7 @@ This module defines the ProductionOrder model using mixins for audit, status, an
 Follows the same pattern as Category model.
 """
 
-from django.db import models
+from django.db import models, transaction
 from common.mixins.auditable import AuditableMixin
 from common.mixins.validatable import ValidatableMixin
 from production.mixins.production_status import ProductionStatusMixin
@@ -56,6 +56,13 @@ class ProductionOrder(AuditableMixin, ProductionStatusMixin, ValidatableMixin, m
 
     def __str__(self):
         return f"ProductionOrder #{self.id} ({self.get_status_display()})"
+    
+    def __repr__(self):
+        text = self.__str__()
+        products = self.get_all_products()
+        for product in products:
+            text += f"\n  - {product}"
+        return text
 
     def get_validators(self):
         # สามารถเพิ่ม custom validator ได้ที่นี่
@@ -76,3 +83,58 @@ class ProductionOrder(AuditableMixin, ProductionStatusMixin, ValidatableMixin, m
         obj = self.__class__.objects.filter(id=self.pk).annotate(num_boms=Count("boms")).first()
         return obj.num_boms
     
+    def get_all_products(self):
+        from .production_order_bom import ProductionOrderBOM          
+        return ProductionOrderBOM.objects.filter(production_order=self).select_related('item_sku')
+    
+    def created_production_order(self, user):
+        """
+        Change status from DRAFT to CREATED. And reserve material.
+        """
+        with transaction.atomic():
+            prev_status = self.__class__.objects.get(id=self.id).status
+            if prev_status != self.Status.DRAFT:
+                raise ValueError("Can only change status from DRAFT to CREATED.")
+            self.status = self.Status.CREATED
+            self.updated_by = user
+            
+            # Reserve material
+            from inventory.models.material_reservation import MaterialReservation
+            products = self.get_all_products()
+            if products.count() == 0:
+                raise ValueError("Cannot create production order. No BOM items found.")
+            for product in products:
+                MaterialReservation.create_reservation(
+                    reference_type=MaterialReservation.ReferenceType.PRODUCTION,
+                    reference_id=self.id,
+                    item_sku=product.item_sku,
+                    warehouse=self.warehouse,
+                    reserved_quantity=product.planned_quantity,
+                    user=user
+                )
+            
+            self.save()
+       
+    def draft_production_order(self, user):
+        """
+        Change status from CREATED to DRAFT. Delete all material reservations for this order.
+        """
+
+        with transaction.atomic():
+            prev_status = self.__class__.objects.get(id=self.id).status
+            if prev_status != self.Status.CREATED:
+                raise ValueError("Can only change status from CREATED to DRAFT.")
+
+            # Delete all reservations for this production order
+            self.get_all_reservations().delete()
+
+            self.status = self.Status.DRAFT
+            self.updated_by = user
+            self.save()
+       
+    def get_all_reservations(self):
+        from inventory.models import MaterialReservation
+        return MaterialReservation.objects.filter(
+            reference_type=MaterialReservation.ReferenceType.PRODUCTION,
+            reference_id=self.id
+        )

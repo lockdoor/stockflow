@@ -1,0 +1,145 @@
+{% extends "base-dashboard-header.html" %}
+{% load widget_tweaks %}
+
+{% block title %}Production Order BOM - StockFlow{% endblock %}
+
+{% block title_text %}Production Order BOM Management{% endblock %}
+{% block subtitle_text %}Manage BOM for <span class="fw-bold">Production Order #{{ production_order.id }}</span>{% endblock %}
+
+{% block header_actions %}
+<a href="{{ prev_url }}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i>Back to Order
+</a>
+<a href="{% url 'production:production-order-list' %}" class="btn btn-outline-secondary">
+    <i class="bi bi-list me-1"></i>All Orders
+</a>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- BOM Form Section -->
+        <div class="col-lg-5 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-plus-circle me-2"></i>Add BOM Item
+                    </h5>
+                    <small class="text-muted">Add a BOM item to this production order.</small>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="" id="bom-form">
+                        {% csrf_token %}
+                        {{ form.production_order }}
+                        <!-- Production Order Info -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">
+                                <i class="bi bi-clipboard-check me-1"></i>Production Order
+                            </label>
+                            <div class="bg-light p-3 rounded border">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <div class="d-flex align-items-center">
+                                        <i class="bi bi-gear me-2 text-primary fs-5"></i>
+                                        <div>
+                                            <div class="fw-semibold">Order #{{ production_order.id }}</div>
+                                            <small class="text-muted">
+                                                <i class="bi bi-calendar me-1"></i>{{ production_order.created_at|date:'Y-m-d' }}
+                                            </small>
+                                        </div>
+                                    </div>
+                                    <span class="badge bg-info fs-6">
+                                        {{ production_order.get_status_display }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Item SKU Selection -->
+                        <div class="mb-3">
+                            <label for="{{ form.item_sku.id_for_label }}" class="form-label">
+                                <i class="bi bi-box me-1"></i>{{ form.item_sku.label }} <span class="text-danger">*</span>
+                            </label>
+                            {{ form.item_sku|add_class:"form-select" }}
+                            {% if form.item_sku.help_text %}
+                                <div class="form-text">{{ form.item_sku.help_text }}</div>
+                            {% endif %}
+                            {% if form.item_sku.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.item_sku.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <!-- Planned Quantity -->
+                        <div class="mb-3">
+                            <label for="{{ form.planned_quantity.id_for_label }}" class="form-label">
+                                <i class="bi bi-123 me-1"></i>{{ form.planned_quantity.label }} <span class="text-danger">*</span>
+                            </label>
+                            <div class="input-group">
+                                {{ form.planned_quantity|add_class:"form-control" }}
+                                <span class="input-group-text">units</span>
+                            </div>
+                            {% if form.planned_quantity.help_text %}
+                                <div class="form-text">{{ form.planned_quantity.help_text }}</div>
+                            {% endif %}
+                            {% if form.planned_quantity.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.planned_quantity.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <!-- Note -->
+                        <div class="mb-3">
+                            <label for="{{ form.note.id_for_label }}" class="form-label">
+                                <i class="bi bi-chat-text me-1"></i>{{ form.note.label }}
+                            </label>
+                            {{ form.note|add_class:"form-control" }}
+                            {% if form.note.help_text %}
+                                <div class="form-text">{{ form.note.help_text }}</div>
+                            {% endif %}
+                            {% if form.note.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.note.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <!-- Form Errors -->
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger mb-3">
+                                <i class="bi bi-exclamation-triangle me-2"></i>
+                                <strong>Please correct the following errors:</strong>
+                                <ul class="mb-0 mt-2">
+                                    {% for error in form.non_field_errors %}
+                                        <li>{{ error }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        {% endif %}
+                        <!-- Action Buttons -->
+                        <div class="row g-2">
+                            <div class="col-8">
+                                <button type="submit" class="btn btn-primary w-100">
+                                    <!-- <i class="bi bi-plus-circle me-2"></i>Add BOM Item -->
+                                    {% if form.instance.pk %}
+                                        <i class="bi bi-pencil me-2"></i>Edit BOM Item
+                                    {% else %}
+                                        <i class="bi bi-plus-circle me-2"></i>Add BOM Item
+                                    {% endif %}
+                                </button>
+                            </div>
+                            <div class="col-4">
+                                <!-- cancel -->
+                                <a href="{{ prev_url }}" class="btn btn-outline-secondary w-100">
+                                    <i class="bi bi-x-circle me-2"></i>Cancel
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <!-- BOM Items List Section (optional, for future use) -->
+         <div class="col-lg-7 mb-4">
+             {% include './partials/production_order_bom-list.html' with bom_items=bom_items production_order=production_order view_only=False %}
+         </div>
+    </div>
+</div>
+{% endblock %}

@@ -272,8 +272,8 @@ class StockMovement(
         # Deduct quantities from allocated stock records
         for stock_record, allocated_qty in allocations:
             stock_record.deduct_quantity(allocated_qty, user=user, save=True)
-    
-    def can_be_recovered(self):
+
+    def can_be_recovered(self) -> bool:
         """Check if this movement can be recovered from failed state"""
         return self.status in [self.Status.PROCESSING, self.Status.FAILED]
     
@@ -350,7 +350,13 @@ class StockMovement(
         if hasattr(self, 'movement_items'):
             return self.movement_items.count()
         return 0
-    
+
+    def get_movement_items(self) -> list:
+        """Get all items in this movement"""
+        if hasattr(self, 'movement_items'):
+            return list(self.movement_items.all())
+        return []
+
     def get_reference_display(self):
         """Get formatted reference display"""
         if self.reference_type == self.ReferenceType.NONE:

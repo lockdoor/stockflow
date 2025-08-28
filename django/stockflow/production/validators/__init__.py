@@ -3,7 +3,10 @@ from .product_order_validators import (
     ProductionOrderStatusDraftToCreatedValidator,
     ProductionOrderCanNotChangeWareHouseValidator
     )
-from .product_order_bom_validators import ProductionOrderBOMUpdateValidator
+from .product_order_bom_validators import (
+    ProductionOrderBOMUpdateValidator, 
+    ProductionOrderBOMItemMustBeTypeProduct
+    )
 
 __all__ = [
     # production order validators
@@ -12,5 +15,6 @@ __all__ = [
     'ProductionOrderCanNotChangeWareHouseValidator',
     
     # production order BOM validators
-    'ProductionOrderBOMUpdateValidator'
+    'ProductionOrderBOMUpdateValidator',
+    'ProductionOrderBOMItemMustBeTypeProduct'
 ]

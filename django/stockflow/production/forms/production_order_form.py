@@ -18,14 +18,10 @@ class ProductionOrderForm(forms.ModelForm):
         model = ProductionOrder
         fields = [
             'warehouse',
-            'status',
             'note'
         ]
         widgets = {
             'warehouse': forms.Select(attrs={
-                'class': 'form-select'
-            }),
-            'status': forms.Select(attrs={
                 'class': 'form-select'
             }),
             'note': forms.Textarea(attrs={
@@ -37,12 +33,10 @@ class ProductionOrderForm(forms.ModelForm):
         }
         labels = {
             'warehouse': 'Warehouse',
-            'status': 'Status',
             'note': 'Notes',
         }
         help_texts = {
             'warehouse': 'Select the warehouse for this production order',
-            'status': 'Set the status for this production order',
             'note': 'Additional information about this production order (optional, max 1000 characters)',
         }
 

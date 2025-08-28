@@ -7,7 +7,9 @@ from datetime import timedelta
 from inventory.models.warehouse import Warehouse
 from inventory.models.stock_movement import StockMovement
 from inventory.models.stock_movement_item import StockMovementItem
+
 from inventory.models.stock import Stock
+from inventory.models.material_reservation import MaterialReservation
 
 
 @login_required
@@ -51,13 +53,29 @@ def inventory_dashboard_view(request):
         status__in=['PROCESSING', 'FAILED']
     ).select_related('warehouse', 'created_by')[:8]
     
-    # Stock by warehouse with warehouse info for dropdown
-    stock_by_warehouse = Warehouse.objects.filter(
-        is_active=True
-    ).annotate(
-        items_count=Count('stocks__item_sku', distinct=True),
-        total_quantity=Sum('stocks__available_quantity')
-    ).filter(total_quantity__gt=0).order_by('-total_quantity')[:8]
+
+    # Stock by warehouse with reservation summary
+    stock_by_warehouse = []
+    warehouses = Warehouse.objects.filter(is_active=True)
+    for warehouse in warehouses:
+        items_count = warehouse.stocks.values('item_sku').distinct().count()
+        total_quantity = warehouse.stocks.aggregate(total=Sum('available_quantity'))['total'] or 0
+        reserved_quantity = MaterialReservation.objects.filter(
+            warehouse=warehouse,
+            status=MaterialReservation.Status.RESERVED
+        ).aggregate(total=Sum('reserved_quantity'))['total'] or 0
+        available_after_reservation = total_quantity - reserved_quantity
+        stock_by_warehouse.append({
+            'id': warehouse.id,
+            'name': warehouse.name,
+            'code': warehouse.code,
+            'items_count': items_count,
+            'total_quantity': total_quantity,
+            'reserved_quantity': reserved_quantity,
+            'available_after_reservation': available_after_reservation,
+        })
+    # Sort by total_quantity desc, limit 8
+    stock_by_warehouse = sorted(stock_by_warehouse, key=lambda w: w['total_quantity'], reverse=True)[:8]
     
     # Recent activity count
     recent_movements_count = StockMovement.objects.filter(

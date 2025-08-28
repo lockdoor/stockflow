@@ -164,6 +164,12 @@ class ItemSKU(AuditableMixin, ItemStatusMixin, ValidatableMixin, models.Model):
         """Check if this item has a primary image"""
         return self.images.filter(is_primary=True).exists()
 
+    def get_bom_components(self):
+        """Get all BOM components for this item"""
+        if not self.can_have_bom:
+            raise ValueError("This item type cannot have a BOM.")
+        return self.bom_parent.all()
+
     @classmethod
     def get_active(cls):
         """Get all active items"""

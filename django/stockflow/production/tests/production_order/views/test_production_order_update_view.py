@@ -30,7 +30,6 @@ class ProductionOrderUpdateViewTests(TestCase):
         self.assertTemplateUsed(response, 'production/orders/production-order-form.html')
         self.assertContains(response, f"Edit production order #{self.production_order.id}")
         self.assertContains(response, self.production_order.warehouse.name)
-        self.assertContains(response, self.production_order.get_status_display())
 
     def test_post_update_production_order(self):
         data = {

@@ -11,7 +11,7 @@ class ProductFactory(factory.django.DjangoModelFactory):
 
     # Core fields
     sku_code = factory.Faker('ean13')
-    name = factory.Faker('word')
+    name = factory.Sequence(lambda n: f"product_{n}")
     type = ItemSKU.Type.PRODUCT
     status = ItemSKU.Status.DRAFT
     unit = factory.Faker('word')
