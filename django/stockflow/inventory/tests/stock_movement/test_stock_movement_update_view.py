@@ -118,7 +118,7 @@ class StockMovementUpdateViewTest(TestCase):
         self.assertEqual(form.instance, self.stock_movement)
         # เปรียบเทียบ warehouse id แทน object
         warehouse_value = form.initial.get('warehouse') or form.instance.warehouse.id
-        self.assertEqual(warehouse_value, self.warehouse.id)
+        self.assertEqual(warehouse_value.id, self.warehouse.id)
         self.assertEqual(form.initial.get('note') or form.instance.note, 'Original note')
 
     def test_form_displays_correct_fields(self):
@@ -402,9 +402,7 @@ class StockMovementUpdateViewTest(TestCase):
         
         reference_types = [
             (StockMovement.ReferenceType.ADJUST, 123),
-            (StockMovement.ReferenceType.PACKING_LIST, 456),
             (StockMovement.ReferenceType.PRODUCTION, 789),
-            (StockMovement.ReferenceType.INVOICE, 101112),
         ]
         
         for ref_type, ref_id in reference_types:
@@ -771,7 +769,7 @@ class StockMovementUpdateViewNextUrlTest(TestCase):
         view.object = self.stock_movement
         
         result = view.get_prev_redirect_url()
-        expected = reverse('inventory:stock-movement-detail', kwargs={'pk': self.stock_movement.pk})
+        expected = reverse('inventory:stock-movement-list')
         self.assertEqual(result, expected)
 
     def test_get_prev_redirect_url_method_fallback_without_object(self):

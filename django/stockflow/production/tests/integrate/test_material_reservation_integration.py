@@ -116,7 +116,6 @@ class MaterialReservationIntegrationTests(TestCase):
         
         self.assertEqual(self.order.status, ProductionOrder.Status.CREATED)
         
-        # MaterialReservation.__repr_with_product_order__(self.order)
         reservations = MaterialReservation.get_all_product_reservation(self.order)
         self.assertEqual(reservations.count(), 3)
         self.assertTrue(reservations.filter(item_sku=items[0]).exists())

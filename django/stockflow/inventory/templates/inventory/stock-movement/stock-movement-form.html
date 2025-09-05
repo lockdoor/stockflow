@@ -66,7 +66,12 @@ Create new stock movement
                         <span class="text-danger">*</span>
                         {% endif %}
                     </label>
-                    {{ form.warehouse|add_class:"form-select" }}
+                    {% if warehouse %}
+                        <input type="hidden" name="warehouse" value="{{ warehouse.id }}">
+                        <input type="text" class="form-control-plaintext" value="{{ warehouse.name }}" readonly>
+                    {% else %}
+                        {{ form.warehouse|add_class:"form-select" }}
+                    {% endif %}
                     {% if form.warehouse.errors %}
                         <div class="invalid-feedback d-block">
                             {% for error in form.warehouse.errors %}{{ error }}{% if not forloop.last %}, {% endif %}{% endfor %}
@@ -85,7 +90,12 @@ Create new stock movement
                         <span class="text-danger">*</span>
                         {% endif %}
                     </label>
-                    {{ form.reference_type|add_class:"form-select" }}
+                    {% if reference_type %}
+                        <input type="hidden" name="reference_type" value="{{ reference_type }}">
+                        <input type="text" class="form-control-plaintext" value="{{ reference_type }}" readonly>
+                    {% else %}
+                        {{ form.reference_type|add_class:"form-select" }}
+                    {% endif %}
                     {% if form.reference_type.errors %}
                         <div class="invalid-feedback d-block">
                             {% for error in form.reference_type.errors %}{{ error }}{% if not forloop.last %}, {% endif %}{% endfor %}
@@ -105,7 +115,12 @@ Create new stock movement
                     <span class="text-danger">*</span>
                     {% endif %}
                 </label>
-                {{ form.reference_id|add_class:"form-control" }}
+                {% if reference_id %}
+                    <input type="hidden" name="reference_id" value="{{ reference_id }}">
+                    <input type="text" class="form-control-plaintext" value="{{ reference_id }}" readonly>
+                {% else %}
+                    {{ form.reference_id|add_class:"form-control" }}
+                {% endif %}
                 {% if form.reference_id.errors %}
                     <div class="invalid-feedback d-block">
                         {% for error in form.reference_id.errors %}{{ error }}{% if not forloop.last %}, {% endif %}{% endfor %}

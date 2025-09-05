@@ -105,7 +105,47 @@ class ProductionOrderDetailView(PermissionRequiredMixin, LoginRequiredMixin, Det
                     'get_status_display': r.get_status_display(),
                 })
         context['over_reserved_reservations'] = over_reserved_reservations
+
+        # --- Stock Movements ---
+        from inventory.models.stock_movement import StockMovement
+        from inventory.models.stock_movement_item import StockMovementItem
+        from django.db.models import Count
+
+        # Get stock movements related to this production order
+        stock_movements = StockMovement.objects.filter(
+            reference_type=StockMovement.ReferenceType.PRODUCTION,
+            reference_id=production_order.id
+        ).annotate(
+            items_count=Count('movement_items')
+        ).prefetch_related(
+            'movement_items__item_sku'
+        ).order_by('-created_at')
+
+        context['stock_movements'] = stock_movements
+
+        # --- WIP Stock Movements ---
+        from production.models.wip_stock_movement import WIPStockMovement
+        
+        wip_movements = WIPStockMovement.objects.filter(
+            production_order=production_order
+        ).select_related(
+            'item_sku'
+        ).order_by('-created_at')
+        
+        context['wip_movements'] = wip_movements
+
+        # --- Production Processes ---
+        from production.models.production_process import ProductionProcess
+        
+        production_processes = ProductionProcess.objects.filter(
+            production_order=production_order
+        ).order_by('-created_at')
+        
+        context['production_processes'] = production_processes
+
         return context
+
+
 
 
 class ProductionOrderUpdateView(PermissionRequiredMixin, LoginRequiredMixin, UpdateView):
@@ -213,7 +253,25 @@ class ProductionOrderCreatedStatusView(PermissionRequiredMixin, LoginRequiredMix
 
         try:
             order.created_production_order(self.request.user)  # Use the new method to set status to CREATED
+            messages.success(self.request, f"Production Order #{order.id} status changed to CREATED and materials reserved successfully.")
         except Exception as e:
             messages.error(self.request, f"Error occurred while changing Production Order #{order.id}: {str(e)}")
-            return reverse('production:production-order-detail', args=[order.id])
+        
+        return reverse('production:production-order-detail', args=[order.id])
+
+
+class ProductionOrderDraftStatusView(PermissionRequiredMixin, LoginRequiredMixin, RedirectView):
+    permission_required = 'production.change_productionorder'
+
+    def get_redirect_url(self, *args, **kwargs):
+        pk = kwargs.get('pk')
+        order = get_object_or_404(ProductionOrder, pk=pk)
+
+        try:
+            order.draft_production_order(self.request.user)  # Use the new method to set status to DRAFT
+            messages.success(self.request, f"Production Order #{order.id} status changed to DRAFT and material reservations cancelled successfully.")
+        except Exception as e:
+            messages.error(self.request, f"Error occurred while changing Production Order #{order.id}: {str(e)}")
+        
+        return reverse('production:production-order-detail', args=[order.id])
     

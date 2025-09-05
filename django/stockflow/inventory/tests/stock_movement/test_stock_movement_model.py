@@ -49,7 +49,7 @@ class StockMovementModelTest(TestCase):
     def test_create_draft_stock_movement_success(self):
         """Test creating a draft stock movement successfully"""
         movement = StockMovement.objects.create(
-            reference_type=StockMovement.ReferenceType.PACKING_LIST,
+            reference_type=StockMovement.ReferenceType.PRODUCTION,
             reference_id=123,
             note='Receive goods',
             warehouse=self.warehouse,
@@ -59,7 +59,7 @@ class StockMovementModelTest(TestCase):
         
         # Check default values and assignments
         self.assertEqual(movement.status, StockMovement.Status.DRAFT)
-        self.assertEqual(movement.reference_type, StockMovement.ReferenceType.PACKING_LIST)
+        self.assertEqual(movement.reference_type, StockMovement.ReferenceType.PRODUCTION)
         self.assertEqual(movement.reference_id, 123)
         self.assertEqual(movement.note, 'Receive goods')
         self.assertEqual(movement.warehouse, self.warehouse)
@@ -295,7 +295,7 @@ class StockMovementModelTest(TestCase):
         # Try to create second draft movement for same warehouse
         with self.assertRaises(IntegrityError):
             StockMovement.objects.create(
-                reference_type=StockMovement.ReferenceType.PACKING_LIST,
+                reference_type=StockMovement.ReferenceType.PRODUCTION,
                 warehouse=self.warehouse,
                 created_by=self.user,
                 updated_by=self.user
@@ -346,7 +346,7 @@ class StockMovementModelTest(TestCase):
         
         # Create and confirm second movement - use IN instead of OUT to avoid stock issues
         movement2 = StockMovement.objects.create(
-            reference_type=StockMovement.ReferenceType.PACKING_LIST,
+            reference_type=StockMovement.ReferenceType.PRODUCTION,
             warehouse=self.warehouse,
             created_by=self.user,
             updated_by=self.user
@@ -401,15 +401,15 @@ class StockMovementModelTest(TestCase):
         """Test that reference_id is required for non-NONE reference types"""
         with self.assertRaises(ValidationError) as context:
             movement = StockMovement(
-                reference_type=StockMovement.ReferenceType.INVOICE,
-                reference_id=None,  # Should be required for INVOICE type
+                reference_type=StockMovement.ReferenceType.PRODUCTION,
+                reference_id=None,  # Should be required for PRODUCTION type
                 warehouse=self.warehouse,
                 created_by=self.user,
                 updated_by=self.user
             )
             movement.full_clean()
         
-        self.assertIn('Reference ID is required when reference type is INVOICE', str(context.exception))
+        self.assertIn('Reference ID is required when reference type is PRODUCTION', str(context.exception))
 
     def test_reference_display_methods(self):
         """Test reference display methods"""
@@ -427,13 +427,13 @@ class StockMovementModelTest(TestCase):
         
         # Test with reference type and ID
         movement_with_ref = StockMovement.objects.create(
-            reference_type=StockMovement.ReferenceType.INVOICE,
+            reference_type=StockMovement.ReferenceType.PRODUCTION,
             reference_id=12345,
             warehouse=self.warehouse,
             created_by=self.user,
             updated_by=self.user
         )
-        self.assertEqual(movement_with_ref.get_reference_display(), "Invoice #12345")
+        self.assertEqual(movement_with_ref.get_reference_display(), "Production #12345")
 
     def test_business_logic_methods(self):
         """Test business logic helper methods"""
@@ -644,9 +644,7 @@ class StockMovementModelTest(TestCase):
         """Test different reference types work correctly"""
         reference_types = [
             (StockMovement.ReferenceType.ADJUST, None),
-            (StockMovement.ReferenceType.PACKING_LIST, 12345),
             (StockMovement.ReferenceType.PRODUCTION, 67890),
-            (StockMovement.ReferenceType.INVOICE, 11111),
         ]
         
         for ref_type, ref_id in reference_types:

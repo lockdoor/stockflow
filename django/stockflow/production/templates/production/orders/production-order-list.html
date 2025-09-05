@@ -42,9 +42,9 @@
                         {% if order.status == 'DRAFT' %}
                             <span class="badge bg-warning"><i class="bi bi-clock me-1"></i>Draft</span>
                         {% elif order.status == 'CREATED' %}
-                            <span class="badge bg-info"><i class="bi bi-check me-1"></i>Created</span>
-                        {% elif order.status == 'PROCESSING' %}
-                            <span class="badge bg-primary"><i class="bi bi-arrow-repeat me-1"></i>Processing</span>
+                            <span class="badge bg-created"><i class="bi bi-check me-1"></i>Created</span>
+                        {% elif order.status == 'IN_PROGRESS' %}
+                            <span class="badge bg-in_progress"><i class="bi bi-arrow-repeat me-1"></i>In Progress</span>
                         {% elif order.status == 'COMPLETED' %}
                             <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Completed</span>
                         {% elif order.status == 'CANCELLED' %}

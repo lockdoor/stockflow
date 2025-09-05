@@ -34,9 +34,9 @@
                             <span class="badge bg-info fs-6">
                                 <i class="bi bi-check me-1"></i>Created
                             </span>
-                        {% elif production_order.status == 'PROCESSING' %}
+                        {% elif production_order.status == 'IN_PROGRESS' %}
                             <span class="badge bg-primary fs-6">
-                                <i class="bi bi-arrow-repeat me-1"></i>Processing
+                                <i class="bi bi-arrow-repeat me-1"></i>In Progress
                             </span>
                         {% elif production_order.status == 'COMPLETED' %}
                             <span class="badge bg-success fs-6">
@@ -119,6 +119,16 @@
                 </div>
             </div>
         </div>
+
+        <!-- Stock Movements Section -->
+        {% if production_order.status != 'DRAFT' %}
+        {% include "production/orders/partials/stock-movement.html" %}
+        {% endif %}
+        
+        <!-- Production Processes Section -->
+        {% if production_order.status == 'CREATED' or production_order.status == 'IN_PROGRESS' or production_order.status == 'COMPLETED' %}
+        {% include "production/orders/partials/production-process-card.html" %}
+        {% endif %}
     </div>
 
     <!-- Sidebar -->
@@ -149,13 +159,22 @@
                     <a href="{% url 'production:production-order-add-bom' production_order.id %}?prev={{ request.path }}" class="btn btn-outline-success">
                         <i class="bi bi-plus-circle me-1"></i>Manage BOM Item
                     </a>
-                    {% endif %}
-
-                    {% if production_order.status == 'CREATED' %}
+                    {% elif production_order.status == 'CREATED' %}
+                    <a href="{% url 'inventory:stock-movement-create' %}?reference_type=PRODUCTION&reference_id={{ production_order.id }}&warehouse={{ production_order.warehouse.id }}&prev={{ request.path }}" class="btn btn-outline-warning">
+                        <i class="bi bi-box-arrow-in-down me-1"></i>Withdraw Material
+                    </a>
+                    <!-- Form สำหรับเปลี่ยนสถานะเป็น DRAFT -->
+                    <form method="post" action="{% url 'production:production-order-draft-status' production_order.id %}" class="d-grid gap-2 mb-2">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-secondary"
+                                onclick="return confirm('Are you sure you want to change this production order back to DRAFT? This will cancel all material reservations.');">
+                            <i class="bi bi-arrow-counterclockwise me-1"></i>Revert to Draft
+                        </button>
+                    </form>
                     <form method="post" action="{#% url 'production:production-order-status-completed' production_order.id %#}" class="d-grid gap-2 mb-2">
                         {% csrf_token %}
                         <button type="submit" class="btn btn-danger">
-                            <i class="bi bi-check2-circle me-1"></i>Cancel
+                            <i class="bi bi-x-circle me-1"></i>Cancel Order
                         </button>
                     </form>
                     {% endif %}
@@ -163,6 +182,71 @@
             </div>
         </div>
         
+        <!-- WIP Stock Card -->
+        {% if production_order.status == 'IN_PROGRESS' or production_order.status == 'COMPLETED' %}
+        <div class="card shadow-sm mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-boxes me-1"></i>Work in Progress
+                </h6>
+                <a href="{% url 'production:wip-stock-list' production_order.id %}" class="btn btn-sm btn-outline-primary">
+                    View All
+                </a>
+            </div>
+            <div class="card-body">
+                {% if wip_movements %}
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Item</th>
+                                    <th>Type</th>
+                                    <th class="text-end">Qty</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for wip in wip_movements|slice:":10" %}
+                                <tr>
+                                    <td>
+                                        <div class="fw-medium">{{ wip.item_sku.name }}</div>
+                                        <small class="text-muted">{{ wip.item_sku.sku_code }}</small>
+                                    </td>
+                                    <td>
+                                        <span class="badge badge-sm 
+                                            {% if wip.movement_type == 'IN' %}bg-success
+                                            {% elif wip.movement_type == 'OUT' %}bg-warning
+                                            {% elif wip.movement_type == 'RETURN' %}bg-info
+                                            {% elif wip.movement_type == 'LOSS' %}bg-danger
+                                            {% elif wip.movement_type == 'ADJUST' %}bg-secondary
+                                            {% endif %}">
+                                            {{ wip.get_movement_type_display }}
+                                        </span>
+                                    </td>
+                                    <td class="text-end">
+                                        <span class="fw-medium">{{ wip.quantity|floatformat:0 }}</span>
+                                        <small class="text-muted">{{ wip.item_sku.unit }}</small>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% if wip_movements|length > 10 %}
+                    <div class="text-center mt-2">
+                        <small class="text-muted">
+                            Showing 10 of {{ wip_movements|length }} movements
+                        </small>
+                    </div>
+                    {% endif %}
+                {% else %}
+                    <div class="text-center text-muted py-3">
+                        <i class="bi bi-inbox fs-4 d-block mb-2"></i>
+                        <span>No WIP movements yet</span>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
 
         <!-- Info Card -->
         <div class="card shadow-sm">

@@ -6,6 +6,7 @@ from . import warehouse_factory
 from tests.factories.user import AdminFactory
 
 class StockMovementFactory(factory.django.DjangoModelFactory):
+    """Factory for creating StockMovement instances."""
     
     class Meta:
         model = StockMovement

@@ -9,12 +9,19 @@ from production.views.production_order_views import (
     ProductionOrderUpdateView,
     ProductionOrderDeleteView,
     ProductionOrderListView,
-    ProductionOrderCreatedStatusView
+    ProductionOrderCreatedStatusView,
+    ProductionOrderDraftStatusView,
+)
+from production.views.wip_views import (
+    WIPStockListView
 )
 from production.views.production_order_bom_views import (
     ProductionOrderBOMCreateView,
     ProductionOrderBOMUpdateView,
     ProductionOrderBOMDeleteView,
+)
+from production.views.production_process_unified import (
+    ProductionProcessUnifiedView,
 )
 app_name = 'production'
 
@@ -29,6 +36,8 @@ urlpatterns = [
     path('production-order/<int:pk>/delete/', ProductionOrderDeleteView.as_view(), name='production-order-delete'),
     path('production-order/', ProductionOrderListView.as_view(), name='production-order-list'),
     path('production-order/<int:pk>/created-status/', ProductionOrderCreatedStatusView.as_view(), name='production-order-created-status'),
+    path('production-order/<int:pk>/draft-status/', ProductionOrderDraftStatusView.as_view(), name='production-order-draft-status'),
+    path('production-order/<int:pk>/wip-stock/', WIPStockListView.as_view(), name='wip-stock-list'),
 
     # production order bom
     path('production-order/<int:production_order_id>/add-bom/', 
@@ -40,4 +49,12 @@ urlpatterns = [
     path('production-order/<int:production_order_id>/bom/<int:pk>/delete/',
         ProductionOrderBOMDeleteView.as_view(),
         name='production-order-delete-bom'),
+    
+    # production process unified
+    path('production-order/<int:production_order_id>/process/unified/create/',
+        ProductionProcessUnifiedView.as_view(),
+        name='production-process-unified-create'),
+    path('production-order/<int:production_order_id>/process/<int:process_id>/unified/edit/',
+        ProductionProcessUnifiedView.as_view(),
+        name='production-process-unified-edit'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

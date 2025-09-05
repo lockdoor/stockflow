@@ -1,5 +1,6 @@
 from django.views.generic import CreateView, ListView, View, UpdateView, DetailView
 from ..mixins.warehouse import WarehousePermissionMixin
+from common.mixins.redirect import StockMovementRedirectMixin
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import render, get_object_or_404, Http404, redirect, reverse
 from django.http import HttpResponse
@@ -26,45 +27,18 @@ class StockMovementListView(LoginRequiredMixin, ListView):
         # No specific warehouse context needed
         return context
 
-class StockMovementCreateView(WarehousePermissionMixin, LoginRequiredMixin, CreateView):
+class StockMovementCreateView(StockMovementRedirectMixin, WarehousePermissionMixin, LoginRequiredMixin, CreateView):
     model = StockMovement
     form_class = StockMovementForm
     template_name = 'inventory/stock-movement/stock-movement-form.html'
     permission_required_base = 'add_stockmovement'
     
-    def get_success_redirect_url(self, stock_movement):
-        """
-        Determine where to redirect after successful creation.
-        Priority:
-        1. 'next' parameter from request (POST takes priority over GET)
-        2. stock movement detail page (default)
-        """
-        # Check for next parameter in request (POST has priority)
-        next_url = self.request.POST.get('next') or self.request.GET.get('next')
-        if next_url:
-            return next_url
-            
-        # Default to stock movement detail page
-        return reverse('inventory:stock-movement-detail', kwargs={'pk': stock_movement.pk})
-    
-    def get_prev_redirect_url(self):
-        """
-        Determine where to redirect when user cancels.
-        Priority:
-        1. 'prev' parameter from request
-        2. stock movement list (default)
-        """
-        # Check for prev parameter in request
-        prev_url = self.request.GET.get('prev')
-        if prev_url:
-            return prev_url
-            
-        # Default to stock movement list
-        try:
-            return reverse('inventory:stock-movement-list')
-        except:
-            # Ultimate fallback
-            return '/inventory/stockmovement/'
+    def get_initial(self):
+        initial = super().get_initial()
+        initial['reference_type'] = self.request.GET.get('reference_type')
+        initial['reference_id'] = self.request.GET.get('reference_id')
+        initial['warehouse'] = self.request.GET.get('warehouse')
+        return initial
     
     def form_valid(self, form):
         try:
@@ -73,9 +47,8 @@ class StockMovementCreateView(WarehousePermissionMixin, LoginRequiredMixin, Crea
             stock_movement.updated_by = self.request.user
             stock_movement.save()
             
-            # Get success redirect URL
-            success_url = self.get_success_redirect_url(stock_movement)
-            return redirect(success_url)
+            # Use mixin's redirect method
+            return self.redirect_success(stock_movement)
         except ValueError as e:
             form.add_error(None, str(e))
             return self.form_invalid(form)
@@ -85,47 +58,28 @@ class StockMovementCreateView(WarehousePermissionMixin, LoginRequiredMixin, Crea
         # Add next URL to context for template usage
         context['next_url'] = self.request.GET.get('next', '')
         context['prev_url'] = self.get_prev_redirect_url()
+        if self.request.GET.get('reference_type'):
+            context['reference_type'] = self.request.GET.get('reference_type', '')
+            context['reference_id'] = self.request.GET.get('reference_id', '')
+        warehouse_id = self.request.GET.get('warehouse', '')
+        if warehouse_id:
+            warehouse = Warehouse.objects.get(pk=warehouse_id)
+            context['warehouse'] = warehouse
         return context
 
-class StockMovementUpdateView(WarehousePermissionMixin, LoginRequiredMixin, UpdateView):
+class StockMovementUpdateView(StockMovementRedirectMixin, WarehousePermissionMixin, LoginRequiredMixin, UpdateView):
     model = StockMovement
     form_class = StockMovementForm
     template_name = 'inventory/stock-movement/stock-movement-form.html'
     permission_required_base = 'change_stockmovement'
     
-    def get_success_redirect_url(self, stock_movement):
-        """
-        Determine where to redirect after successful update.
-        Priority:
-        1. 'next' parameter from request (POST takes priority over GET)
-        2. stock movement detail page (default)
-        """
-        # Check for next parameter in request (POST has priority)
-        next_url = self.request.POST.get('next') or self.request.GET.get('next')
-        if next_url:
-            return next_url
-            
-        # Default to stock movement detail page
-        return reverse('inventory:stock-movement-detail', kwargs={'pk': stock_movement.pk})
-    
-    def get_prev_redirect_url(self):
-        """
-        Determine where to redirect when user cancels.
-        Priority:
-        1. 'prev' parameter from request
-        2. stock movement detail page (default for update)
-        """
-        # Check for prev parameter in request
-        prev_url = self.request.GET.get('prev')
-        if prev_url:
-            return prev_url
-            
-        # Default to stock movement detail page for update
-        try:
-            return reverse('inventory:stock-movement-detail', kwargs={'pk': self.object.pk})
-        except:
-            # Fallback to stock movement list
-            return reverse('inventory:stock-movement-list')
+    def get_initial(self):
+        initial = super().get_initial()
+        sm = self.get_object()
+        initial['reference_type'] = sm.reference_type
+        initial['reference_id'] = sm.reference_id
+        initial['warehouse'] = sm.warehouse
+        return initial
 
     def form_valid(self, form):            
         try:
@@ -133,9 +87,8 @@ class StockMovementUpdateView(WarehousePermissionMixin, LoginRequiredMixin, Upda
             stock_movement.updated_by = self.request.user
             stock_movement.save()
             
-            # Get success redirect URL
-            success_url = self.get_success_redirect_url(stock_movement)
-            return redirect(success_url)
+            # Use mixin's redirect method
+            return self.redirect_success(stock_movement)
         except ValueError as e:
             form.add_error(None, str(e))
             return self.form_invalid(form)
@@ -148,7 +101,10 @@ class StockMovementUpdateView(WarehousePermissionMixin, LoginRequiredMixin, Upda
         context = super().get_context_data(**kwargs)
         # Add next URL to context for template usage
         context['next_url'] = self.request.GET.get('next', '')
-        context['prev_url'] = self.get_prev_redirect_url()
+        context['prev_url'] = self.get_prev_redirect_url(self.object)
+        context['reference_type'] = self.object.reference_type
+        context['reference_id'] = self.object.reference_id
+        context['warehouse'] = self.object.warehouse
         return context
 
 class StockMovementDetailView(LoginRequiredMixin, DetailView):
@@ -162,29 +118,18 @@ class StockMovementDetailView(LoginRequiredMixin, DetailView):
         context['movement_items'] = self.object.movement_items.select_related(
             'item_sku', 'item_sku__category'
         ).order_by('created_at')
+        if self.object.reference_type == self.__class__.model.ReferenceType.PRODUCTION:
+            context['management_items_url'] = reverse(
+                'inventory:movement-production-create',
+                kwargs={'stock_movement_id': self.object.pk})
+        else:
+            context['management_items_url'] = reverse(
+                'inventory:movement-create', 
+                kwargs={'stock_movement_id': self.object.pk})
         return context
 
-class StockMovementDeleteView(WarehousePermissionMixin, LoginRequiredMixin, View):
+class StockMovementDeleteView(StockMovementRedirectMixin, WarehousePermissionMixin, LoginRequiredMixin, View):
     permission_required_base = 'delete_stockmovement'
-
-    def get_success_redirect_url(self, stock_movement):
-        """
-        Determine where to redirect after successful deletion.
-        Priority:
-        1. 'next' parameter from request
-        2. general stock movement list (fallback)
-        """
-        # Check for next parameter in request
-        next_url = self.request.GET.get('next') or self.request.POST.get('next')
-        if next_url:
-            return next_url
-            
-        # Fallback to general stock movement list
-        try:
-            return reverse('inventory:stock-movement-list')
-        except:
-            # Ultimate fallback
-            return '/inventory/stockmovement/'
 
     def delete(self, request, pk):
         """
@@ -201,7 +146,7 @@ class StockMovementDeleteView(WarehousePermissionMixin, LoginRequiredMixin, View
                 messages.error(request, "Cannot delete confirmed movement.")
                 return redirect('inventory:stock-movement-detail', pk=pk)
             
-            # Get redirect URL before deletion
+            # Get redirect URL before deletion (use mixin)
             success_url = self.get_success_redirect_url(stock_movement)
             
             # Delete the stock movement
@@ -222,24 +167,9 @@ class StockMovementDeleteView(WarehousePermissionMixin, LoginRequiredMixin, View
         """Handle POST request by delegating to delete method."""
         return self.delete(request, pk)
    
-class StockMovementConfirmView(WarehousePermissionMixin, LoginRequiredMixin, View):
+class StockMovementConfirmView(StockMovementRedirectMixin, WarehousePermissionMixin, LoginRequiredMixin, View):
     permission_required_base = 'change_stockmovement'
     http_method_names = ['post']
-
-    def get_prev_redirect_url(self, stock_movement):
-        """
-        Determine where to redirect when there's an error.
-        Priority:
-        1. 'prev' parameter from request
-        2. stock movement detail page (default)
-        """
-        # Check for prev parameter in request
-        prev_url = self.request.GET.get('prev') or self.request.POST.get('prev')
-        if prev_url:
-            return prev_url
-            
-        # Default to stock movement detail page
-        return reverse('inventory:stock-movement-detail', kwargs={'pk': stock_movement.pk})
 
     def post(self, request, pk):
         # Debug breakpoint - uncomment when needed
@@ -252,7 +182,7 @@ class StockMovementConfirmView(WarehousePermissionMixin, LoginRequiredMixin, Vie
             if stock_movement.status == StockMovement.Status.COMPLETED:
                 from django.contrib import messages
                 messages.warning(request, "Stock movement is already completed.")
-                return redirect(self.get_prev_redirect_url(stock_movement))
+                return self.redirect_prev(stock_movement)
             
             # Use the model's confirm method which handles immutability correctly
             stock_movement.confirm(request.user)
@@ -264,15 +194,15 @@ class StockMovementConfirmView(WarehousePermissionMixin, LoginRequiredMixin, Vie
         except PermissionDenied as e:
             from django.contrib import messages
             messages.error(request, str(e))
-            return redirect(self.get_prev_redirect_url(stock_movement))
+            return self.redirect_prev(stock_movement)
         except ValidationError as e:
             from django.contrib import messages
             messages.error(request, f"Validation error: {str(e)}")
-            return redirect(self.get_prev_redirect_url(stock_movement))
+            return self.redirect_prev(stock_movement)
         except Http404:
             # Re-raise Http404 to let Django handle it properly
             raise
         except Exception as e:
             from django.contrib import messages
             messages.error(request, f"Error confirming stock movement: {str(e)}")
-            return redirect(self.get_prev_redirect_url(stock_movement))
+            return self.redirect_prev(stock_movement)

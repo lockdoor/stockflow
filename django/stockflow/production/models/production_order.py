@@ -59,7 +59,7 @@ class ProductionOrder(AuditableMixin, ProductionStatusMixin, ValidatableMixin, m
     
     def __repr__(self):
         text = self.__str__()
-        products = self.get_all_products()
+        products = self.boms.all()
         for product in products:
             text += f"\n  - {product}"
         return text
@@ -83,10 +83,6 @@ class ProductionOrder(AuditableMixin, ProductionStatusMixin, ValidatableMixin, m
         obj = self.__class__.objects.filter(id=self.pk).annotate(num_boms=Count("boms")).first()
         return obj.num_boms
     
-    def get_all_products(self):
-        from .production_order_bom import ProductionOrderBOM          
-        return ProductionOrderBOM.objects.filter(production_order=self).select_related('item_sku')
-    
     def created_production_order(self, user):
         """
         Change status from DRAFT to CREATED. And reserve material.
@@ -100,7 +96,8 @@ class ProductionOrder(AuditableMixin, ProductionStatusMixin, ValidatableMixin, m
             
             # Reserve material
             from inventory.models.material_reservation import MaterialReservation
-            products = self.get_all_products()
+            # products = self.get_all_products()
+            products = self.boms.all()
             if products.count() == 0:
                 raise ValueError("Cannot create production order. No BOM items found.")
             for product in products:
@@ -138,3 +135,9 @@ class ProductionOrder(AuditableMixin, ProductionStatusMixin, ValidatableMixin, m
             reference_type=MaterialReservation.ReferenceType.PRODUCTION,
             reference_id=self.id
         )
+
+    def get_bom_material_items(self):
+        """
+        Get all material items required for this production order based on BOM
+        """
+        return self.boms.all()

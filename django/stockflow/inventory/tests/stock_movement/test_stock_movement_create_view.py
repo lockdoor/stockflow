@@ -367,9 +367,8 @@ class StockMovementCreateViewTest(TestCase):
         
         reference_types = [
             (StockMovement.ReferenceType.ADJUST, 123),
-            (StockMovement.ReferenceType.PACKING_LIST, 456),
             (StockMovement.ReferenceType.PRODUCTION, 789),
-            (StockMovement.ReferenceType.INVOICE, 101112),
+            (StockMovement.ReferenceType.NONE, None),
         ]
         
         for i, (ref_type, ref_id) in enumerate(reference_types):
@@ -387,16 +386,20 @@ class StockMovementCreateViewTest(TestCase):
             data = {
                 'warehouse': warehouse.id,
                 'reference_type': ref_type,
-                'reference_id': ref_id,
                 'note': f'Test {ref_type} movement',
             }
+            if ref_id is not None:
+                data['reference_id'] = ref_id
             
             response = self.client.post(self.url, data)
             self.assertEqual(response.status_code, 302)
             
             movement = StockMovement.objects.latest('created_at')
             self.assertEqual(movement.reference_type, ref_type)
-            self.assertEqual(movement.reference_id, ref_id)
+            if ref_id is not None:
+                self.assertEqual(movement.reference_id, ref_id)
+            else:
+                self.assertIsNone(movement.reference_id)
 
     def test_note_field_whitespace_handling(self):
         """Test that note field handles whitespace correctly"""

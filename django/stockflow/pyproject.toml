@@ -13,5 +13,6 @@ testpaths = [
     "catalog/tests",
     "inventory/tests",
     "production/tests",
+    "tests/mixin",
     "common"
 ]

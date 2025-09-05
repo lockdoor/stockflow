@@ -5,47 +5,56 @@ This pattern allows forms to redirect to different destinations after successful
 - **`next`**: For success redirects (after form submission)
 - **`prev`**: For cancel redirects (when user cancels form)
 
-## Implementation
+## Mixin-Based Implementation
 
-### Views Pattern
+### RedirectMixin Architecture
+The system now uses a mixin-based approach with `RedirectMixin` and specialized mixins like `StockMovementRedirectMixin`.
+
 ```python
-def get_success_redirect_url(self, instance):
-    """Determine where to redirect after successful form submission."""
-    # Check for next parameter in request (POST takes priority over GET)
-    next_url = self.request.POST.get('next') or self.request.GET.get('next')
-    if next_url:
-        return next_url
-    # Default redirect
-    return reverse('app:detail-view', kwargs={'pk': instance.pk})
+from common.mixins.redirect import RedirectMixin, StockMovementRedirectMixin
 
-def get_prev_redirect_url(self):
-    """Determine where to redirect when user cancels."""
-    # Check for prev parameter in request
-    prev_url = self.request.GET.get('prev')
-    if prev_url:
-        return prev_url
-    # Default redirect
-    return reverse('app:list-view')
-
-def form_valid(self, form):
-    # Save the form
-    instance = form.save(commit=False)
-    instance.updated_by = self.request.user
-    instance.save()
+class MyCreateView(RedirectMixin, CreateView):
+    """Generic view using base RedirectMixin."""
     
-    # Add success message
-    messages.success(self.request, f'{model_name} was updated successfully.')
+    def form_valid(self, form):
+        instance = form.save(commit=False)
+        instance.created_by = self.request.user
+        instance.save()
+        
+        # Use mixin's redirect method
+        return self.redirect_success(instance)
     
-    # Use success redirect method
-    success_url = self.get_success_redirect_url(instance)
-    return redirect(success_url)
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['next_url'] = self.request.GET.get('next', '')
+        context['prev_url'] = self.get_prev_redirect_url()
+        return context
 
-def get_context_data(self, **kwargs):
-    context = super().get_context_data(**kwargs)
-    # Pass URLs to template
-    context['next_url'] = self.request.GET.get('next', '')
-    context['prev_url'] = self.get_prev_redirect_url()
-    return context
+class StockMovementCreateView(StockMovementRedirectMixin, CreateView):
+    """Specialized view using StockMovementRedirectMixin."""
+    
+    def form_valid(self, form):
+        stock_movement = form.save(commit=False)
+        stock_movement.created_by = self.request.user
+        stock_movement.save()
+        
+        # Use mixin's redirect method - handles all redirect logic
+        return self.redirect_success(stock_movement)
+```
+
+### Mixin Methods Available
+```python
+# Core redirect methods
+self.get_success_redirect_url(obj=None)  # Determines success redirect
+self.get_prev_redirect_url(obj=None)     # Determines cancel redirect
+
+# Helper methods for easy redirection
+self.redirect_success(obj=None)          # Returns HttpResponseRedirect for success
+self.redirect_prev(obj=None)             # Returns HttpResponseRedirect for cancel
+
+# Override these for custom defaults
+self.get_default_success_url(obj=None)   # Default success URL
+self.get_default_prev_url(obj=None)      # Default cancel URL
 ```
 
 ### Template Pattern
@@ -96,44 +105,30 @@ def get_context_data(self, **kwargs):
 
 ## Usage Examples
 
-### Category Management
+### Stock Movement Management (Current Implementation)
 
-#### CategoryUpdateView
+#### StockMovementCreateView
 ```python
-class CategoryUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
-    model = Category
-    form_class = CategoryForm
-    template_name = 'catalog/category/category-form.html'
-    permission_required = 'catalog.change_category'
+from common.mixins.redirect import StockMovementRedirectMixin
 
-    def get_success_redirect_url(self, category):
-        """Determine where to redirect after successful update."""
-        # Check for next parameter in request (POST takes priority over GET)
-        next_url = self.request.POST.get('next') or self.request.GET.get('next')
-        if next_url:
-            return next_url
-        # Default to category detail page
-        return reverse('catalog:category-detail', kwargs={'pk': category.pk})
-    
-    def get_prev_redirect_url(self):
-        """Determine where to redirect when user cancels."""
-        # Check for prev parameter in request
-        prev_url = self.request.GET.get('prev')
-        if prev_url:
-            return prev_url
-        # Default to category detail page for update
-        return reverse('catalog:category-detail', kwargs={'pk': self.object.pk})
+class StockMovementCreateView(StockMovementRedirectMixin, WarehousePermissionMixin, LoginRequiredMixin, CreateView):
+    model = StockMovement
+    form_class = StockMovementForm
+    template_name = 'inventory/stock-movement/stock-movement-form.html'
+    permission_required_base = 'add_stockmovement'
 
     def form_valid(self, form):
-        category = form.save(commit=False)
-        category.updated_by = self.request.user
-        category.save()
-        
-        messages.success(self.request, f'Category "{category.name}" was updated successfully.')
-        
-        # Use success redirect method
-        success_url = self.get_success_redirect_url(category)
-        return redirect(success_url)
+        try:
+            stock_movement = form.save(commit=False)
+            stock_movement.created_by = self.request.user
+            stock_movement.updated_by = self.request.user
+            stock_movement.save()
+            
+            # Use mixin's redirect method
+            return self.redirect_success(stock_movement)
+        except ValueError as e:
+            form.add_error(None, str(e))
+            return self.form_invalid(form)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -142,36 +137,84 @@ class CategoryUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView
         return context
 ```
 
-#### Category Detail Template
-```html
-<!-- Edit button with next and prev parameters -->
-<a href="{% url 'catalog:category-edit' category.pk %}?next={{ request.get_full_path|urlencode }}&prev={{ request.get_full_path|urlencode }}" class="btn btn-primary">
-    <i class="bi bi-pencil-square"></i> Edit Category
-</a>
+#### Custom Model Example (Using Base RedirectMixin)
+```python
+from common.mixins.redirect import RedirectMixin
+
+class CategoryUpdateView(RedirectMixin, LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+    model = Category
+    form_class = CategoryForm
+    template_name = 'catalog/category/category-form.html'
+    permission_required = 'catalog.change_category'
+
+    def form_valid(self, form):
+        category = form.save(commit=False)
+        category.updated_by = self.request.user
+        category.save()
+        
+        messages.success(self.request, f'Category "{category.name}" was updated successfully.')
+        
+        # Use mixin's redirect method
+        return self.redirect_success(category)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['next_url'] = self.request.GET.get('next', '')
+        context['prev_url'] = self.get_prev_redirect_url()
+        return context
+    
+    # Override defaults if needed
+    def get_default_success_url(self, category=None):
+        if category:
+            return reverse('catalog:category-detail', kwargs={'pk': category.pk})
+        return reverse('catalog:category-list')
 ```
 
-#### Category Form Template
-```html
-<form id="category-form" method="post">
-    {% csrf_token %}
-    
-    {% if next_url %}
-        <input type="hidden" name="next" value="{{ next_url }}">
-    {% endif %}
-    
-    <!-- Form fields -->
-</form>
+## Creating Custom Redirect Mixins
 
-{% block header_actions %}
-<div class="btn-group" role="group">
-    <button type="submit" form="category-form" class="btn btn-primary">
-        <i class="bi bi-check-lg"></i> Save Category
-    </button>
-    <a href="{{ prev_url }}" class="btn btn-secondary">
-        <i class="bi bi-arrow-left"></i> Cancel
-    </a>
-</div>
-{% endblock %}
+### Specialized Mixins
+You can create specialized mixins for different model types:
+
+```python
+# In common/mixins/redirect.py
+class CategoryRedirectMixin(RedirectMixin):
+    """Specialized redirect mixin for Category views."""
+    
+    def get_default_success_url(self, category=None):
+        if category:
+            return reverse('catalog:category-detail', kwargs={'pk': category.pk})
+        return reverse('catalog:category-list')
+    
+    def get_default_prev_url(self, category=None):
+        if category and hasattr(self, 'object') and self.object:
+            # For update operations, prefer detail page
+            return reverse('catalog:category-detail', kwargs={'pk': category.pk})
+        return reverse('catalog:category-list')
+
+class ProductionOrderRedirectMixin(RedirectMixin):
+    """Specialized redirect mixin for ProductionOrder views."""
+    
+    def get_default_success_url(self, production_order=None):
+        if production_order:
+            return reverse('production:production-order-detail', kwargs={'pk': production_order.pk})
+        return reverse('production:production-order-list')
+```
+
+### Usage in Views
+```python
+from common.mixins.redirect import CategoryRedirectMixin
+
+class CategoryCreateView(CategoryRedirectMixin, CreateView):
+    model = Category
+    form_class = CategoryForm
+    
+    def form_valid(self, form):
+        category = form.save(commit=False)
+        category.created_by = self.request.user
+        category.save()
+        
+        # Automatically uses CategoryRedirectMixin defaults
+        return self.redirect_success(category)
 ```
 
 ## User Experience Flow
@@ -201,28 +244,51 @@ class CategoryUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView
 ## Security Considerations
 
 ### URL Validation
+The `RedirectMixin` includes basic URL validation, but you can enhance it:
+
 ```python
 from django.urls import reverse
 from urllib.parse import urlparse
 
-def form_valid(self, form):
-    # ... save logic ...
+class SecureRedirectMixin(RedirectMixin):
+    """Enhanced redirect mixin with additional security."""
     
-    next_url = self.request.GET.get('next') or self.request.POST.get('next')
-    if next_url:
-        # Validate that next_url is from same domain
-        parsed = urlparse(next_url)
-        if not parsed.netloc or parsed.netloc == self.request.get_host():
-            return redirect(next_url)
-    
-    return redirect('app:default-view')
+    def get_success_redirect_url(self, obj=None):
+        next_url = self.request.POST.get('next') or self.request.GET.get('next')
+        if next_url:
+            # Validate that next_url is from same domain
+            parsed = urlparse(next_url)
+            if not parsed.netloc or parsed.netloc == self.request.get_host():
+                return next_url
+        
+        return self.get_default_success_url(obj)
 ```
 
 ### Best Practices
-1. **Always validate next URLs** - Prevent open redirects
-2. **Provide fallback URLs** - Default redirect if next is invalid
-3. **Use urlencode filter** - Properly encode URLs in templates
-4. **Check for both GET and POST** - Support both parameter methods
+1. **Use specialized mixins** - Create model-specific mixins for consistent behavior
+2. **Override defaults when needed** - Customize default URLs for specific use cases
+3. **Always validate URLs** - Prevent open redirects in custom implementations
+4. **Use helper methods** - Use `redirect_success()` and `redirect_prev()` for cleaner code
+5. **Test redirect flows** - Verify all success and cancel paths work correctly
+
+## Mixin Architecture Benefits
+
+### Code Reusability
+- Single implementation for all redirect logic
+- Consistent behavior across all views
+- Easy to extend and customize
+
+### Maintainability  
+- Centralized redirect logic in `/common/mixins/redirect.py`
+- No duplicate code across views
+- Easy to update behavior globally
+
+### Current Implementations
+The following views currently use redirect mixins:
+- `StockMovementCreateView` - Uses `StockMovementRedirectMixin`
+- `StockMovementUpdateView` - Uses `StockMovementRedirectMixin`  
+- `StockMovementDeleteView` - Uses `StockMovementRedirectMixin`
+- `StockMovementConfirmView` - Uses `StockMovementRedirectMixin`
 
 ## Common Use Cases
 
@@ -247,6 +313,6 @@ $('#form').on('submit', function(e) {
 
 ---
 
-**Last Updated**: August 8, 2025  
-**Version**: 2.0  
+**Last Updated**: September 2, 2025  
+**Version**: 3.0 - Mixin Architecture  
 **Maintainer**: StockFlow Development Team

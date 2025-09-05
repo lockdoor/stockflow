@@ -79,7 +79,13 @@
                                 <div class="mb-3">
                                     <label class="form-label text-muted">Reference ID</label>
                                     <div>
+                                        {% if stock_movement.reference_type == 'PRODUCTION' %}
+                                        <a href="{% url 'production:production-order-detail' stock_movement.reference_id %}">
+                                            <code class="fs-6">#{{ stock_movement.reference_id }}</code>
+                                        </a>
+                                        {% else %}
                                         <code class="fs-6">#{{ stock_movement.reference_id }}</code>
+                                        {% endif %}
                                     </div>
                                 </div>
                             </div>
@@ -114,7 +120,7 @@
                     </div>
                     <div class="card-body">
                         <div class="d-grid gap-2">
-                            <a href="{% url 'inventory:movement-create' stock_movement.id %}" class="btn btn-outline-secondary">
+                            <a href="{{ management_items_url }}" class="btn btn-outline-secondary">
                                 <i class="bi bi-box me-1"></i>Management Items
                             </a>
                             <a href="{% url 'inventory:stock-movement-update' stock_movement.id %}" class="btn btn-outline-primary">

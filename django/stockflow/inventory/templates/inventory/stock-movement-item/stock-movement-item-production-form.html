@@ -1,0 +1,564 @@
+{% extends "base-dashboard-header.html" %}
+{% load widget_tweaks %}
+{% load inventory_extras %}
+
+{% comment %}
+Required context:
+	- production_order: ProductionOrder instance
+	- stock_movement: StockMovement instance
+	- production_boms: List of ProductionOrderBOM objects
+	- bom_data: Dict of BOM structure with components
+	- material_reservations: Dict of MaterialReservation data
+	- stock_availability: Dict of available stock per item
+	- existing_items: Dict of existing movement items
+	- bom_data_json: JSON string of BOM data for JavaScript
+	- stock_data_json: JSON string of stock data for JavaScript
+	- reservations_data_json: JSON string of reservations for JavaScript
+{% endcomment %}
+
+{% block title %}Plan Material Withdrawal for Production - StockFlow{% endblock %}
+
+{% block title_text %}Material Withdrawal Planning{% endblock %}
+{% block subtitle_text %}Production Order #{{ production_order.id }} - {{ production_order.warehouse.name }} (Draft Mode){% endblock %}
+
+{% block header_actions %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.product-row {
+    background-color: #f8f9fa;
+    border-left: 4px solid #0d6efd;
+}
+.material-row {
+    background-color: #ffffff;
+}
+.calc-info {
+    font-size: 0.85em;
+    color: #6c757d;
+}
+.multiplier-input {
+    width: 80px;
+    display: inline-block;
+}
+.warning-stock {
+    background-color: #fff3cd;
+    border-color: #ffeaa7;
+}
+.danger-stock {
+    background-color: #f8d7da;
+    border-color: #f5c6cb;
+}
+.disabled-material {
+    opacity: 0.6;
+    background-color: #f8f9fa;
+}
+.disabled-material input {
+    background-color: #e9ecef;
+    cursor: not-allowed;
+}
+</style>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="card mb-3">
+	<div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+		<div>
+			<i class="bi bi-box-seam me-2"></i>Plan Material Withdrawal for Production
+		</div>
+		<div class="text-end">
+			<small>Status: <span class="badge bg-light text-dark">{{ production_order.get_status_display }}</span></small>
+		</div>
+	</div>
+	<div class="card-body">
+		<!-- Production Order Summary -->
+		<div class="alert alert-info mb-4">
+			<h6 class="alert-heading mb-2">
+				<i class="bi bi-info-circle me-1"></i>Production Summary
+			</h6>
+			<div class="row">
+				<div class="col-md-4">
+					<strong>Order ID:</strong> #{{ production_order.id }}<br>
+					<strong>Warehouse:</strong> {{ production_order.warehouse.name }}
+				</div>
+				<div class="col-md-4">
+					<strong>Status:</strong> {{ production_order.get_status_display }}<br>
+					<strong>Created:</strong> {{ production_order.created_at|date:"M d, Y" }}
+				</div>
+				<div class="col-md-4">
+					<strong>Products to Produce:</strong> {{ production_order.bom_count }} item(s)<br>
+					{% if production_order.note %}
+					<strong>Note:</strong> {{ production_order.note|truncatechars:50 }}
+					{% endif %}
+				</div>
+			</div>
+		</div>
+
+		<!-- Draft Status Information -->
+		<div class="alert alert-warning mb-4">
+			<h6 class="alert-heading mb-2">
+				<i class="bi bi-file-earmark-plus me-1"></i>Draft Withdrawal Plan
+			</h6>
+			<p class="mb-1">
+				This form creates <strong>draft movement items</strong> in your stock movement. 
+				Draft items can be reviewed, modified, and finalized later.
+			</p>
+			<small class="text-muted">
+				<i class="bi bi-lightbulb me-1"></i>
+				<strong>Tip:</strong> After saving, you can confirm the stock movement to apply the actual stock changes.
+			</small>
+		</div>
+
+		<form method="post" id="withdrawalForm">
+			{% csrf_token %}
+			
+			<table class="table table-bordered align-middle">
+				<thead class="table-light">
+					<tr>
+						<th style="width: 25%;">Product / Material</th>
+						<th style="width: 12%;" class="text-center">Product Qty</th>
+						<th style="width: 12%;" class="text-center">BOM Qty</th>
+						<th style="width: 12%;" class="text-center">Reserved Qty</th>
+						<th style="width: 12%;" class="text-center">Available Stock</th>
+						<th style="width: 15%;" class="text-center">Withdraw Qty</th>
+						<th style="width: 7%;" class="text-center">Unit</th>
+						<th style="width: 5%;" class="text-center">Note</th>
+					</tr>
+				</thead>
+				<tbody>
+					{% for prod_bom in production_boms %}
+						{% with product_sku=prod_bom.item_sku product_data=bom_data|dict_value:prod_bom.item_sku.sku_code %}
+						
+						<!-- Product Row -->
+						<tr class="product-row">
+							<td>
+								<div class="d-flex align-items-center">
+									<i class="bi bi-box text-primary me-2"></i>
+									<div>
+										<strong>{{ prod_bom.item_sku.sku_code }}</strong><br>
+										<span class="text-primary fw-medium">{{ prod_bom.item_sku.name }}</span>
+									</div>
+								</div>
+							</td>
+							<td class="text-center">
+								<input type="number" 
+									   class="form-control form-control-sm text-center product-qty-input multiplier-input" 
+									   data-product="{{ prod_bom.item_sku.sku_code }}"
+									   value="{{ prod_bom.planned_quantity|default:0 }}" 
+									   min="0" 
+									   max="{{ prod_bom.planned_quantity|default:100 }}">
+							</td>
+							<td class="text-center text-muted">-</td>
+							<td class="text-center text-muted">-</td>
+							<td class="text-center text-muted">-</td>
+							<td class="text-center text-muted">-</td>
+							<td class="text-center text-muted">{{ prod_bom.item_sku.unit }}</td>
+							<td class="text-center">
+								<i class="bi bi-info-circle text-muted" title="Product item"></i>
+							</td>
+						</tr>
+						
+						<!-- Material Components -->
+						{% if product_data %}
+						{% for component_sku_code, component_data in product_data.components.items %}
+							{% with reservation=material_reservations|dict_value:component_sku_code stock=stock_availability|dict_value:component_sku_code existing=existing_items|dict_value:component_sku_code %}
+							<tr class="material-row" data-product="{{ prod_bom.item_sku.sku_code }}" data-component="{{ component_sku_code }}">
+								<td class="ps-4">
+									<div class="d-flex align-items-center">
+										<i class="bi bi-arrow-return-right text-muted me-2"></i>
+										<div>
+											<strong>{{ component_sku_code }}</strong><br>
+											<span>{{ component_data.component_name }}</span>
+											<div class="calc-info">
+												BOM: <span class="bom-qty-base">{{ component_data.bom_quantity }}</span> per product × 
+												<span class="product-multiplier">{{ product_data.planned_quantity|default:0 }}</span> = 
+												<span class="calculated-qty">{{ component_data.bom_quantity|mul:product_data.planned_quantity|default:0 }}</span>
+											</div>
+										</div>
+									</div>
+								</td>
+								<td class="text-center text-muted">-</td>
+								<td class="text-center">
+									<span class="bom-qty-display">{{ component_data.bom_quantity|floatformat:2 }}</span>
+								</td>
+								<td class="text-center text-info">
+									<span class="reserved-qty">{{ reservation.reserved_quantity|default:0|floatformat:0 }}</span>
+								</td>
+								<td class="text-center {% if stock.available_quantity > 0 %}text-success{% elif stock.available_quantity == 0 %}text-danger{% else %}text-warning{% endif %}">
+									<span class="available-qty">{{ stock.available_quantity|default:0|floatformat:0 }}</span>
+								</td>
+								<td>
+									<input type="number" 
+										   name="withdraw_qty_{{ component_sku_code }}" 
+										   class="form-control form-control-sm text-center withdraw-qty-input" 
+										   data-component="{{ component_sku_code }}"
+										   value="{{ existing.quantity|default:0 }}" 
+										   min="0" 
+										   max="{{ stock.available_quantity|default:0 }}" 
+										   step="0.001">
+								</td>
+								<td class="text-center">{{ component_data.unit }}</td>
+								<td class="text-center">
+									<input type="text" 
+										   name="note_{{ component_sku_code }}" 
+										   class="form-control form-control-sm" 
+										   placeholder="Note"
+										   value="{{ existing.note|default:'' }}"
+										   style="width: 80px;">
+								</td>
+							</tr>
+							{% endwith %}
+						{% endfor %}
+						{% endif %}
+						
+						{% endwith %}
+					{% empty %}
+						<tr>
+							<td colspan="8" class="text-center text-muted py-4">
+								<i class="bi bi-info-circle me-2"></i>
+								No products found in this production order
+							</td>
+						</tr>
+					{% endfor %}
+				</tbody>
+			</table>
+
+			<!-- Summary Section -->
+			<div class="row mt-4">
+				<div class="col-md-6">
+					<div class="card border-info">
+						<div class="card-header bg-info bg-opacity-10 d-flex justify-content-between align-items-center">
+							<h6 class="mb-0"><i class="bi bi-clipboard-data me-1"></i>Withdrawal Summary</h6>
+							<span class="badge bg-warning">Draft Plan</span>
+						</div>
+						<div class="card-body">
+							<div class="row">
+								<div class="col-6">
+									<small class="text-muted">Total Materials:</small><br>
+									<span class="fw-bold" id="totalMaterials">5</span> items
+								</div>
+								<div class="col-6">
+									<small class="text-muted">Ready to Withdraw:</small><br>
+									<span class="fw-bold text-success" id="readyItems">4</span> items
+								</div>
+							</div>
+							<hr class="my-2">
+							<div class="row">
+								<div class="col-6">
+									<small class="text-muted">Insufficient Stock:</small><br>
+									<span class="fw-bold text-danger" id="insufficientItems">1</span> items
+								</div>
+								<div class="col-6">
+									<small class="text-muted">Over Reserved:</small><br>
+									<span class="fw-bold text-warning" id="overReservedItems">0</span> items
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="col-md-6">
+					<div class="card border-warning">
+						<div class="card-header bg-warning bg-opacity-10">
+							<h6 class="mb-0"><i class="bi bi-exclamation-triangle me-1"></i>Alerts</h6>
+						</div>
+						<div class="card-body">
+							<div id="alertsContainer">
+								<div class="alert alert-danger alert-sm py-2 mb-2">
+									<i class="bi bi-x-circle me-1"></i>
+									<strong>RM-003 Battery Pack:</strong> Out of stock (0 available)
+								</div>
+								<div class="alert alert-warning alert-sm py-2 mb-2">
+									<i class="bi bi-exclamation-triangle me-1"></i>
+									<strong>RM-002 LCD Display:</strong> Low stock (8 available, 10 needed)
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- Action Buttons -->
+			<div class="d-flex justify-content-between align-items-center mt-4">
+				<div>
+					<button type="button" class="btn btn-outline-primary btn-sm" id="autoCalculateBtn">
+						<i class="bi bi-calculator me-1"></i>Auto Calculate All
+					</button>
+					<button type="button" class="btn btn-outline-secondary btn-sm" id="resetBtn">
+						<i class="bi bi-arrow-clockwise me-1"></i>Reset to BOM
+					</button>
+				</div>
+				<div class="d-flex gap-2">
+					<a href="{{ prev_url }}" class="btn btn-secondary">
+						<i class="bi bi-arrow-left me-1"></i>Back to Movement
+					</a>
+					<button type="submit" class="btn btn-primary" id="confirmBtn">
+						<i class="bi bi-file-earmark-plus me-1"></i>Save as Draft
+					</button>
+				</div>
+			</div>
+		</form>
+	</div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+
+    // Calculate quantities when product quantity changes
+    function calculateMaterialQuantities(productCode) {
+        const productQtyInput = document.querySelector(`input[data-product="${productCode}"]`);
+        const productQty = parseFloat(productQtyInput.value) || 0;
+        
+        // Update material rows for this product
+        const materialRows = document.querySelectorAll(`tr[data-product="${productCode}"][data-component]`);
+        
+        materialRows.forEach(row => {
+            const componentCode = row.dataset.component;
+            
+            // Get BOM quantity from the displayed data
+            const bomQtyElement = row.querySelector('.bom-qty-base');
+            const bomQty = parseFloat(bomQtyElement.textContent) || 0;
+            const calculatedQty = bomQty * productQty;
+            
+            // Update display elements
+            row.querySelector('.product-multiplier').textContent = productQty;
+            row.querySelector('.calculated-qty').textContent = calculatedQty;
+            
+            // Update withdraw quantity input
+            const withdrawInput = row.querySelector('.withdraw-qty-input');
+            const noteInput = row.querySelector(`input[name="note_${componentCode}"]`);
+            
+            // Get available quantity from the displayed data
+            const availableQtyElement = row.querySelector('.available-qty');
+            const availableQty = parseFloat(availableQtyElement.textContent) || 0;
+            
+            // If product qty is 0, set withdraw qty to 0 and disable row
+            if (productQty === 0) {
+                withdrawInput.value = 0;
+                withdrawInput.disabled = true;
+                noteInput.disabled = true;
+                withdrawInput.classList.remove('warning-stock', 'danger-stock');
+                withdrawInput.classList.add('text-muted');
+                row.classList.add('disabled-material');
+            } else {
+                const maxQty = Math.min(calculatedQty, availableQty);
+                withdrawInput.value = maxQty;
+                withdrawInput.max = availableQty;
+                withdrawInput.disabled = false;
+                noteInput.disabled = false;
+                withdrawInput.classList.remove('text-muted');
+                row.classList.remove('disabled-material');
+                
+                // Update styling based on stock availability
+                updateStockStyling(withdrawInput, availableQty, calculatedQty);
+            }
+        });
+        
+        updateSummary();
+        updateAlerts();
+    }
+
+    // Update input styling based on stock availability
+    function updateStockStyling(input, availableQty, neededQty) {
+        input.classList.remove('warning-stock', 'danger-stock');
+        
+        if (availableQty === 0) {
+            input.classList.add('danger-stock');
+            input.disabled = true;
+        } else if (availableQty < neededQty) {
+            input.classList.add('warning-stock');
+            input.disabled = false;
+        } else {
+            input.disabled = false;
+        }
+    }
+
+    // Update summary statistics
+    function updateSummary() {
+        const materialRows = document.querySelectorAll('tr[data-component]');
+        let totalMaterials = 0;
+        let readyItems = 0;
+        let insufficientItems = 0;
+        let overReservedItems = 0;
+
+        materialRows.forEach(row => {
+            const componentCode = row.dataset.component;
+            const withdrawInput = row.querySelector('.withdraw-qty-input');
+            const withdrawQty = parseFloat(withdrawInput.value) || 0;
+            const calculatedQty = parseFloat(row.querySelector('.calculated-qty').textContent) || 0;
+            const availableQty = parseFloat(row.querySelector('.available-qty').textContent) || 0;
+            const reservedQty = parseFloat(row.querySelector('.reserved-qty').textContent) || 0;
+            const productQty = parseFloat(row.querySelector('.product-multiplier').textContent) || 0;
+
+            // Only count materials for products with qty > 0
+            if (productQty > 0) {
+                totalMaterials++;
+                
+                if (availableQty === 0) {
+                    insufficientItems++;
+                } else if (availableQty < calculatedQty) {
+                    insufficientItems++;
+                } else if (withdrawQty >= calculatedQty) {
+                    readyItems++;
+                }
+
+                if (withdrawQty > reservedQty) {
+                    overReservedItems++;
+                }
+            }
+        });
+
+        document.getElementById('totalMaterials').textContent = totalMaterials;
+        document.getElementById('readyItems').textContent = readyItems;
+        document.getElementById('insufficientItems').textContent = insufficientItems;
+        document.getElementById('overReservedItems').textContent = overReservedItems;
+    }
+
+    // Update alerts section
+    function updateAlerts() {
+        const alertsContainer = document.getElementById('alertsContainer');
+        alertsContainer.innerHTML = '';
+
+        const materialRows = document.querySelectorAll('tr[data-component]');
+        let hasAlerts = false;
+        
+        materialRows.forEach(row => {
+            const componentCode = row.dataset.component;
+            const componentName = row.querySelector('td:first-child span:last-child').textContent;
+            const calculatedQty = parseFloat(row.querySelector('.calculated-qty').textContent) || 0;
+            const availableQty = parseFloat(row.querySelector('.available-qty').textContent) || 0;
+            const withdrawQty = parseFloat(row.querySelector('.withdraw-qty-input').value) || 0;
+            const reservedQty = parseFloat(row.querySelector('.reserved-qty').textContent) || 0;
+            const productQty = parseFloat(row.querySelector('.product-multiplier').textContent) || 0;
+
+            // Only show alerts for products with qty > 0
+            if (productQty > 0) {
+                if (availableQty === 0) {
+                    hasAlerts = true;
+                    alertsContainer.innerHTML += `
+                        <div class="alert alert-danger alert-sm py-2 mb-2">
+                            <i class="bi bi-x-circle me-1"></i>
+                            <strong>${componentCode} ${componentName}:</strong> Out of stock (${availableQty} available)
+                        </div>
+                    `;
+                } else if (availableQty < calculatedQty) {
+                    hasAlerts = true;
+                    alertsContainer.innerHTML += `
+                        <div class="alert alert-warning alert-sm py-2 mb-2">
+                            <i class="bi bi-exclamation-triangle me-1"></i>
+                            <strong>${componentCode} ${componentName}:</strong> Low stock (${availableQty} available, ${calculatedQty} needed)
+                        </div>
+                    `;
+                }
+
+                if (withdrawQty > reservedQty) {
+                    hasAlerts = true;
+                    alertsContainer.innerHTML += `
+                        <div class="alert alert-info alert-sm py-2 mb-2">
+                            <i class="bi bi-info-circle me-1"></i>
+                            <strong>${componentCode} ${componentName}:</strong> Withdrawing more than reserved (${withdrawQty} vs ${reservedQty} reserved)
+                        </div>
+                    `;
+                }
+            }
+        });
+
+        // Check if any product has qty = 0
+        const allProductInputs = document.querySelectorAll('.product-qty-input');
+        const zeroQtyProducts = Array.from(allProductInputs).filter(input => parseFloat(input.value) === 0);
+        
+        if (zeroQtyProducts.length > 0) {
+            hasAlerts = true;
+            zeroQtyProducts.forEach(input => {
+                const productCode = input.dataset.product;
+                const productName = input.closest('tr').querySelector('td:first-child span:last-child').textContent;
+                alertsContainer.innerHTML += `
+                    <div class="alert alert-secondary alert-sm py-2 mb-2">
+                        <i class="bi bi-pause-circle me-1"></i>
+                        <strong>${productCode} ${productName}:</strong> Production quantity set to 0 (materials will not be withdrawn)
+                    </div>
+                `;
+            });
+        }
+
+        if (!hasAlerts) {
+            alertsContainer.innerHTML = `
+                <div class="alert alert-success alert-sm py-2 mb-0">
+                    <i class="bi bi-check-circle me-1"></i>
+                    All materials are ready for draft withdrawal plan
+                </div>
+            `;
+        }
+    }
+
+    // Event listeners
+    document.querySelectorAll('.product-qty-input').forEach(input => {
+        input.addEventListener('input', function() {
+            const productCode = this.dataset.product;
+            calculateMaterialQuantities(productCode);
+        });
+    });
+
+    document.querySelectorAll('.withdraw-qty-input').forEach(input => {
+        input.addEventListener('input', function() {
+            updateSummary();
+            updateAlerts();
+        });
+    });
+
+    // Auto calculate button
+    document.getElementById('autoCalculateBtn').addEventListener('click', function() {
+        document.querySelectorAll('.product-qty-input').forEach(input => {
+            const productCode = input.dataset.product;
+            calculateMaterialQuantities(productCode);
+        });
+    });
+
+    // Reset button
+    document.getElementById('resetBtn').addEventListener('click', function() {
+        document.querySelectorAll('.product-qty-input').forEach(input => {
+            const productCode = input.dataset.product;
+            calculateMaterialQuantities(productCode);
+        });
+    });
+
+    // Form submission validation
+    document.getElementById('withdrawalForm').addEventListener('submit', function(e) {
+        const insufficientItems = parseInt(document.getElementById('insufficientItems').textContent);
+        const totalMaterials = parseInt(document.getElementById('totalMaterials').textContent);
+        
+        // Check if any products are being produced
+        const allProductInputs = document.querySelectorAll('.product-qty-input');
+        const totalProductQty = Array.from(allProductInputs).reduce((sum, input) => {
+            return sum + (parseFloat(input.value) || 0);
+        }, 0);
+        
+        if (totalProductQty === 0) {
+            e.preventDefault();
+            alert('Please specify a production quantity for at least one product before saving the draft withdrawal plan.');
+            return false;
+        }
+        
+        if (totalMaterials === 0) {
+            e.preventDefault();
+            alert('No materials to withdraw. Please set production quantities greater than 0 before saving.');
+            return false;
+        }
+        
+        if (insufficientItems > 0) {
+            if (!confirm('Some materials have insufficient stock. Do you want to save this as a draft withdrawal plan anyway? You can adjust quantities later before confirming.')) {
+                e.preventDefault();
+                return false;
+            }
+        }
+    });
+
+    // Initial calculation
+    document.querySelectorAll('.product-qty-input').forEach(input => {
+        const productCode = input.dataset.product;
+        calculateMaterialQuantities(productCode);
+    });
+});
+</script>
+{% endblock %}

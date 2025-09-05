@@ -1,0 +1,417 @@
+{% extends "base-dashboard-header.html" %}
+{% load widget_tweaks %}
+
+{% block title %}
+    {% if process %}
+        Edit Production Process - StockFlow
+    {% else %}
+        Create Production Process - StockFlow
+    {% endif %}
+{% endblock %}
+
+{% block title_text %}Production Management{% endblock %}
+{% block subtitle_text %}
+    {% if process %}
+        Edit Production Process: {{ process.process_name }}
+    {% else %}
+        Create New Production Process
+    {% endif %}
+{% endblock %}
+
+{% block header_actions %}
+<a href="{% url 'production:production-order-detail' production_order.id %}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i>Back to Production Order
+</a>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-gear me-1"></i>
+                    {% if process %}Edit{% else %}Create{% endif %} Production Process
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" id="production-process-form">
+                    {% csrf_token %}
+                    
+                    <!-- Process Details -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <label for="{{ form.process_name.id_for_label }}" class="form-label">Process Name <span class="text-danger">*</span></label>
+                            {{ form.process_name|add_class:"form-control" }}
+                            {% if form.process_name.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.process_name.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        {% if process and process.status %}
+                        <div class="col-md-6">
+                            <label class="form-label">Status</label>
+                            <div>
+                                <span class="badge {% if process.status == 'DRAFT' %}bg-warning{% else %}bg-success{% endif %} fs-6">
+                                    {{ process.get_status_display }}
+                                </span>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="{{ form.note.id_for_label }}" class="form-label">Notes</label>
+                        {{ form.note|add_class:"form-control" }}
+                        {% if form.note.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.note.errors.0 }}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Production Results Section -->
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="mb-0">
+                                <i class="bi bi-box-seam me-1"></i>Finished Products
+                            </h6>
+                            <button type="button" class="btn btn-sm btn-outline-success" id="add-result-btn">
+                                <i class="bi bi-plus me-1"></i>Add Product
+                            </button>
+                        </div>
+                        
+                        <div id="results-formset">
+                            {{ result_formset.management_form }}
+                            <div id="results-forms">
+                                {% for form in result_formset %}
+                                <div class="result-form-row border rounded p-3 mb-3" data-form-index="{{ forloop.counter0 }}">
+                                    <div class="row">
+                                        <div class="col-md-5">
+                                            <label class="form-label">Product <span class="text-danger">*</span></label>
+                                            {{ form.item_sku|add_class:"form-select" }}
+                                            {% if form.item_sku.errors %}
+                                                <div class="invalid-feedback d-block">{{ form.item_sku.errors.0 }}</div>
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label">Quantity <span class="text-danger">*</span></label>
+                                            {{ form.quantity|add_class:"form-control" }}
+                                            {% if form.quantity.errors %}
+                                                <div class="invalid-feedback d-block">{{ form.quantity.errors.0 }}</div>
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label">&nbsp;</label>
+                                            <div>
+                                                {% if not process or process.status == 'DRAFT' %}
+                                                <button type="button" class="btn btn-sm btn-outline-danger remove-result-btn">
+                                                    <i class="bi bi-trash"></i> Remove
+                                                </button>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {{ form.id }}
+                                    {% if form.DELETE %}{{ form.DELETE }}{% endif %}
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Production Losses Section -->
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="mb-0">
+                                <i class="bi bi-exclamation-triangle me-1"></i>Lost Materials
+                            </h6>
+                            <button type="button" class="btn btn-sm btn-outline-warning" id="add-loss-btn">
+                                <i class="bi bi-plus me-1"></i>Add Loss
+                            </button>
+                        </div>
+                        
+                        <div id="losses-formset">
+                            {{ loss_formset.management_form }}
+                            <div id="losses-forms">
+                                {% for form in loss_formset %}
+                                <div class="loss-form-row border rounded p-3 mb-3" data-form-index="{{ forloop.counter0 }}">
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <label class="form-label">Material <span class="text-danger">*</span></label>
+                                            {{ form.item_sku|add_class:"form-select" }}
+                                            {% if form.item_sku.errors %}
+                                                <div class="invalid-feedback d-block">{{ form.item_sku.errors.0 }}</div>
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label">Quantity <span class="text-danger">*</span></label>
+                                            {{ form.quantity|add_class:"form-control" }}
+                                            {% if form.quantity.errors %}
+                                                <div class="invalid-feedback d-block">{{ form.quantity.errors.0 }}</div>
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label">Reason</label>
+                                            {{ form.reason|add_class:"form-control" }}
+                                            {% if form.reason.errors %}
+                                                <div class="invalid-feedback d-block">{{ form.reason.errors.0 }}</div>
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-2">
+                                            <label class="form-label">&nbsp;</label>
+                                            <div>
+                                                {% if not process or process.status == 'DRAFT' %}
+                                                <button type="button" class="btn btn-sm btn-outline-danger remove-loss-btn">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {{ form.id }}
+                                    {% if form.DELETE %}{{ form.DELETE }}{% endif %}
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            {% if process and process.status == 'DRAFT' %}
+                            <button type="submit" name="action" value="confirm" class="btn btn-success me-2">
+                                <i class="bi bi-check-circle me-1"></i>Confirm Process
+                            </button>
+                            {% endif %}
+                            <button type="submit" name="action" value="save" class="btn btn-primary">
+                                <i class="bi bi-save me-1"></i>
+                                {% if process %}Update{% else %}Save Draft{% endif %}
+                            </button>
+                        </div>
+                        <div>
+                            {% if process and process.status == 'DRAFT' %}
+                            <a href="{% url 'production:production-process-unified-edit' production_order.id process.id %}?action=delete" 
+                               class="btn btn-outline-danger"
+                               onclick="return confirm('Are you sure you want to delete this production process?')">
+                                <i class="bi bi-trash me-1"></i>Delete
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">Information</h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label text-muted small">Production Order</label>
+                    <div>
+                        <a href="{% url 'production:production-order-detail' production_order.id %}" class="text-decoration-none">
+                            #{{ production_order.id }} - {{ production_order.warehouse.name }}
+                        </a>
+                    </div>
+                </div>
+                
+                {% if process %}
+                <div class="mb-3">
+                    <label class="form-label text-muted small">Status</label>
+                    <div>
+                        <span class="badge {% if process.status == 'DRAFT' %}bg-warning{% else %}bg-success{% endif %}">
+                            {{ process.get_status_display }}
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label text-muted small">Created</label>
+                    <div>
+                        {{ process.created_at|date:'M d, Y H:i' }}
+                        <br><small class="text-muted">by {{ process.created_by.username }}</small>
+                    </div>
+                </div>
+                
+                {% if process.updated_at != process.created_at %}
+                <div class="mb-3">
+                    <label class="form-label text-muted small">Last Updated</label>
+                    <div>
+                        {{ process.updated_at|date:'M d, Y H:i' }}
+                        <br><small class="text-muted">by {{ process.updated_by.username }}</small>
+                    </div>
+                </div>
+                {% endif %}
+                {% endif %}
+            </div>
+        </div>
+        
+        {% if process and process.status == 'CONFIRMED' %}
+        <div class="alert alert-success">
+            <i class="bi bi-check-circle me-1"></i>
+            <strong>Process Confirmed!</strong><br>
+            This process has been confirmed and cannot be modified. All stock movements have been applied.
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Empty form templates for JavaScript -->
+<div id="empty-result-form" style="display: none;">
+    <!-- This will be populated by JavaScript -->
+</div>
+
+<div id="empty-loss-form" style="display: none;">
+    <!-- This will be populated by JavaScript -->
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Formset management
+    let resultFormCount = parseInt(document.querySelector('[name="results-TOTAL_FORMS"]').value);
+    let lossFormCount = parseInt(document.querySelector('[name="losses-TOTAL_FORMS"]').value);
+    
+    // Add result form
+    document.getElementById('add-result-btn').addEventListener('click', function() {
+        if (resultFormCount >= 10) {
+            alert('Maximum 10 products allowed');
+            return;
+        }
+        addResultForm();
+    });
+    
+    // Add loss form  
+    document.getElementById('add-loss-btn').addEventListener('click', function() {
+        if (lossFormCount >= 20) {
+            alert('Maximum 20 loss entries allowed');
+            return;
+        }
+        addLossForm();
+    });
+    
+    // Remove form handlers
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('remove-result-btn') || e.target.closest('.remove-result-btn')) {
+            e.preventDefault();
+            removeResultForm(e.target.closest('.result-form-row'));
+        }
+        if (e.target.classList.contains('remove-loss-btn') || e.target.closest('.remove-loss-btn')) {
+            e.preventDefault();
+            removeLossForm(e.target.closest('.loss-form-row'));
+        }
+    });
+    
+    function addResultForm() {
+        const template = `
+            <div class="result-form-row border rounded p-3 mb-3" data-form-index="${resultFormCount}">
+                <div class="row">
+                    <div class="col-md-5">
+                        <label class="form-label">Product <span class="text-danger">*</span></label>
+                        <select name="results-${resultFormCount}-item_sku" class="form-select" required>
+                            <option value="">Select Product...</option>
+                            {% for choice in result_formset.0.item_sku.field.queryset %}
+                            <option value="{{ choice.id }}">{{ choice.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Quantity <span class="text-danger">*</span></label>
+                        <input type="number" name="results-${resultFormCount}-quantity" class="form-control" step="0.01" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">&nbsp;</label>
+                        <div>
+                            <button type="button" class="btn btn-sm btn-outline-danger remove-result-btn">
+                                <i class="bi bi-trash"></i> Remove
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <input type="hidden" name="results-${resultFormCount}-id">
+            </div>
+        `;
+        
+        document.getElementById('results-forms').insertAdjacentHTML('beforeend', template);
+        resultFormCount++;
+        document.querySelector('[name="results-TOTAL_FORMS"]').value = resultFormCount;
+    }
+    
+    function addLossForm() {
+        const template = `
+            <div class="loss-form-row border rounded p-3 mb-3" data-form-index="${lossFormCount}">
+                <div class="row">
+                    <div class="col-md-4">
+                        <label class="form-label">Material <span class="text-danger">*</span></label>
+                        <select name="losses-${lossFormCount}-item_sku" class="form-select" required>
+                            <option value="">Select Material...</option>
+                            {% for choice in loss_formset.0.item_sku.field.queryset %}
+                            <option value="{{ choice.id }}">{{ choice.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Quantity <span class="text-danger">*</span></label>
+                        <input type="number" name="losses-${lossFormCount}-quantity" class="form-control" step="0.01" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Reason</label>
+                        <input type="text" name="losses-${lossFormCount}-reason" class="form-control">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">&nbsp;</label>
+                        <div>
+                            <button type="button" class="btn btn-sm btn-outline-danger remove-loss-btn">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <input type="hidden" name="losses-${lossFormCount}-id">
+            </div>
+        `;
+        
+        document.getElementById('losses-forms').insertAdjacentHTML('beforeend', template);
+        lossFormCount++;
+        document.querySelector('[name="losses-TOTAL_FORMS"]').value = lossFormCount;
+    }
+    
+    function removeResultForm(formRow) {
+        if (document.querySelectorAll('.result-form-row').length <= 1) {
+            alert('At least one product is required');
+            return;
+        }
+        
+        const deleteInput = formRow.querySelector('[name$="-DELETE"]');
+        if (deleteInput) {
+            deleteInput.checked = true;
+            formRow.style.display = 'none';
+        } else {
+            formRow.remove();
+            resultFormCount--;
+            document.querySelector('[name="results-TOTAL_FORMS"]').value = resultFormCount;
+        }
+    }
+    
+    function removeLossForm(formRow) {
+        const deleteInput = formRow.querySelector('[name$="-DELETE"]');
+        if (deleteInput) {
+            deleteInput.checked = true;
+            formRow.style.display = 'none';
+        } else {
+            formRow.remove();
+            lossFormCount--;
+            document.querySelector('[name="losses-TOTAL_FORMS"]').value = lossFormCount;
+        }
+    }
+});
+</script>
+{% endblock %}

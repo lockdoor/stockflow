@@ -1,0 +1,210 @@
+<div class="card shadow-sm mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h6 class="card-title mb-0">
+            <i class="bi bi-arrow-down-up me-2"></i>Stock Movements
+        </h6>
+        {% if production_order.status == 'CREATED' %}
+        <a href="{% url 'inventory:stock-movement-create' %}?reference_type=PRODUCTION&reference_id={{ production_order.id }}&warehouse={{ production_order.warehouse.id }}&prev={{ request.path }}" 
+            class="btn btn-outline-primary btn-sm">
+            <i class="bi bi-plus-circle me-1"></i>New Movement
+        </a>
+        {% endif %}
+    </div>
+    <div class="card-body p-0">
+        {% if stock_movements %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Movement #</th>
+                        <th>Type</th>
+                        <th>Status</th>
+                        <th>Items</th>
+                        <th>Created</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for movement in stock_movements %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'inventory:stock-movement-detail' movement.id %}" class="text-decoration-none">
+                                <span class="badge bg-secondary">#{{ movement.id }}</span>
+                            </a>
+                        </td>
+                        <td>
+                            {% if movement.movement_type == 'IN' %}
+                                <span class="badge bg-success">
+                                    <i class="bi bi-arrow-down me-1"></i>IN
+                                </span>
+                            {% else %}
+                                <span class="badge bg-warning">
+                                    <i class="bi bi-arrow-up me-1"></i>OUT
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if movement.status == 'DRAFT' %}
+                                <span class="badge bg-secondary">Draft</span>
+                            {% elif movement.status == 'CONFIRMED' %}
+                                <span class="badge bg-success">Confirmed</span>
+                            {% elif movement.status == 'CANCELLED' %}
+                                <span class="badge bg-danger">Cancelled</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="fw-bold">{{ movement.items_count|default:0 }}</span> items
+                        </td>
+                        <td>
+                            <small class="text-muted">{{ movement.created_at|date:"M d, Y H:i" }}</small>
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <a href="{% url 'inventory:stock-movement-detail' movement.id %}" 
+                                    class="btn btn-outline-primary btn-sm" title="View Details">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                {% if movement.status == 'DRAFT' %}
+                                <a href="{% url 'inventory:movement-production-create' movement.id %}?prev={{ request.path }}&next={{ request.path }}" 
+                                    class="btn btn-outline-warning btn-sm" title="Manage Items">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <button type="button" 
+                                        class="btn btn-outline-success btn-sm" 
+                                        title="Confirm Movement"
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#confirmMovementModal{{ movement.id }}">
+                                    <i class="bi bi-check-circle"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    
+                    <!-- Movement Items Details -->
+                    {% if movement.movement_items.exists %}
+                    <tr class="bg-light">
+                        <td colspan="6">
+                            <div class="ps-4">
+                                <small class="text-muted fw-bold">Movement Items:</small>
+                                <div class="mt-2">
+                                    {% for item in movement.movement_items.all %}
+                                    <div class="d-inline-block me-3 mb-1">
+                                        <span class="badge bg-light text-dark border">
+                                            {{ item.item_sku.sku_code }}: {{ item.quantity|floatformat:2 }} {{ item.item_sku.unit }}
+                                            {% if item.note %}
+                                                <small class="text-muted">({{ item.note }})</small>
+                                            {% endif %}
+                                        </span>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-4">
+            <i class="bi bi-inbox display-6 text-muted"></i>
+            <p class="text-muted mt-3 mb-1">No stock movements created yet</p>
+            {% if production_order.status == 'CREATED' %}
+            <p class="text-muted small">Create a stock movement to withdraw materials for production</p>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Confirm Movement Modals -->
+{% if stock_movements %}
+{% for movement in stock_movements %}
+{% if movement.status == 'DRAFT' %}
+<div class="modal fade" id="confirmMovementModal{{ movement.id }}" tabindex="-1" aria-labelledby="confirmMovementModalLabel{{ movement.id }}" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="confirmMovementModalLabel{{ movement.id }}">
+                    <i class="bi bi-check-circle me-2"></i>Confirm Stock Movement #{{ movement.id }}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <h6 class="alert-heading">
+                        <i class="bi bi-exclamation-triangle me-1"></i>Important Actions
+                    </h6>
+                    <p class="mb-2">Confirming this movement will:</p>
+                    <ul class="mb-0">
+                        <li><strong>Reduce stock quantities</strong> for all withdrawn materials</li>
+                        <li><strong>Reduce material reservations</strong> for this production order</li>
+                        <li><strong>Create WIP (Work in Progress)</strong> entries for materials</li>
+                        <li><strong>Update production order status</strong> to "In Progress"</li>
+                    </ul>
+                </div>
+                
+                {% if movement.movement_items.exists %}
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">Items to be Withdrawn</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Item</th>
+                                        <th>Quantity</th>
+                                        <th>Note</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in movement.movement_items.all %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ item.item_sku.sku_code }}</strong><br>
+                                            <small class="text-muted">{{ item.item_sku.name }}</small>
+                                        </td>
+                                        <td>
+                                            <span class="fw-bold">{{ item.quantity|floatformat:2 }}</span> {{ item.item_sku.unit }}
+                                        </td>
+                                        <td>
+                                            <small>{{ item.note|default:"-" }}</small>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="alert alert-danger">
+                    <i class="bi bi-x-circle me-1"></i>
+                    This movement has no items. Please add items before confirming.
+                </div>
+                {% endif %}
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x me-1"></i>Cancel
+                </button>
+                {% if movement.movement_items.exists %}
+                <form method="post" action="{% url 'inventory:stock-movement-confirm' movement.id %}" style="display: inline;">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.path }}">
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-check-circle me-1"></i>Confirm Movement
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endfor %}
+{% endif %}

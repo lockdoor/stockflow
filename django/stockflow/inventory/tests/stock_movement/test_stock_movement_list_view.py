@@ -59,7 +59,7 @@ class StockMovementListViewTest(TestCase):
         )
         
         self.stock_movement3 = StockMovement.objects.create(
-            reference_type=StockMovement.ReferenceType.PACKING_LIST,
+            reference_type=StockMovement.ReferenceType.PRODUCTION,
             reference_id=456,
             note='Test movement 3',
             warehouse=self.warehouse,
@@ -123,7 +123,6 @@ class StockMovementListViewTest(TestCase):
         # Check for reference types
         self.assertContains(response, 'None')  # NONE reference type
         self.assertContains(response, 'Adjust')  # ADJUST reference type
-        self.assertContains(response, 'Packing List')  # PACKING_LIST reference type
 
     def test_view_displays_status_badges(self):
         """Test that view displays status badges correctly"""

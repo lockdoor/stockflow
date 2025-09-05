@@ -62,6 +62,20 @@ erDiagram
         timestamp updated_at
         int version
     }
+    WIPStockMovement {
+        int id PK
+        int production_order_id FK
+        int source_stock_movement_id FK "เชื่อมโยง StockMovement ต้นทาง"
+        enum movement_type "IN, OUT"
+        int item_sku_id FK
+        decimal quantity
+        text note
+        timestamp created_at
+        int created_by FK
+        timestamp updated_at
+        int updated_by FK
+        int version
+    }
     ProductionProcess {
         int id PK
         int production_order_id FK
@@ -118,6 +132,9 @@ erDiagram
     StockMovement_Inventory ||--o{ StockMovementItem_Inventory : "has items"
     StockMovementItem_Inventory }o--|| ItemSKU_Catalog : "item_sku_id"
     StockMovementItem_Inventory }o--|| Warehouse_Inventory : "warehouse_id"
+        WIPStockMovement }o--|| ItemSKU_Catalog : "item_sku_id"
+        WIPStockMovement }o--|| ProductionOrder : "production_order_id"
+        WIPStockMovement }o--|| StockMovement_Inventory : "source_stock_movement_id"
     ProductionOrder ||--o{ ProductionProcess : "has"
     ProductionProcess ||--o{ ProductionResult : "has results"
     ProductionProcess ||--o{ ProductionLoss : "has losses"

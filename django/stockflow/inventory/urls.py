@@ -21,7 +21,8 @@ from inventory.views.stock_movement_views import (
 from inventory.views.stock_movement_item_views import (
     StockItemMovementCreateView,
     StockItemMovementDeleteView,
-    StockItemMovementUpdateView
+    StockItemMovementUpdateView,
+    StockMovementItemProductionCreateView
 )
 
 from inventory.views.stock_view import (
@@ -85,7 +86,7 @@ urlpatterns = [
     path('stockmovement/<int:pk>/edit/', 
         StockMovementUpdateView.as_view(), 
         name='stock-movement-update'),
-     path('stockmovement/<int:pk>/confirm/', 
+    path('stockmovement/<int:pk>/confirm/', 
         StockMovementConfirmView.as_view(), 
         name='stock-movement-confirm'),
     
@@ -99,6 +100,9 @@ urlpatterns = [
     path('movement/<int:stock_movement_id>/items/<int:pk>/delete/', 
         StockItemMovementDeleteView.as_view(),
         name='movement-delete'),
+    path('movement/<int:stock_movement_id>/production-form/',
+        StockMovementItemProductionCreateView.as_view(),
+        name='movement-production-create'),
 
     # Stock overview
     path('stock/overview/', StockOverviewView.as_view(), name='stock-overview'),

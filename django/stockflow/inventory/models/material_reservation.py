@@ -145,3 +145,21 @@ class MaterialReservation(AuditableMixin, ValidatableMixin, models.Model):
         print("reservation count: ", reservations.count())
         for reservation in reservations:
             print(reservation)
+
+    def decrease_quantity(self, quantity, user):
+        """
+        Decrease the reserved quantity.
+        """
+        if quantity <= 0:
+            raise ValueError("Quantity must be positive.")
+        
+        if self.reserved_quantity - quantity < 0:
+            self.reserved_quantity = 0
+        else:
+            self.reserved_quantity -= quantity
+
+        if self.reserved_quantity == 0:
+            self.status = self.Status.COMMITTED
+
+        self.updated_by = user
+        self.save()

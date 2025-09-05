@@ -45,9 +45,9 @@ class StockMovement(
     class ReferenceType(models.TextChoices):
         NONE = 'NONE', 'None'
         ADJUST = 'ADJUST', 'Adjust'
-        PACKING_LIST = 'PACKING_LIST', 'Packing List'
         PRODUCTION = 'PRODUCTION', 'Production'
-        INVOICE = 'INVOICE', 'Invoice'
+        # PACKING_LIST = 'PACKING_LIST', 'Packing List'
+        # INVOICE = 'INVOICE', 'Invoice'
 
     class Status(models.TextChoices):
         DRAFT = 'DRAFT', 'Draft'
@@ -231,16 +231,70 @@ class StockMovement(
         if not hasattr(self, 'movement_items'):
             return  # No items to process
         
-        from .stock import Stock
-        from django.db import transaction
+        # from .stock import Stock
+        # from django.db import transaction
         
         # Process each movement item
+        from inventory.models import StockMovementItem
         for item in self.movement_items.all():
+            item: StockMovementItem
             if item.movement_type == 'IN':
                 self._process_stock_in(item, self.updated_by)
             elif item.movement_type == 'OUT':
                 self._process_stock_out(item, self.updated_by)
-    
+                
+        # Handle production-specific logic after all items are processed
+        if self.reference_type == self.ReferenceType.PRODUCTION and self.reference_id:
+            self._process_production_logic()
+
+    def _process_production_logic(self):
+        """Handle production-specific logic when confirming stock movement"""
+        from production.models import ProductionOrder
+        
+        try:
+            production_order = ProductionOrder.objects.select_for_update().get(id=self.reference_id)
+            
+            # Process each movement item for production
+            for item in self.movement_items.all():
+                if item.movement_type == 'OUT':
+                    # Decrease reservation quantity
+                    from inventory.models import MaterialReservation
+                    material_reservation = MaterialReservation.objects.select_for_update().filter(
+                        reference_type=MaterialReservation.ReferenceType.PRODUCTION,
+                        reference_id=production_order.id,
+                        item_sku=item.item_sku
+                    ).first()
+                    
+                    if material_reservation:
+                        # Decrease reservation quantity
+                        new_reserved = material_reservation.reserved_quantity - item.quantity
+                        if new_reserved < 0:
+                            new_reserved = 0
+                        material_reservation.reserved_quantity = new_reserved
+                        material_reservation.updated_by = self.updated_by
+                        material_reservation.save()
+                    
+                    # Create WIP entry
+                    from production.models import WIPStockMovement
+                    WIPStockMovement.objects.create(
+                        production_order=production_order,
+                        source_stock_movement=self,
+                        item_sku=item.item_sku,
+                        quantity=item.quantity,
+                        movement_type=WIPStockMovement.MovementType.IN,
+                        created_by=self.updated_by,
+                        updated_by=self.updated_by
+                    )
+            
+            # Update production order status to IN_PROGRESS if it's still CREATED
+            if production_order.status == 'CREATED':
+                production_order.status = 'IN_PROGRESS'
+                production_order.updated_by = self.updated_by
+                production_order.save()
+                
+        except Exception as e:
+            raise ValidationError(f"Error processing production logic: {str(e)}")
+
     def _process_stock_in(self, movement_item, user):
         """Process stock IN (receiving inventory)"""
         from .stock import Stock

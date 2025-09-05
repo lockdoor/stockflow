@@ -268,9 +268,7 @@ class StockMovementDetailViewTest(TestCase):
     def test_different_reference_types_display(self):
         """Test that different reference types are displayed correctly"""
         reference_types = [
-            (StockMovement.ReferenceType.PACKING_LIST, 'Packing List'),
             (StockMovement.ReferenceType.PRODUCTION, 'Production'),
-            (StockMovement.ReferenceType.INVOICE, 'Invoice'),
         ]
         
         for i, (ref_type, display_name) in enumerate(reference_types):

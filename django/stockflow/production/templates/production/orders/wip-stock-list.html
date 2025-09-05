@@ -1,0 +1,163 @@
+{% extends "base-dashboard-header.html" %}
+{% load widget_tweaks %}
+
+{% block title %}WIP Stock - Production Order #{{ production_order.id }} - StockFlow{% endblock %}
+
+{% block title_text %}Production Management{% endblock %}
+{% block subtitle_text %}Work in Progress - Production Order #{{ production_order.id }}{% endblock %}
+
+{% block header_actions %}
+<a href="{% url 'production:production-order-detail' production_order.id %}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i>Back to Production Order
+</a>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="row">
+    <!-- WIP Balance Card -->
+    <div class="col-12 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-clipboard-data me-2"></i>Current WIP Balance
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if wip_balance %}
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Item</th>
+                                    <th class="text-end">Balance</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in wip_balance %}
+                                <tr>
+                                    <td>
+                                        <div class="fw-medium">{{ item.item_sku__item__name }}</div>
+                                        <div class="small text-muted">{{ item.item_sku__name }}</div>
+                                        <small class="text-muted">SKU: {{ item.item_sku__sku_code }}</small>
+                                    </td>
+                                    <td class="text-end">
+                                        <span class="badge bg-primary fs-6">
+                                            {{ item.balance|floatformat:2 }} {{ item.item_sku__unit }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center text-muted py-3">
+                        <i class="bi bi-clipboard-x fs-4 d-block mb-2"></i>
+                        <span>No materials currently in WIP</span>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- WIP Movements Card -->
+    <div class="col-12">
+        <!-- WIP Movements Card -->
+        <div class="card shadow-sm">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-boxes me-2"></i>Work in Progress Stock Movements
+                </h5>
+                <div class="d-flex align-items-center">
+                    <span class="badge bg-info me-2">{{ wip_movements|length }} movements</span>
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                            <i class="bi bi-funnel me-1"></i>Filter
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="?movement_type=IN">IN (รับเข้า WIP)</a></li>
+                            <li><a class="dropdown-item" href="?movement_type=OUT">OUT (ใช้ใน process)</a></li>
+                            <li><a class="dropdown-item" href="?movement_type=RETURN">RETURN (คืนจาก WIP)</a></li>
+                            <li><a class="dropdown-item" href="?movement_type=LOSS">LOSS (สูญเสียใน WIP)</a></li>
+                            <li><a class="dropdown-item" href="?movement_type=ADJUST">ADJUST (ปรับยอด WIP)</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="?">All Types</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if wip_movements %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Item</th>
+                                    <th>Movement Type</th>
+                                    <th class="text-end">Quantity</th>
+                                    <th>Source</th>
+                                    <th>Note</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for wip in wip_movements %}
+                                <tr>
+                                    <td>
+                                        <div class="fw-medium">{{ wip.created_at|date:'M d, Y' }}</div>
+                                        <small class="text-muted">{{ wip.created_at|date:'H:i' }}</small>
+                                    </td>
+                                    <td>
+                                        <div class="fw-medium">{{ wip.item_sku.item.name }}</div>
+                                        <div class="small text-muted">{{ wip.item_sku.name }}</div>
+                                        <small class="text-muted">SKU: {{ wip.item_sku.sku_code }}</small>
+                                    </td>
+                                    <td>
+                                        <span class="badge 
+                                            {% if wip.movement_type == 'IN' %}bg-success
+                                            {% elif wip.movement_type == 'OUT' %}bg-warning
+                                            {% elif wip.movement_type == 'RETURN' %}bg-info
+                                            {% elif wip.movement_type == 'LOSS' %}bg-danger
+                                            {% elif wip.movement_type == 'ADJUST' %}bg-secondary
+                                            {% endif %}">
+                                            {{ wip.get_movement_type_display }}
+                                        </span>
+                                    </td>
+                                    <td class="text-end">
+                                        <span class="fw-medium">{{ wip.quantity|floatformat:2 }}</span>
+                                        <small class="text-muted">{{ wip.item_sku.unit }}</small>
+                                    </td>
+                                    <td>
+                                        {% if wip.source_stock_movement %}
+                                            <a href="{% url 'inventory:stock-movement-detail' wip.source_stock_movement.id %}" 
+                                               class="text-decoration-none">
+                                                <i class="bi bi-box me-1"></i>Stock Movement #{{ wip.source_stock_movement.id }}
+                                            </a>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if wip.note %}
+                                            <span class="text-muted">{{ wip.note|truncatechars:50 }}</span>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center text-muted py-5">
+                        <i class="bi bi-inbox fs-1 d-block mb-3 opacity-50"></i>
+                        <h5>No WIP Movements Found</h5>
+                        <p class="mb-0">No work in progress stock movements have been recorded for this production order yet.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

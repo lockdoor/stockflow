@@ -157,8 +157,6 @@ class StockMovementFormValidationTest(TestCase):
     def test_valid_form_with_reference_id(self):
         """Test valid form with reference type that requires ID"""
         test_cases = [
-            StockMovement.ReferenceType.INVOICE,
-            StockMovement.ReferenceType.PACKING_LIST,
             StockMovement.ReferenceType.PRODUCTION,
             StockMovement.ReferenceType.ADJUST,
         ]
@@ -180,8 +178,6 @@ class StockMovementFormValidationTest(TestCase):
     def test_reference_id_required_validation(self):
         """Test that reference_id is required for non-NONE reference types"""
         required_ref_types = [
-            StockMovement.ReferenceType.INVOICE,
-            StockMovement.ReferenceType.PACKING_LIST,
             StockMovement.ReferenceType.PRODUCTION,
             StockMovement.ReferenceType.ADJUST,
         ]
@@ -253,7 +249,7 @@ class StockMovementFormValidationTest(TestCase):
         for invalid_value in invalid_values:
             with self.subTest(reference_id=invalid_value):
                 form_data = {
-                    'reference_type': StockMovement.ReferenceType.INVOICE,
+                    'reference_type': StockMovement.ReferenceType.PRODUCTION,
                     'reference_id': invalid_value,
                     'warehouse': self.warehouse.id,
                 }
@@ -425,17 +421,17 @@ class StockMovementFormIntegrationTest(TestCase):
         
         # Test with missing required data for business rules
         form_data = {
-            'reference_type': StockMovement.ReferenceType.INVOICE,
+            'reference_type': StockMovement.ReferenceType.PRODUCTION,
             'warehouse': self.warehouse.id,
             'note': 'Test note',
-            # Missing reference_id for INVOICE type
+            # Missing reference_id for PRODUCTION type
         }
         form = StockMovementForm(data=form_data)
         
         # Model validation should catch this  
         self.assertFalse(form.is_valid())
         self.assertIn('__all__', form.errors)
-        self.assertIn('Reference ID is required when reference type is INVOICE', str(form.errors['__all__']))
+        self.assertIn('Reference ID is required when reference type is PRODUCTION', str(form.errors['__all__']))
     
     def test_form_preserves_model_defaults(self):
         """Test that form doesn't interfere with model defaults"""
@@ -503,9 +499,9 @@ class StockMovementFormAccessibilityTest(TestCase):
         """Test that form produces helpful error messages"""
         # Test with invalid data to trigger various error messages
         form_data = {
-            'reference_type': StockMovement.ReferenceType.INVOICE,
+            'reference_type': StockMovement.ReferenceType.PRODUCTION,
             'warehouse': '',  # Invalid
-            'reference_id': '',  # Missing for INVOICE type
+            'reference_id': '',  # Missing for PRODUCTION type
         }
         form = StockMovementForm(data=form_data)
         
@@ -519,4 +515,4 @@ class StockMovementFormAccessibilityTest(TestCase):
         if 'reference_id' in form.errors:
             ref_id_error = str(form.errors['reference_id'])
             self.assertIn('required', ref_id_error.lower())
-            self.assertIn('INVOICE', ref_id_error)  # Should mention the reference type
+            self.assertIn('PRODUCTION', ref_id_error)  # Should mention the reference type
