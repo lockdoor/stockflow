@@ -80,6 +80,17 @@ class ProductionProcess(AuditableMixin, ValidatableMixin, models.Model):
         """Validate business rules"""
         super().clean()
         
+        # ตรวจสอบว่า confirmed process ไม่สามารถแก้ไขได้
+        if self.pk and self.is_confirmed:
+            # เช็คว่ามีการเปลี่ยนแปลง field ใดๆ หรือไม่
+            original = ProductionProcess.objects.get(pk=self.pk)
+            if (self.process_name != original.process_name or 
+                self.note != original.note or
+                self.status != original.status):
+                raise ValidationError(
+                    'Confirmed production processes cannot be modified.'
+                )
+        
         # ตรวจสอบว่า finished_at ต้องไม่เร็วกว่า started_at
         if self.started_at and self.finished_at:
             if self.finished_at < self.started_at:
@@ -239,10 +250,10 @@ class ProductionProcess(AuditableMixin, ValidatableMixin, models.Model):
             # สร้าง WIP stock movement สำหรับ production loss (ลด stock)
             WIPStockMovement.objects.create(
                 production_order=self.production_order,
-                item_sku=loss.item,
+                item_sku=loss.item_sku,
                 movement_type='LOSS',
                 quantity=loss.quantity,
-                note=f'Production loss from process: {self.process_name} - {loss.get_loss_reason_display()} - {loss.note}',
+                note=f'Production loss from process: {self.process_name} - {loss.reason}',
                 created_by=user,
                 updated_by=user
             )

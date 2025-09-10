@@ -17,6 +17,7 @@ from django.db import transaction
 from django.forms import inlineformset_factory
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import ValidationError
+from django.http import JsonResponse
 from decimal import Decimal
 
 from production.models.production_order import ProductionOrder
@@ -29,13 +30,14 @@ from production.forms.production_process_form import (
     ProductionLossForm
 )
 from production.mixins.production_permissions import ProductionPermissionMixin
+from common.mixins.redirect import RedirectMixin
 
 
-class ProductionProcessUnifiedView(ProductionPermissionMixin, View):
+class ProductionProcessUnifiedView(LoginRequiredMixin, ProductionPermissionMixin, RedirectMixin, View):
     """View แบบรวมสำหรับ Production Process Management"""
     
-    required_permission = 'production_process.manage'
-    permission_denied_message = "You don't have permission to manage production processes."
+    # Use the new ProductionPermissionMixin pattern
+    permission_required_base = 'manage_production_process'
     
     def get_production_order(self, production_order_id):
         """ดึง ProductionOrder และตรวจสอบ permissions"""
@@ -214,9 +216,27 @@ class ProductionProcessUnifiedView(ProductionPermissionMixin, View):
             'result_formset': result_formset,
             'loss_formset': loss_formset,
             'production_order': production_order,
-            'production_process': production_process,
+            'process': production_process,  # Changed from 'production_process' to 'process'
+            'production_process': production_process,  # Keep both for compatibility
             'is_edit': production_process is not None,
         }
+        
+        # เพิ่มข้อมูลสำหรับ JavaScript template
+        if production_order:
+            # Products ที่อยู่ใน BOM
+            from production.models.production_order_bom import ProductionOrderBOM
+            bom_products = ProductionOrderBOM.objects.filter(
+                production_order=production_order
+            ).select_related('item_sku')
+            context['bom_products'] = bom_products
+            
+            # Materials ที่อยู่ใน WIP (distinct)
+            from production.models.wip_stock_movement import WIPStockMovement
+            wip_materials = WIPStockMovement.objects.filter(
+                production_order=production_order,
+                movement_type=WIPStockMovement.MovementType.IN
+            ).select_related('item_sku').values_list('item_sku__id', 'item_sku__name').distinct()
+            context['wip_materials'] = wip_materials
         
         return render(request, 'production/production-process/production-process-unified-form.html', context)
     
@@ -227,7 +247,7 @@ class ProductionProcessUnifiedView(ProductionPermissionMixin, View):
         production_process = self.get_production_process(process_id)
         
         # ตรวจสอบ action parameter
-        action = request.POST.get('action')
+        action = request.POST.get('action', 'save')
         
         # หาก action เป็น confirm
         if action == 'confirm' and production_process:
@@ -242,13 +262,15 @@ class ProductionProcessUnifiedView(ProductionPermissionMixin, View):
             ).exists()
             
             if not has_wip_items:
-                messages.error(
-                    request, 
-                    'Cannot create production process: No WIP (Work in Progress) items available. '
-                    'Please transfer materials to WIP first.'
-                )
-                prev_url = request.GET.get('prev') or reverse('production:production-order-detail', args=[production_order.id])
-                return redirect(prev_url)
+                error_msg = ('Cannot create production process: No WIP (Work in Progress) items available. '
+                           'Please transfer materials to WIP first.')
+                messages.error(request, error_msg)
+                
+                # For AJAX requests
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({'success': False, 'error': error_msg}, status=400)
+                
+                return self.redirect_prev(production_order)
         
         # สร้าง forms และ formsets
         form = ProductionProcessForm(
@@ -290,22 +312,25 @@ class ProductionProcessUnifiedView(ProductionPermissionMixin, View):
                     else:
                         # แก้ไข - เฉพาะ DRAFT เท่านั้น
                         if production_process.status != 'DRAFT':
-                            messages.error(
-                                request, 
-                                'Cannot modify confirmed production process. Only process name can be updated.'
-                            )
+                            error_msg = 'Cannot modify confirmed production process. Only process name can be updated.'
+                            messages.error(request, error_msg)
+                            
                             # อนุญาตให้แก้ไขเฉพาะ process_name
                             production_process.process_name = form.cleaned_data.get('process_name')
                             production_process.updated_by = request.user
                             production_process.save()
                             
+                            # Success message
+                            success_msg = f'Production process "{production_process.process_name}" updated successfully.'
+                            messages.success(request, success_msg)
+                            
+                            # For AJAX requests
+                            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                                redirect_url = reverse('production:production-order-detail', args=[production_order.id])
+                                return JsonResponse({'success': True, 'redirect_url': redirect_url})
+                            
                             # Redirect ทันทีโดยไม่ต้องบันทึก formsets
-                            messages.success(request, f'Production process "{production_process.process_name}" updated successfully.')
-                            next_url = request.GET.get('next')
-                            if next_url:
-                                return redirect(next_url)
-                            else:
-                                return redirect('production:production-order-detail', production_order.id)
+                            return self.redirect_success(production_process)
                         else:
                             # แก้ไข DRAFT process
                             production_process = form.save(commit=False)
@@ -342,24 +367,36 @@ class ProductionProcessUnifiedView(ProductionPermissionMixin, View):
                         for loss in loss_formset.deleted_objects:
                             loss.delete()
                     
-                    # Success message และ redirect
+                    # Success message
                     if not process_id:  # สร้างใหม่
                         messages.success(request, f'Production process "{production_process.process_name}" created successfully.')
                     else:  # แก้ไข
                         messages.success(request, f'Production process "{production_process.process_name}" updated successfully.')
                     
-                    # Redirect โดยใช้ next parameter ถ้ามี
-                    next_url = request.GET.get('next')
-                    if next_url:
-                        return redirect(next_url)
-                    else:
-                        return redirect('production:production-order-detail', production_order.id)
+                    # Handle different redirect behaviors based on action
+                    return self._handle_action_redirect(request, action, production_order, production_process)
                         
             except Exception as e:
-                messages.error(request, f'Error saving production process: {str(e)}')
+                error_msg = f'Error saving production process: {str(e)}'
+                messages.error(request, error_msg)
+                
+                # For AJAX requests
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({'success': False, 'error': error_msg}, status=400)
         else:
             # มี validation errors
             messages.error(request, 'Please correct the errors below.')
+            
+            # For AJAX requests, return JSON with errors
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                errors = {}
+                if form.errors:
+                    errors['form'] = form.errors
+                if result_formset.errors:
+                    errors['results'] = result_formset.errors
+                if loss_formset.errors:
+                    errors['losses'] = loss_formset.errors
+                return JsonResponse({'success': False, 'errors': errors}, status=400)
         
         # กรณี validation ไม่ผ่าน หรือเกิด error ให้แสดง form อีกครั้ง
         context = {
@@ -367,22 +404,58 @@ class ProductionProcessUnifiedView(ProductionPermissionMixin, View):
             'result_formset': result_formset,
             'loss_formset': loss_formset,
             'production_order': production_order,
-            'production_process': production_process,
+            'process': production_process,
             'is_edit': production_process is not None,
         }
         
         return render(request, 'production/production-process/production-process-unified-form.html', context)
     
+    def _handle_action_redirect(self, request, action, production_order, production_process):
+        """Handle different redirect behaviors based on action"""
+        
+        # Check for AJAX request
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            if action == 'save_draft':
+                redirect_url = reverse('production:production-order-detail', args=[production_order.id])
+            elif action == 'update_draft':
+                if production_process and production_process.id:
+                    # Edit mode - stay on edit page
+                    redirect_url = reverse('production:production-process-unified-edit', args=[production_order.id, production_process.id])
+                else:
+                    # Create mode - redirect to edit page with new process
+                    redirect_url = reverse('production:production-process-unified-edit', args=[production_order.id, production_process.id])
+            else:
+                redirect_url = reverse('production:production-order-detail', args=[production_order.id])
+            return JsonResponse({'success': True, 'redirect_url': redirect_url})
+        
+        # Handle redirect behavior for regular requests
+        if action == 'save_draft':
+            # Redirect กลับไป order detail
+            return redirect('production:production-order-detail', production_order.id)
+        elif action == 'update_draft':
+            # Stay on the same page - redirect to edit URL
+            if production_process and production_process.id:
+                return redirect('production:production-process-unified-edit', production_order.id, production_process.id)
+            else:
+                # This shouldn't happen, but fallback to order detail
+                return redirect('production:production-order-detail', production_order.id)
+        else:
+            # Default behavior - use RedirectMixin
+            return self.redirect_success(production_process)
+
     def _handle_confirmation(self, request, production_process, production_order):
         """Handle production process confirmation"""
         
         try:
             # ตรวจสอบว่า production process มี results และ losses หรือไม่
             if not production_process.production_results.exists():
-                messages.error(
-                    request, 
-                    'Cannot confirm production process without results. Please add at least one result product.'
-                )
+                error_msg = 'Cannot confirm production process without results. Please add at least one result product.'
+                messages.error(request, error_msg)
+                
+                # For AJAX requests
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({'success': False, 'error': error_msg}, status=400)
+                
                 return redirect('production:production-process-unified-edit', 
                               production_order_id=production_order.id, 
                               process_id=production_process.id)
@@ -392,6 +465,12 @@ class ProductionProcessUnifiedView(ProductionPermissionMixin, View):
             if validation_errors:
                 for error in validation_errors:
                     messages.error(request, error)
+                
+                # For AJAX requests - return all errors as a single message
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    error_message = '; '.join(validation_errors)
+                    return JsonResponse({'success': False, 'error': error_message}, status=400)
+                
                 return redirect('production:production-process-unified-edit', 
                               production_order_id=production_order.id, 
                               process_id=production_process.id)
@@ -404,18 +483,38 @@ class ProductionProcessUnifiedView(ProductionPermissionMixin, View):
                 f'Production process "{production_process.process_name}" confirmed successfully.'
             )
             
+            # For AJAX requests
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                redirect_url = reverse('production:production-order-detail', args=[production_order.id])
+                return JsonResponse({'success': True, 'redirect_url': redirect_url})
+            
             # Redirect กลับไปยัง production order detail
-            next_url = request.GET.get('next')
-            if next_url:
-                return redirect(next_url)
-            else:
-                return redirect('production:production-order-detail', production_order.id)
+            return redirect('production:production-order-detail', production_order.id)
                 
         except Exception as e:
             messages.error(request, f'Error confirming production process: {str(e)}')
+            
+            # For AJAX requests
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'error': str(e)}, status=400)
+            
             return redirect('production:production-process-unified-edit', 
                           production_order_id=production_order.id, 
                           process_id=production_process.id)
+
+    def get_default_success_url(self, obj=None):
+        """Override RedirectMixin method for production-specific default URL"""
+        if hasattr(self, 'production_order') and self.production_order:
+            return reverse('production:production-order-detail', args=[self.production_order.id])
+        # Fallback to production order list
+        return reverse('production:production-order-list')
+
+    def get_default_prev_url(self, obj=None):
+        """Override RedirectMixin method for production-specific previous URL"""
+        if hasattr(self, 'production_order') and self.production_order:
+            return reverse('production:production-order-detail', args=[self.production_order.id])
+        # Fallback to production order list  
+        return reverse('production:production-order-list')
 
     def _validate_wip_balance_for_confirmation(self, production_process):
         """Validate WIP balance for process confirmation"""
@@ -431,7 +530,7 @@ class ProductionProcessUnifiedView(ProductionPermissionMixin, View):
         # จาก Results (ผลผลิต) -> ต้องใช้วัตถุดิบตาม BOM
         for result in production_process.production_results.all():
             # หา BOM ของ product นี้
-            bom_items = BOM.objects.filter(parent_sku=result.item)
+            bom_items = BOM.objects.filter(parent_sku=result.item_sku)
             for bom_item in bom_items:
                 required_qty = bom_item.quantity * result.quantity
                 material_sku = bom_item.component_sku
@@ -443,10 +542,10 @@ class ProductionProcessUnifiedView(ProductionPermissionMixin, View):
         
         # จาก Losses (การสูญเสีย) -> วัตถุดิบที่สูญเสียไป
         for loss in production_process.production_losses.all():
-            if loss.item in material_usage:
-                material_usage[loss.item] += loss.quantity
+            if loss.item_sku in material_usage:
+                material_usage[loss.item_sku] += loss.quantity
             else:
-                material_usage[loss.item] = loss.quantity
+                material_usage[loss.item_sku] = loss.quantity
         
         # ตรวจสอบ balance
         for material_sku, required_qty in material_usage.items():

@@ -16,9 +16,25 @@ class MixinSetupProduction(MixinSetupInventory):
         # Set up additional test data for production tests
         if len(self.production_planned_quantity) > len(self.catalog_products):
             raise ValueError("production_planned_quantity ต้องไม่เกินจำนวน catalog_products ที่มี")
-        for warehouse in self.inventory_warehouses:
-            products = random.sample(self.catalog_products, len(self.production_planned_quantity))
-            for i, product in zip(self.production_planned_quantity, products):
+        
+        for warehouse_idx, warehouse in enumerate(self.inventory_warehouses):
+            # Use deterministic product selection instead of random.sample()
+            # to avoid circular reference issues in parallel tests
+            for quantity_idx, quantity in enumerate(self.production_planned_quantity):
+                # Create fresh PRODUCT with BOM using existing raw materials
+                from tests.factories.catalog import ProductFactory
+                from catalog.models import ItemSKU
+                
+                # Use first few raw materials from catalog_items for BOM
+                bom_components = self.catalog_items[:3] if len(self.catalog_items) >= 3 else self.catalog_items
+                
+                product = ProductFactory(
+                    name=f"Prod-{warehouse_idx}-{quantity_idx}",
+                    created_by=self.admin_user,
+                    bom=bom_components  # Use existing raw materials as BOM
+                )
+                # ProductFactory automatically saves the product with BOM
+                    
                 production_order: ProductionOrder = ProductionOrderFactory(
                     warehouse=warehouse,
                     created_by=self.admin_user
@@ -28,7 +44,7 @@ class MixinSetupProduction(MixinSetupInventory):
                 ProductionOrderBOMFactory(
                     production_order=production_order,
                     item_sku=product,
-                    planned_quantity=i,
+                    planned_quantity=quantity,
                     created_by=self.admin_user
                 )
                 production_order.created_production_order(self.admin_user)

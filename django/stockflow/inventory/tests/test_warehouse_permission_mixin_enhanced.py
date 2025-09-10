@@ -6,7 +6,7 @@ from stock_movement_id in URL kwargs.
 """
 
 from django.test import TestCase, RequestFactory
-from django.contrib.auth.models import User, Permission
+from django.contrib.auth.models import AnonymousUser, User, Permission
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import PermissionDenied
 
@@ -130,7 +130,8 @@ class WarehousePermissionMixinEnhancedTest(TestCase):
     def test_permission_check_fails_without_permission(self):
         """Test permission check fails without any permission"""
         request = self.factory.get('/')
-        request.user = self.user
+        # anonymous user
+        request.user = AnonymousUser()
         
         view = TestViewWithStockMovementId(
             request,

@@ -75,3 +75,24 @@ class ProductionOrderBOM(AuditableMixin, ValidatableMixin, models.Model):
             ProductionOrderBOMUpdateValidator(self),
             ProductionOrderBOMItemMustBeTypeProduct(self)
         ]
+
+    @property
+    def actual_quantity(self):
+        """
+        คำนวณจำนวนจริงของสินค้าที่ผลิตได้แล้วโดยรวมจากทุก Production Process
+        ใช้การรวม ProductionResult ที่มีสถานะ CONFIRMED แล้ว
+        """
+        from production.models.production_result import ProductionResult
+        from production.models.production_process import ProductionProcess
+        from django.db.models import Sum
+        
+        # หา ProductionResult ที่เป็น item_sku นี้และมาจาก Production Process ที่ CONFIRMED แล้ว
+        total_produced = ProductionResult.objects.filter(
+            production_process__production_order=self.production_order,
+            production_process__status=ProductionProcess.StatusChoices.CONFIRMED,
+            item_sku=self.item_sku
+        ).aggregate(
+            total=Sum('quantity')
+        )['total'] or 0
+        
+        return total_produced

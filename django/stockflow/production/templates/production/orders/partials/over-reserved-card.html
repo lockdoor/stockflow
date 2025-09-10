@@ -1,0 +1,48 @@
+<div class="alert alert-danger d-flex align-items-center mb-4" role="alert">
+    <i class="bi bi-exclamation-triangle-fill me-2 fs-4"></i>
+    <div>
+        พบการจองวัสดุเกิน stock จริงใน Production Order นี้ กรุณาตรวจสอบและแก้ไข
+    </div>
+</div>
+<div class="card border-danger mb-4">
+    <div class="card-header bg-danger bg-opacity-10 border-bottom border-danger">
+        <h6 class="card-title mb-0 text-danger">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            Over Reserved Materials
+        </h6>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0 align-middle">
+                <thead class="table-danger">
+                    <tr>
+                        <th>Item</th>
+                        <th>Warehouse</th>
+                        <th>Reserved Qty</th>
+                        <th>Available</th>
+                        <th>Status</th>
+                        <th>Reference</th>
+                        <th>Created</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in over_reserved_reservations %}
+                    <tr class="table-danger">
+                        <td>{{ r.item_sku.name }} <br><small class="text-muted">{{ r.item_sku.sku_code }}</small></td>
+                        <td>{{ r.warehouse.name }}</td>
+                        <td class="fw-bold text-danger">{{ r.reserved_quantity|floatformat:0 }}</td>
+                        <td class="fw-bold text-success">{{ r.available_quantity|floatformat:0 }}</td>
+                        <td>
+                            <span class="badge {% if r.status == 'RESERVED' %}bg-success{% elif r.status == 'CANCELLED' %}bg-secondary{% else %}bg-warning{% endif %}">
+                                {{ r.get_status_display }}
+                            </span>
+                        </td>
+                        <td>{{ r.reference_type }} #{{ r.reference_id }}</td>
+                        <td>{{ r.created_at|date:"Y-m-d H:i" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

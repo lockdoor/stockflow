@@ -103,8 +103,12 @@ class StockItemMovementCreateViewTest(TestCase):
 
     def test_get_request_without_permission(self):
         """Test GET request without permissions should be denied"""
-        self.client.login(username='testuser', password='testpass123')
-        
+        noperm_user = User.objects.create_user(
+            username='nopermuser',
+            password='testpass123'
+        )
+        self.client.force_login(noperm_user)
+
         url = reverse('inventory:movement-create', kwargs={'stock_movement_id': self.stock_movement.id})
         response = self.client.get(url)
         

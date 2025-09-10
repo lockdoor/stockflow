@@ -34,6 +34,11 @@ class ProductionResult(AuditableMixin, models.Model):
         decimal_places=2,
         help_text="จำนวนที่ผลิตได้"
     )
+    
+    note = models.TextField(
+        blank=True, default='',
+        help_text="หมายเหตุเพิ่มเติมเกี่ยวกับกระบวนการผลิต"
+    )
 
     class Meta:
         db_table = 'production_result'

@@ -23,6 +23,12 @@ from production.views.production_order_bom_views import (
 from production.views.production_process_unified import (
     ProductionProcessUnifiedView,
 )
+from production.views.production_process_views import (
+    ProductionProcessDeleteView,
+)
+from production.views.production_process_detail import (
+    ProductionProcessDetailView,
+)
 app_name = 'production'
 
 urlpatterns = [
@@ -57,4 +63,10 @@ urlpatterns = [
     path('production-order/<int:production_order_id>/process/<int:process_id>/unified/edit/',
         ProductionProcessUnifiedView.as_view(),
         name='production-process-unified-edit'),
+    path('production-order/<int:production_order_id>/process/<int:process_id>/unified/delete/',
+        ProductionProcessDeleteView.as_view(),
+        name='production-process-unified-delete'),
+    path('production-order/<int:production_order_id>/process/<int:process_id>/',
+        ProductionProcessDetailView.as_view(),
+        name='production-process-detail'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

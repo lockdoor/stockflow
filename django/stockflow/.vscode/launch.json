@@ -55,7 +55,7 @@
             "program": "${workspaceFolder}/manage.py",
             "args": [
                 "test",
-                "production.tests.production_order_bom.test_production_order_bom_forms.ProductionOrderBOMFormTests.test_form_valid_with_minimal_data"
+                "inventory.tests.stock_movement_item.test_stock_movement_item_create_view.StockItemMovementCreateViewTest.test_get_request_without_permission"
             ],
             "django": true,
             "console": "integratedTerminal",

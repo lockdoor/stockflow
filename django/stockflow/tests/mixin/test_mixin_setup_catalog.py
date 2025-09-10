@@ -1,4 +1,5 @@
 import random
+import uuid
 from django.test import TestCase
 from . import MixinSetupUser
 
@@ -32,12 +33,23 @@ class MixinSetupCatalog(MixinSetupUser):
 
         for i in range(1, self.catalog_product_number + 1):
             number_of_items = random.randint(self.catalog_min_item_bom, self.catalog_max_item_bom)
-            bom_items = random.sample(self.catalog_items, number_of_items)
+            
+            # Create unique components for each product to avoid circular reference
+            unique_id = str(uuid.uuid4())[:8]  # Thread-safe unique identifier per product
+            product_components = []
+            for j in range(number_of_items):
+                component = ItemFactory(
+                    sku_code=f"COMP-{unique_id}-{j}",
+                    name=f"Component {unique_id}-{j}",
+                    created_by=self.admin_user
+                )
+                product_components.append(component)
+            
             product = ProductFactory(
                 name=f"Product {i}", 
                 created_by=self.admin_user, 
                 category=self.catalog_categories[i % len(self.catalog_categories)], 
-                bom=bom_items
+                bom=product_components  # Use unique components
             )
             self.catalog_products.append(product)
 

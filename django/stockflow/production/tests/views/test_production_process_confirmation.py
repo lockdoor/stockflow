@@ -27,12 +27,38 @@ class ProductionProcessConfirmationTests(TransactionTestCase):
         self.material_1 = ItemFactory(name="Material 1", created_by=self.admin)
         self.material_2 = ItemFactory(name="Material 2", created_by=self.admin)
         
-        # Create product with BOM
-        self.product = ProductFactory(
+        # Create product manually to avoid auto BOM creation and activation
+        from catalog.models import ItemSKU
+        self.product = ItemSKU.objects.create(
             name="Test Product", 
+            sku_code="TEST-PROD-001",  # Required field
+            unit="pcs",  # Required field
+            type=ItemSKU.Type.PRODUCT,
+            status=ItemSKU.Status.DRAFT,  # Keep as DRAFT to allow BOM editing
             created_by=self.admin,
-            bom=[self.material_1, self.material_2]
+            updated_by=self.admin
         )
+        
+        # Create BOM entries with predictable quantities for testing
+        from catalog.models import BOM
+        BOM.objects.create(
+            parent_sku=self.product,
+            component_sku=self.material_1,
+            quantity=2,  # Need 2 units of material 1 per product
+            created_by=self.admin,
+            updated_by=self.admin
+        )
+        BOM.objects.create(
+            parent_sku=self.product,
+            component_sku=self.material_2,
+            quantity=3,  # Need 3 units of material 2 per product
+            created_by=self.admin,
+            updated_by=self.admin
+        )
+        
+        # Now activate the product to make BOM available for production
+        self.product.status = ItemSKU.Status.ACTIVE
+        self.product.save()
         
         # Create production order
         self.production_order = ProductionOrderFactory(
@@ -97,6 +123,29 @@ class ProductionProcessConfirmationTests(TransactionTestCase):
     
     def test_process_confirmation_basic(self):
         """Test basic production process confirmation."""
+        # First, create WIP stock movements to bring materials into WIP
+        # This simulates the materials being moved to production
+        # For 8 units of product: need 8*2=16 of material_1, 8*3=24 of material_2
+        WIPStockMovement.objects.create(
+            production_order=self.production_order,
+            item_sku=self.material_1,
+            movement_type='IN',
+            quantity=20,  # 20 > 16 needed for 8 products
+            note='Material 1 moved to WIP for production',
+            created_by=self.admin,
+            updated_by=self.admin
+        )
+        
+        WIPStockMovement.objects.create(
+            production_order=self.production_order,
+            item_sku=self.material_2,
+            movement_type='IN',
+            quantity=30,  # 30 > 24 needed for 8 products
+            note='Material 2 moved to WIP for production',
+            created_by=self.admin,
+            updated_by=self.admin
+        )
+        
         # Add results
         ProductionResult.objects.create(
             production_process=self.production_process,
@@ -115,11 +164,33 @@ class ProductionProcessConfirmationTests(TransactionTestCase):
         self.assertEqual(self.production_process.status, ProductionProcess.StatusChoices.CONFIRMED)
         self.assertTrue(self.production_process.is_confirmed)
         
-        # Check WIP movements created
+        # Check WIP movements created (should have more movements from confirmation)
         self.assertGreater(WIPStockMovement.objects.count(), initial_wip_count)
     
     def test_process_confirmation_with_losses(self):
         """Test production process confirmation with losses."""
+        # First, create WIP stock movements to bring materials into WIP
+        # For 7 units + 1 loss of material_1: need 7*2=14 + extra, 7*3=21 of material_2
+        WIPStockMovement.objects.create(
+            production_order=self.production_order,
+            item_sku=self.material_1,
+            movement_type='IN',
+            quantity=25,  # Extra for losses and production
+            note='Material 1 moved to WIP for production',
+            created_by=self.admin,
+            updated_by=self.admin
+        )
+        
+        WIPStockMovement.objects.create(
+            production_order=self.production_order,
+            item_sku=self.material_2,
+            movement_type='IN',
+            quantity=30,  # 30 > 21 needed for 7 products
+            note='Material 2 moved to WIP for production',
+            created_by=self.admin,
+            updated_by=self.admin
+        )
+        
         # Add results and losses
         ProductionResult.objects.create(
             production_process=self.production_process,
@@ -147,6 +218,28 @@ class ProductionProcessConfirmationTests(TransactionTestCase):
     
     def test_confirmed_process_immutable(self):
         """Test that confirmed processes cannot be modified."""
+        # Create WIP stock first
+        # Need sufficient for 8 units: 8*2=16 of material_1, 8*3=24 of material_2
+        WIPStockMovement.objects.create(
+            production_order=self.production_order,
+            item_sku=self.material_1,
+            movement_type='IN',
+            quantity=20,  # 20 > 16 needed
+            note='Material moved to WIP for production',
+            created_by=self.admin,
+            updated_by=self.admin
+        )
+        
+        WIPStockMovement.objects.create(
+            production_order=self.production_order,
+            item_sku=self.material_2,
+            movement_type='IN',
+            quantity=30,  # 30 > 24 needed
+            note='Material moved to WIP for production',
+            created_by=self.admin,
+            updated_by=self.admin
+        )
+        
         # Confirm process first
         ProductionResult.objects.create(
             production_process=self.production_process,
@@ -165,7 +258,29 @@ class ProductionProcessConfirmationTests(TransactionTestCase):
     
     def test_integration_complete_flow(self):
         """Integration test for complete production process confirmation flow."""
-        # Add production results
+        # Step 1: Create WIP stock movements to simulate materials being moved to production
+        # For 8 units + 1 loss of material_1: need 8*2=16 + extra, 8*3=24 of material_2
+        WIPStockMovement.objects.create(
+            production_order=self.production_order,
+            item_sku=self.material_1,
+            movement_type='IN',
+            quantity=25,  # Extra for losses and 8*2=16 needed
+            note='Material 1 moved to WIP for production',
+            created_by=self.admin,
+            updated_by=self.admin
+        )
+        
+        WIPStockMovement.objects.create(
+            production_order=self.production_order,
+            item_sku=self.material_2,
+            movement_type='IN',
+            quantity=30,  # 30 > 24 needed for 8 products
+            note='Material 2 moved to WIP for production',
+            created_by=self.admin,
+            updated_by=self.admin
+        )
+        
+        # Step 2: Add production results
         result = ProductionResult.objects.create(
             production_process=self.production_process,
             item_sku=self.product,
@@ -174,7 +289,7 @@ class ProductionProcessConfirmationTests(TransactionTestCase):
             updated_by=self.admin
         )
         
-        # Add production loss
+        # Step 3: Add production loss
         loss = ProductionLoss.objects.create(
             production_process=self.production_process,
             item_sku=self.material_1,
@@ -187,7 +302,7 @@ class ProductionProcessConfirmationTests(TransactionTestCase):
         # Track initial state
         initial_wip_count = WIPStockMovement.objects.count()
         
-        # Confirm the process
+        # Step 4: Confirm the process
         self.production_process.confirm_process(self.admin)
         
         # Verify final state
@@ -196,7 +311,7 @@ class ProductionProcessConfirmationTests(TransactionTestCase):
         # Status should be CONFIRMED
         self.assertEqual(self.production_process.status, ProductionProcess.StatusChoices.CONFIRMED)
         
-        # WIP movements should be created
+        # WIP movements should be created (consumption and production)
         final_wip_count = WIPStockMovement.objects.count()
         self.assertGreater(final_wip_count, initial_wip_count)
         
@@ -211,6 +326,57 @@ class ProductionProcessConfirmationTests(TransactionTestCase):
         self.assertEqual(confirmed_result.quantity, 8)
         self.assertEqual(confirmed_loss.quantity, 1)
         self.assertEqual(confirmed_loss.reason, "Material waste")
+    
+    def test_process_confirmation_insufficient_wip_stock(self):
+        """Test that process confirmation fails when WIP stock is insufficient."""
+        # Only add small amount of WIP stock
+        WIPStockMovement.objects.create(
+            production_order=self.production_order,
+            item_sku=self.material_1,
+            movement_type='IN',
+            quantity=1,  # Insufficient for production
+            note='Small amount of Material 1',
+            created_by=self.admin,
+            updated_by=self.admin
+        )
+        
+        # Add production results that would require more materials
+        ProductionResult.objects.create(
+            production_process=self.production_process,
+            item_sku=self.product,
+            quantity=8,  # This would require 8*2=16 material_1 and 8*3=24 material_2
+            created_by=self.admin,
+            updated_by=self.admin
+        )
+        
+        # Confirmation should fail due to insufficient WIP stock
+        with self.assertRaises(ValidationError) as context:
+            self.production_process.confirm_process(self.admin)
+        
+        # Check that process remains in DRAFT status
+        self.production_process.refresh_from_db()
+        self.assertEqual(self.production_process.status, ProductionProcess.StatusChoices.DRAFT)
+    
+    def test_process_confirmation_no_wip_stock(self):
+        """Test that process confirmation fails when no WIP stock exists."""
+        # Don't create any WIP stock movements
+        
+        # Add production results
+        ProductionResult.objects.create(
+            production_process=self.production_process,
+            item_sku=self.product,
+            quantity=5,  # This would require 5*2=10 material_1 and 5*3=15 material_2
+            created_by=self.admin,
+            updated_by=self.admin
+        )
+        
+        # Confirmation should fail due to no WIP stock
+        with self.assertRaises(ValidationError):
+            self.production_process.confirm_process(self.admin)
+        
+        # Process should remain in DRAFT status
+        self.production_process.refresh_from_db()
+        self.assertEqual(self.production_process.status, ProductionProcess.StatusChoices.DRAFT)
 
 
 class ProductionProcessValidationTests(TestCase):

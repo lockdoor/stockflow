@@ -26,6 +26,7 @@
 
 {% block dashboard_content %}
 <div class="row">
+    <!-- Main Form - col-8 -->
     <div class="col-lg-8">
         <div class="card shadow-sm">
             <div class="card-header">
@@ -53,15 +54,13 @@
                         <div class="col-md-6">
                             <label class="form-label">Status</label>
                             <div>
-                                <span class="badge {% if process.status == 'DRAFT' %}bg-warning{% else %}bg-success{% endif %} fs-6">
+                                <span class="badge {% if process.status == 'DRAFT' %}bg-warning text-dark{% else %}bg-success{% endif %}">
                                     {{ process.get_status_display }}
                                 </span>
                             </div>
                         </div>
                         {% endif %}
-                    </div>
-
-                    <div class="mb-4">
+                    </div>                    <div class="mb-4">
                         <label for="{{ form.note.id_for_label }}" class="form-label">Notes</label>
                         {{ form.note|add_class:"form-control" }}
                         {% if form.note.errors %}
@@ -75,12 +74,19 @@
                     <div class="mb-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <h6 class="mb-0">
-                                <i class="bi bi-box-seam me-1"></i>Finished Products
+                                <i class="bi bi-box-seam me-1"></i>Finished Products <span class="text-danger">*</span>
                             </h6>
-                            <button type="button" class="btn btn-sm btn-outline-success" id="add-result-btn">
-                                <i class="bi bi-plus me-1"></i>Add Product
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="add-result-btn">
+                                <i class="bi bi-plus-lg me-1"></i>Add Product
                             </button>
                         </div>
+                        
+                        {% if not result_formset.forms or result_formset.forms|length == 0 %}
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle me-2"></i>
+                            <strong>No products added yet.</strong> Click "Add Product" to add finished products for this production process.
+                        </div>
+                        {% endif %}
                         
                         <div id="results-formset">
                             {{ result_formset.management_form }}
@@ -89,32 +95,24 @@
                                 <div class="result-form-row border rounded p-3 mb-3" data-form-index="{{ forloop.counter0 }}">
                                     <div class="row">
                                         <div class="col-md-5">
-                                            <label class="form-label">Product <span class="text-danger">*</span></label>
+                                            <label for="{{ form.item_sku.id_for_label }}" class="form-label">Product <span class="text-danger">*</span></label>
                                             {{ form.item_sku|add_class:"form-select" }}
-                                            {% if form.item_sku.errors %}
-                                                <div class="invalid-feedback d-block">{{ form.item_sku.errors.0 }}</div>
-                                            {% endif %}
                                         </div>
                                         <div class="col-md-4">
-                                            <label class="form-label">Quantity <span class="text-danger">*</span></label>
+                                            <label for="{{ form.quantity.id_for_label }}" class="form-label">Quantity <span class="text-danger">*</span></label>
                                             {{ form.quantity|add_class:"form-control" }}
-                                            {% if form.quantity.errors %}
-                                                <div class="invalid-feedback d-block">{{ form.quantity.errors.0 }}</div>
-                                            {% endif %}
                                         </div>
                                         <div class="col-md-3">
                                             <label class="form-label">&nbsp;</label>
                                             <div>
-                                                {% if not process or process.status == 'DRAFT' %}
-                                                <button type="button" class="btn btn-sm btn-outline-danger remove-result-btn">
-                                                    <i class="bi bi-trash"></i> Remove
+                                                <button type="button" class="btn btn-outline-danger btn-sm remove-result-btn">
+                                                    <i class="bi bi-trash me-1"></i>Remove
                                                 </button>
-                                                {% endif %}
                                             </div>
                                         </div>
                                     </div>
                                     {{ form.id }}
-                                    {% if form.DELETE %}{{ form.DELETE }}{% endif %}
+                                    {{ form.DELETE }}
                                 </div>
                                 {% endfor %}
                             </div>
@@ -125,10 +123,10 @@
                     <div class="mb-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <h6 class="mb-0">
-                                <i class="bi bi-exclamation-triangle me-1"></i>Lost Materials
+                                <i class="bi bi-exclamation-triangle me-1"></i>Material Losses (Optional)
                             </h6>
                             <button type="button" class="btn btn-sm btn-outline-warning" id="add-loss-btn">
-                                <i class="bi bi-plus me-1"></i>Add Loss
+                                <i class="bi bi-plus-lg me-1"></i>Add Loss
                             </button>
                         </div>
                         
@@ -139,78 +137,127 @@
                                 <div class="loss-form-row border rounded p-3 mb-3" data-form-index="{{ forloop.counter0 }}">
                                     <div class="row">
                                         <div class="col-md-4">
-                                            <label class="form-label">Material <span class="text-danger">*</span></label>
+                                            <label for="{{ form.item_sku.id_for_label }}" class="form-label">Material</label>
                                             {{ form.item_sku|add_class:"form-select" }}
-                                            {% if form.item_sku.errors %}
-                                                <div class="invalid-feedback d-block">{{ form.item_sku.errors.0 }}</div>
-                                            {% endif %}
                                         </div>
                                         <div class="col-md-3">
-                                            <label class="form-label">Quantity <span class="text-danger">*</span></label>
+                                            <label for="{{ form.quantity.id_for_label }}" class="form-label">Quantity</label>
                                             {{ form.quantity|add_class:"form-control" }}
-                                            {% if form.quantity.errors %}
-                                                <div class="invalid-feedback d-block">{{ form.quantity.errors.0 }}</div>
-                                            {% endif %}
                                         </div>
                                         <div class="col-md-3">
-                                            <label class="form-label">Reason</label>
+                                            <label for="{{ form.reason.id_for_label }}" class="form-label">Reason</label>
                                             {{ form.reason|add_class:"form-control" }}
-                                            {% if form.reason.errors %}
-                                                <div class="invalid-feedback d-block">{{ form.reason.errors.0 }}</div>
-                                            {% endif %}
                                         </div>
                                         <div class="col-md-2">
                                             <label class="form-label">&nbsp;</label>
                                             <div>
-                                                {% if not process or process.status == 'DRAFT' %}
-                                                <button type="button" class="btn btn-sm btn-outline-danger remove-loss-btn">
+                                                <button type="button" class="btn btn-outline-danger btn-sm remove-loss-btn">
                                                     <i class="bi bi-trash"></i>
                                                 </button>
-                                                {% endif %}
                                             </div>
                                         </div>
                                     </div>
                                     {{ form.id }}
-                                    {% if form.DELETE %}{{ form.DELETE }}{% endif %}
+                                    {{ form.DELETE }}
                                 </div>
                                 {% endfor %}
                             </div>
                         </div>
                     </div>
 
-                    <!-- Action Buttons -->
-                    <div class="d-flex justify-content-between">
-                        <div>
-                            {% if process and process.status == 'DRAFT' %}
-                            <button type="submit" name="action" value="confirm" class="btn btn-success me-2">
-                                <i class="bi bi-check-circle me-1"></i>Confirm Process
-                            </button>
-                            {% endif %}
-                            <button type="submit" name="action" value="save" class="btn btn-primary">
-                                <i class="bi bi-save me-1"></i>
-                                {% if process %}Update{% else %}Save Draft{% endif %}
-                            </button>
-                        </div>
-                        <div>
-                            {% if process and process.status == 'DRAFT' %}
-                            <a href="{% url 'production:production-process-unified-edit' production_order.id process.id %}?action=delete" 
-                               class="btn btn-outline-danger"
-                               onclick="return confirm('Are you sure you want to delete this production process?')">
-                                <i class="bi bi-trash me-1"></i>Delete
-                            </a>
-                            {% endif %}
-                        </div>
-                    </div>
+                    <!-- Form submission will be handled by action card buttons -->
                 </form>
             </div>
         </div>
     </div>
     
-    <!-- Sidebar -->
+    <!-- Sidebar - col-4 -->
     <div class="col-lg-4">
-        <div class="card shadow-sm mb-4">
+        <!-- Action Card -->
+        <div class="card shadow-sm mb-3">
             <div class="card-header">
-                <h6 class="card-title mb-0">Information</h6>
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-lightning me-1"></i>Actions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <!-- Save Draft Action -->
+                    <div class="col-md-4">
+                        <div class="d-grid">
+                            <button type="button" class="btn btn-outline-primary btn-lg action-btn" data-action="save_draft">
+                                <div class="text-center">
+                                    <i class="bi bi-file-earmark-text fs-4 d-block mb-2"></i>
+                                    <strong>Save Draft</strong>
+                                    <small class="d-block text-muted">Save and return to order</small>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Update Draft Action -->
+                    <div class="col-md-4">
+                        <div class="d-grid">
+                            <button type="button" class="btn btn-outline-info btn-lg action-btn" data-action="update_draft">
+                                <div class="text-center">
+                                    <i class="bi bi-pencil-square fs-4 d-block mb-2"></i>
+                                    <strong>{% if process %}Update{% else %}Save &{% endif %} Stay</strong>
+                                    <small class="d-block text-muted">Save and stay here</small>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Confirm Process Action -->
+                    {% if process and process.status == 'DRAFT' %}
+                    <div class="col-md-4">
+                        <div class="d-grid">
+                            <button type="button" class="btn btn-success btn-lg action-btn" data-action="confirm">
+                                <div class="text-center">
+                                    <i class="bi bi-check-circle fs-4 d-block mb-2"></i>
+                                    <strong>Confirm Process</strong>
+                                    <small class="d-block text-muted">Apply to stock</small>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+                    {% elif process %}
+                    <!-- Debug: Process exists but not DRAFT -->
+                    <div class="col-md-4">
+                        <div class="d-grid">
+                            <button type="button" class="btn btn-secondary btn-lg" disabled>
+                                <div class="text-center">
+                                    <i class="bi bi-lock fs-4 d-block mb-2"></i>
+                                    <strong>{{ process.get_status_display }}</strong>
+                                    <small class="d-block text-muted">Process is {{ process.status }}</small>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+                    {% else %}
+                    <!-- Debug: No process object -->
+                    <div class="col-md-4">
+                        <div class="d-grid">
+                            <button type="button" class="btn btn-outline-secondary btn-lg" disabled>
+                                <div class="text-center">
+                                    <i class="bi bi-question fs-4 d-block mb-2"></i>
+                                    <strong>No Process</strong>
+                                    <small class="d-block text-muted">Create first</small>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Information Card -->
+        <div class="card shadow-sm mb-3">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-info-circle me-1"></i>Information
+                </h6>
             </div>
             <div class="card-body">
                 <div class="mb-3">
@@ -226,7 +273,7 @@
                 <div class="mb-3">
                     <label class="form-label text-muted small">Status</label>
                     <div>
-                        <span class="badge {% if process.status == 'DRAFT' %}bg-warning{% else %}bg-success{% endif %}">
+                        <span class="badge {% if process.status == 'DRAFT' %}bg-warning text-dark{% else %}bg-success{% endif %}">
                             {{ process.get_status_display }}
                         </span>
                     </div>
@@ -276,6 +323,168 @@
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Action button handlers
+    document.querySelectorAll('.action-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            const action = this.dataset.action;
+            handleActionSubmit(action);
+        });
+    });
+    
+    function handleActionSubmit(action) {
+        const form = document.getElementById('production-process-form');
+        const formData = new FormData(form);
+        
+        // Validate required fields based on action
+        let hasErrors = false;
+        
+        // Check process name (always required)
+        const processName = document.querySelector('[name="process_name"]').value;
+        if (!processName.trim()) {
+            alert('Process name is required');
+            return;
+        }
+        
+        // For confirm action, we need stricter validation
+        if (action === 'confirm') {
+            if (!confirm('Are you sure you want to confirm this production process? This will apply all stock movements and cannot be undone.')) {
+                return;
+            }
+            
+            // Check if we have at least one result
+            const resultForms = document.querySelectorAll('.result-form-row:not([style*="display: none"])');
+            if (resultForms.length === 0) {
+                alert('At least one finished product is required for confirmation. Please add a product using the "Add Product" button.');
+                return;
+            }
+            
+            // Validate each visible result form
+            let hasValidResults = false;
+            resultForms.forEach(function(formRow) {
+                const itemSelect = formRow.querySelector('[name*="-item_sku"]');
+                const quantityInput = formRow.querySelector('[name*="-quantity"]');
+                
+                // Skip empty forms (both item and quantity are empty)
+                if (!itemSelect.value && !quantityInput.value) {
+                    return;
+                }
+                
+                if (!itemSelect.value) {
+                    hasErrors = true;
+                    alert('Please select a product for all result entries before confirmation');
+                    return;
+                }
+                
+                if (!quantityInput.value || parseFloat(quantityInput.value) <= 0) {
+                    hasErrors = true;
+                    alert('Please enter a valid quantity for all result entries before confirmation');
+                    return;
+                }
+                
+                hasValidResults = true;
+            });
+            
+            if (!hasValidResults) {
+                alert('At least one finished product with valid quantity is required for confirmation');
+                return;
+            }
+            
+            if (hasErrors) return;
+        } else {
+            // For save_draft and update_draft, allow incomplete data
+            // But if there are result forms, validate only the filled ones
+            const resultForms = document.querySelectorAll('.result-form-row:not([style*="display: none"])');
+            
+            resultForms.forEach(function(formRow) {
+                const itemSelect = formRow.querySelector('[name*="-item_sku"]');
+                const quantityInput = formRow.querySelector('[name*="-quantity"]');
+                
+                // If item is selected, quantity must be valid
+                if (itemSelect.value && (!quantityInput.value || parseFloat(quantityInput.value) <= 0)) {
+                    hasErrors = true;
+                    alert('Please enter a valid quantity for selected products');
+                    return;
+                }
+                
+                // If quantity is entered, item must be selected
+                if (quantityInput.value && parseFloat(quantityInput.value) > 0 && !itemSelect.value) {
+                    hasErrors = true;
+                    alert('Please select a product when quantity is entered');
+                    return;
+                }
+            });
+            
+            if (hasErrors) return;
+        }
+        
+        // Set action
+        formData.set('action', action);
+        
+        // Show loading state
+        const btn = this.closest ? this.closest('.action-btn') : event.target.closest('.action-btn');
+        if (!btn) return;
+        
+        const originalHTML = btn.innerHTML;
+        btn.innerHTML = '<div class="text-center"><i class="bi bi-hourglass-split fs-4 d-block mb-2"></i><strong>Processing...</strong></div>';
+        btn.disabled = true;
+        
+        // Submit form
+        fetch(window.location.href, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                return response.json().then(data => {
+                    if (data.success) {
+                        if (data.redirect_url) {
+                            window.location.href = data.redirect_url;
+                        } else {
+                            // Fallback redirect
+                            window.location.href = '{% url "production:production-order-detail" production_order.id %}';
+                        }
+                    } else {
+                        throw new Error(data.error || 'Server returned success=false');
+                    }
+                });
+            } else {
+                // Handle errors
+                return response.json().then(data => {
+                    if (data.errors) {
+                        let errorMsg = 'Please fix the following errors:\n';
+                        Object.keys(data.errors).forEach(key => {
+                            errorMsg += '- ' + data.errors[key].join(', ') + '\n';
+                        });
+                        alert(errorMsg);
+                    } else if (data.error) {
+                        alert(data.error);
+                    } else {
+                        alert('An error occurred while processing your request');
+                    }
+                    
+                    // Restore button
+                    btn.innerHTML = originalHTML;
+                    btn.disabled = false;
+                }).catch(() => {
+                    alert('An error occurred while processing your request');
+                    btn.innerHTML = originalHTML;
+                    btn.disabled = false;
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while processing your request');
+            
+            // Restore button
+            btn.innerHTML = originalHTML;
+            btn.disabled = false;
+        });
+    }
+    
     // Formset management
     let resultFormCount = parseInt(document.querySelector('[name="results-TOTAL_FORMS"]').value);
     let lossFormCount = parseInt(document.querySelector('[name="losses-TOTAL_FORMS"]').value);
@@ -318,8 +527,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         <label class="form-label">Product <span class="text-danger">*</span></label>
                         <select name="results-${resultFormCount}-item_sku" class="form-select" required>
                             <option value="">Select Product...</option>
-                            {% for choice in result_formset.0.item_sku.field.queryset %}
-                            <option value="{{ choice.id }}">{{ choice.name }}</option>
+                            {% for bom in bom_products %}
+                            <option value="{{ bom.item_sku.id }}">{{ bom.item_sku.name }}</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -353,8 +562,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         <label class="form-label">Material <span class="text-danger">*</span></label>
                         <select name="losses-${lossFormCount}-item_sku" class="form-select" required>
                             <option value="">Select Material...</option>
-                            {% for choice in loss_formset.0.item_sku.field.queryset %}
-                            <option value="{{ choice.id }}">{{ choice.name }}</option>
+                            {% for material_id, material_name in wip_materials %}
+                            <option value="{{ material_id }}">{{ material_name }}</option>
                             {% endfor %}
                         </select>
                     </div>

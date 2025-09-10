@@ -1,9 +1,3 @@
-"""
-Production Process Forms
-
-Forms for creating and editing production processes with validation.
-"""
-
 from django import forms
 from django.core.exceptions import ValidationError
 from production.models.production_process import ProductionProcess
@@ -17,7 +11,6 @@ class ProductionProcessForm(forms.ModelForm):
     class Meta:
         model = ProductionProcess
         fields = [
-            'production_order',
             'process_name',
             'note',
             'started_at',
@@ -32,10 +25,6 @@ class ProductionProcessForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         self.production_order = kwargs.pop('production_order', None)
         super().__init__(*args, **kwargs)
-        
-        if self.production_order:
-            self.fields['production_order'].initial = self.production_order
-            self.fields['production_order'].widget = forms.HiddenInput()
 
 
 class ProductionResultForm(forms.ModelForm):
@@ -50,11 +39,26 @@ class ProductionResultForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         self.production_process = kwargs.pop('production_process', None)
+        self.production_order = kwargs.pop('production_order', None)
         super().__init__(*args, **kwargs)
         
         if self.production_process:
             self.fields['production_process'].initial = self.production_process
             self.fields['production_process'].widget = forms.HiddenInput()
+        
+        # กรอง item_sku ให้แสดงเฉพาะ products ที่อยู่ใน BOM ของ production order
+        if self.production_order:
+            from production.models.production_order_bom import ProductionOrderBOM
+            
+            # หา products ที่อยู่ใน BOM ของ production order นี้
+            bom_products = ProductionOrderBOM.objects.filter(
+                production_order=self.production_order
+            ).values_list('item_sku', flat=True)
+            
+            # กรอง queryset ให้แสดงเฉพาะ products ที่อยู่ใน BOM
+            self.fields['item_sku'].queryset = self.fields['item_sku'].queryset.filter(
+                id__in=bom_products
+            )
 
     def clean_quantity(self):
         quantity = self.cleaned_data.get('quantity')
@@ -76,11 +80,27 @@ class ProductionLossForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         self.production_process = kwargs.pop('production_process', None)
+        self.production_order = kwargs.pop('production_order', None)
         super().__init__(*args, **kwargs)
         
         if self.production_process:
             self.fields['production_process'].initial = self.production_process
             self.fields['production_process'].widget = forms.HiddenInput()
+        
+        # กรอง item_sku ให้แสดงเฉพาะ materials ที่อยู่ใน WIP ของ production order
+        if self.production_order:
+            from production.models.wip_stock_movement import WIPStockMovement
+            
+            # หา materials ที่มีใน WIP ของ production order นี้
+            wip_materials = WIPStockMovement.objects.filter(
+                production_order=self.production_order,
+                movement_type=WIPStockMovement.MovementType.IN
+            ).values_list('item_sku', flat=True).distinct()
+            
+            # กรอง queryset ให้แสดงเฉพาะ materials ที่มีใน WIP
+            self.fields['item_sku'].queryset = self.fields['item_sku'].queryset.filter(
+                id__in=wip_materials
+            )
 
     def clean_quantity(self):
         quantity = self.cleaned_data.get('quantity')

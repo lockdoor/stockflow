@@ -66,41 +66,20 @@
                             <td class="text-end">
                                 <div class="btn-group btn-group-sm">
                                     {% if process.status == 'DRAFT' %}
-                                    <form method="post" action="{#% url 'production:production-process-confirm' process.id %#}" class="d-inline">
-                                        {% csrf_token %}
-                                        <button type="submit" class="btn btn-outline-success btn-sm" 
-                                                onclick="return confirm('Are you sure you want to confirm this process?');"
-                                                title="Confirm Process">
-                                            <i class="bi bi-check"></i>
-                                        </button>
-                                    </form>
-                                    {% endif %}
                                     <a href="{% url 'production:production-process-unified-edit' production_order.id process.id %}?prev={{ request.path }}" 
                                         class="btn btn-outline-primary btn-sm" title="Edit Process">
                                         <i class="bi bi-pencil"></i>
                                     </a>
-                                    {% if process.status == 'DRAFT' %}
-                                    <!-- TODO: Create production-process-delete view -->
-                                    <a href="#" onclick="alert('Delete function not implemented yet')" 
+                                    <a href="{% url 'production:production-process-unified-delete' production_order.id process.id %}?prev={{ request.path }}" 
                                         class="btn btn-outline-danger btn-sm" title="Delete Process">
                                         <i class="bi bi-trash"></i>
                                     </a>
                                     {% endif %}
                                     {% if process.status == 'CONFIRMED' %}
-                                    <div class="btn-group btn-group-sm">
-                                        <button type="button" class="btn btn-outline-info btn-sm dropdown-toggle dropdown-toggle-split" 
-                                                data-bs-toggle="dropdown" title="Add Result/Loss">
-                                            <i class="bi bi-plus"></i>
-                                        </button>
-                                        <ul class="dropdown-menu">
-                                            <li><a class="dropdown-item" href="#" onclick="addProductionResult({{ process.id }})">
-                                                <i class="bi bi-check-circle me-1"></i>Add Success Result
-                                            </a></li>
-                                            <li><a class="dropdown-item" href="#" onclick="addProductionLoss({{ process.id }})">
-                                                <i class="bi bi-x-circle me-1"></i>Add Loss/Waste
-                                            </a></li>
-                                        </ul>
-                                    </div>
+                                    <a href="{% url 'production:production-process-detail' production_order.id process.id %}" 
+                                        class="btn btn-outline-secondary btn-sm" title="View Process">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
                                     {% endif %}
                                 </div>
                             </td>

@@ -18,9 +18,15 @@ class RedirectMixin:
     def get_success_redirect_url(self, obj=None):
         """
         Determine where to redirect after successful operation.
-        Priority:
-        1. 'next' parameter from request (POST takes priority over GET)
-        2. Default success URL based on view type
+        Priority for DELETE operations:
+        1. GET 'next' parameter (from action buttons/links)
+        2. POST 'next' parameter (from forms)
+        3. Default success URL based on view type
+        
+        Priority for CREATE/UPDATE operations:
+        1. POST 'next' parameter (from forms) 
+        2. GET 'next' parameter (from navigation)
+        3. Default success URL based on view type
         
         Args:
             obj: The model instance (optional, for object-specific redirects)
@@ -28,8 +34,13 @@ class RedirectMixin:
         Returns:
             str: URL to redirect to
         """
-        # Check for next parameter in request (POST has priority)
-        next_url = self.request.POST.get('next') or self.request.GET.get('next')
+        # For DELETE operations, GET has priority
+        if self.__class__.__name__.endswith('DeleteView'):
+            next_url = self.request.GET.get('next') or self.request.POST.get('next')
+        else:
+            # For CREATE/UPDATE operations, POST has priority
+            next_url = self.request.POST.get('next') or self.request.GET.get('next')
+            
         if next_url:
             return next_url
             
@@ -140,6 +151,10 @@ class StockMovementRedirectMixin(RedirectMixin):
     
     def get_default_success_url(self, stock_movement=None):
         """Get default success URL for stock movement operations."""
+        # For delete operations, always go to list page (object will be deleted)
+        if self.__class__.__name__.endswith('DeleteView'):
+            return reverse('inventory:stock-movement-list')
+            
         if stock_movement:
             return reverse('inventory:stock-movement-detail', kwargs={'pk': stock_movement.pk})
         return reverse('inventory:stock-movement-list')

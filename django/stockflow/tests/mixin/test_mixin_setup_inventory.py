@@ -3,7 +3,7 @@ import random
 
 from . import MixinSetupCatalog
 from ..factories.inventory import WarehouseFactory, StockMovementFactory, StockMovementItemFactory
-from inventory.models import Warehouse, StockMovement
+from inventory.models import Warehouse, StockMovement, StockMovementItem, Stock
 from catalog.models import ItemSKU
 
 class MixinSetupInventory(MixinSetupCatalog):
@@ -57,5 +57,10 @@ class MyInventoryTests(MixinSetupInventory, TestCase):
             for sm in stock_movements:
                 self.assertEqual(sm.movement_items.count(), len(self.catalog_items))
                 for item in sm.movement_items.all():
+                    item: StockMovementItem
+                    self.assertIsInstance(item, StockMovementItem)
                     self.assertGreaterEqual(item.quantity, self.inventory_stockmovement_item_min_quantity)
                     self.assertLessEqual(item.quantity, self.inventory_stockmovement_item_max_quantity)
+                    print (f"warehouse: {warehouse.name}, item: {item.item_sku.name}, stock: {Stock.get_total_stock(item.item_sku, warehouse)}")
+                    self.assertTrue(Stock.get_total_stock(item.item_sku, warehouse) > 0)
+                self.assertEqual(sm.status, StockMovement.Status.COMPLETED)

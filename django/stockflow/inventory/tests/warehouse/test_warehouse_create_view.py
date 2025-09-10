@@ -221,7 +221,7 @@ class WarehouseCreateViewTest(TestCase):
         self.assertEqual(warehouse.version, 1)
 
     def test_create_warehouse_creates_permissions_and_groups(self):
-        """Test that warehouse creation creates warehouse-specific permission and group via transaction"""
+        """Test that warehouse creation creates warehouse-specific permissions and groups via transaction"""
         self.client.login(username='permitted', password='testpass123')
         url = reverse('inventory:warehouse-form')
         data = {
@@ -244,28 +244,63 @@ class WarehouseCreateViewTest(TestCase):
         warehouse = Warehouse.objects.get(name="Permission Test Warehouse")
         self.assertIsNotNone(warehouse.id)
         
-        # Check permission was created
-        perm_codename = f'can_manage_warehouse_{warehouse.id}'
-        permission = Permission.objects.filter(codename=perm_codename).first()
+        # Check main warehouse management permission was created
+        main_perm_codename = f'can_manage_warehouse_{warehouse.id}'
+        main_permission = Permission.objects.filter(codename=main_perm_codename).first()
         
-        self.assertIsNotNone(permission, f"Permission with codename '{perm_codename}' should exist")
-        self.assertEqual(permission.name, f"Can manage Warehouse {warehouse.name} (ID {warehouse.id})")
+        self.assertIsNotNone(main_permission, f"Main permission with codename '{main_perm_codename}' should exist")
+        self.assertEqual(main_permission.name, f"Can manage Warehouse {warehouse.name} (ID {warehouse.id})")
         
-        # Check that the group was also created and has the permission
+        # Check that warehouse-specific group was created
         group_name = f"warehouse_{warehouse.id}_staff"
-        group = Group.objects.filter(name=group_name).first()
-        self.assertIsNotNone(group, f"Group '{group_name}' should exist")
-        self.assertIn(permission, group.permissions.all())
+        warehouse_group = Group.objects.filter(name=group_name).first()
+        self.assertIsNotNone(warehouse_group, f"Warehouse group '{group_name}' should exist")
         
-        # Check that superuser group also has the permission
+        # Check that the group has the main permission
+        self.assertIn(main_permission, warehouse_group.permissions.all())
+        
+        # Check that all warehouse-specific permissions were created (8 total)
+        warehouse_permissions = Permission.objects.filter(
+            codename__contains=f'_warehouse_{warehouse.id}'
+        )
+        expected_permission_count = 8  # As defined in _create_warehouse_permissions
+        self.assertEqual(
+            warehouse_permissions.count(), 
+            expected_permission_count,
+            f"Should create {expected_permission_count} warehouse-specific permissions"
+        )
+        
+        # Verify the specific permissions exist
+        expected_codenames = [
+            f"can_manage_warehouse_{warehouse.id}",
+            f"can_view_stock_warehouse_{warehouse.id}",
+            f"can_create_stock_movement_warehouse_{warehouse.id}",
+            f"can_manage_stock_movement_warehouse_{warehouse.id}",
+            f"can_manage_reservation_warehouse_{warehouse.id}",
+            f"can_create_production_order_warehouse_{warehouse.id}",
+            f"can_manage_production_order_warehouse_{warehouse.id}",
+            f"can_manage_production_process_warehouse_{warehouse.id}",
+        ]
+        
+        for codename in expected_codenames:
+            permission = Permission.objects.filter(codename=codename).first()
+            self.assertIsNotNone(permission, f"Permission '{codename}' should exist")
+            self.assertIn(permission, warehouse_group.permissions.all(), 
+                         f"Permission '{codename}' should be in warehouse group")
+        
+        # Check that superuser group also has all the permissions
         superuser_group = Group.objects.filter(name='superuser').first()
-        if superuser_group:  # May not exist in test DB
-            self.assertIn(permission, superuser_group.permissions.all())
+        if superuser_group:
+            for codename in expected_codenames:
+                permission = Permission.objects.get(codename=codename)
+                self.assertIn(permission, superuser_group.permissions.all(),
+                             f"Permission '{codename}' should be in superuser group")
         
-        # Verify counts increased
+        # Verify counts increased correctly
         self.assertEqual(Warehouse.objects.count(), warehouse_count_before + 1)
-        self.assertEqual(Group.objects.count(), group_count_before + 2)  # warehouse group + superuser group (if new)
-        self.assertEqual(Permission.objects.count(), permission_count_before + 1)
+        # Should create warehouse group + superuser group (if new)
+        self.assertGreaterEqual(Group.objects.count(), group_count_before + 1)
+        self.assertEqual(Permission.objects.count(), permission_count_before + expected_permission_count)
 
     def test_warehouse_creation_atomic_transaction(self):
         """Test that warehouse creation is atomic - either everything succeeds or nothing is created"""
@@ -291,18 +326,66 @@ class WarehouseCreateViewTest(TestCase):
         # Verify warehouse and permissions were created together
         warehouse = Warehouse.objects.get(name="Atomic Test Warehouse")
         
-        # Both warehouse and permission should exist
-        permission_exists = Permission.objects.filter(
-            codename=f'can_manage_warehouse_{warehouse.id}'
-        ).exists()
+        # All warehouse-specific permissions should exist (8 total)
+        warehouse_permissions = Permission.objects.filter(
+            codename__contains=f'_warehouse_{warehouse.id}'
+        )
+        self.assertEqual(warehouse_permissions.count(), 8, "Should create 8 warehouse-specific permissions")
+        
+        # Warehouse-specific group should exist
         group_exists = Group.objects.filter(
             name=f'warehouse_{warehouse.id}_staff'
         ).exists()
+        self.assertTrue(group_exists, "Warehouse group should be created with warehouse")
         
-        self.assertTrue(permission_exists, "Permission should be created with warehouse")
-        self.assertTrue(group_exists, "Group should be created with warehouse")
+        # Main management permission should exist
+        main_permission_exists = Permission.objects.filter(
+            codename=f'can_manage_warehouse_{warehouse.id}'
+        ).exists()
+        self.assertTrue(main_permission_exists, "Main management permission should be created with warehouse")
         
-        # Counts should increase together
+        # Counts should increase correctly
         self.assertEqual(Warehouse.objects.count(), warehouse_count_before + 1)
-        self.assertGreater(Group.objects.count(), group_count_before)
-        self.assertEqual(Permission.objects.count(), permission_count_before + 1)
+        self.assertGreaterEqual(Group.objects.count(), group_count_before + 1)
+        self.assertEqual(Permission.objects.count(), permission_count_before + 8)
+
+    def test_warehouse_creator_gets_permission_automatically(self):
+        """Test that the user who creates a warehouse automatically gets permission to manage it"""
+        self.client.login(username='permitted', password='testpass123')
+        url = reverse('inventory:warehouse-form')
+        data = {
+            'name': 'Creator Permission Test Warehouse',
+            'code': 'CREATOR01',
+            'is_active': True
+        }
+        
+        # Verify user doesn't have warehouse permission before creation
+        warehouse_exists_before = Warehouse.objects.filter(name="Creator Permission Test Warehouse").exists()
+        self.assertFalse(warehouse_exists_before, "Warehouse should not exist before creation")
+        
+        response = self.client.post(url, data, follow=True)
+        
+        # Should redirect on success
+        self.assertRedirects(response, reverse('inventory:warehouse-list'))
+        
+        # Get the created warehouse
+        warehouse = Warehouse.objects.get(name="Creator Permission Test Warehouse")
+        
+        # Check that user has been added to the warehouse group automatically
+        warehouse_group = warehouse.get_warehouse_group()
+        self.assertIn(self.user_with_perm, warehouse_group.user_set.all(),
+                     "Warehouse creator should be automatically added to warehouse group")
+        
+        # Check that user now has warehouse management permission
+        main_permission = Permission.objects.get(
+            codename=f'can_manage_warehouse_{warehouse.id}'
+        )
+        
+        # User should have the permission either directly or through group membership
+        has_permission = (
+            self.user_with_perm.has_perm(f'inventory.can_manage_warehouse_{warehouse.id}') or
+            main_permission in self.user_with_perm.get_group_permissions() or
+            main_permission in self.user_with_perm.user_permissions.all()
+        )
+        self.assertTrue(has_permission, 
+                       "Warehouse creator should have permission to manage the warehouse they created")

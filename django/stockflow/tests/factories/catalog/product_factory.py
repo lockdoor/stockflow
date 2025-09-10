@@ -1,4 +1,5 @@
 import factory
+import uuid
 from ..user import AdminFactory
 from . import BOMFactory
 from . import ItemFactory
@@ -10,7 +11,7 @@ class ProductFactory(factory.django.DjangoModelFactory):
         model = ItemSKU
 
     # Core fields
-    sku_code = factory.Faker('ean13')
+    sku_code = factory.LazyFunction(lambda: f"PROD-{str(uuid.uuid4())[:8]}")  # Thread-safe unique SKU
     name = factory.Sequence(lambda n: f"product_{n}")
     type = ItemSKU.Type.PRODUCT
     status = ItemSKU.Status.DRAFT
@@ -34,7 +35,18 @@ class ProductFactory(factory.django.DjangoModelFactory):
             for component in extracted:
                 BOMFactory(parent_sku=self, component_sku=component)
         else:
-            default_components = ItemFactory.create_batch(bom_count, created_by=self.created_by, updated_by=self.updated_by)
+            # Create unique components to avoid circular reference
+            unique_id = str(uuid.uuid4())[:8]  # Thread-safe unique identifier
+            default_components = []
+            for i in range(bom_count):
+                component = ItemFactory(
+                    sku_code=f"COMP-{unique_id}-{i}",
+                    name=f"Component for {self.name} #{i+1}",
+                    created_by=self.created_by, 
+                    updated_by=self.updated_by
+                )
+                default_components.append(component)
+            
             for component in default_components:
                 BOMFactory(parent_sku=self, component_sku=component)
 

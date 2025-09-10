@@ -184,68 +184,7 @@
         
         <!-- WIP Stock Card -->
         {% if production_order.status == 'IN_PROGRESS' or production_order.status == 'COMPLETED' %}
-        <div class="card shadow-sm mb-4">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h6 class="card-title mb-0">
-                    <i class="bi bi-boxes me-1"></i>Work in Progress
-                </h6>
-                <a href="{% url 'production:wip-stock-list' production_order.id %}" class="btn btn-sm btn-outline-primary">
-                    View All
-                </a>
-            </div>
-            <div class="card-body">
-                {% if wip_movements %}
-                    <div class="table-responsive">
-                        <table class="table table-sm mb-0">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Item</th>
-                                    <th>Type</th>
-                                    <th class="text-end">Qty</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for wip in wip_movements|slice:":10" %}
-                                <tr>
-                                    <td>
-                                        <div class="fw-medium">{{ wip.item_sku.name }}</div>
-                                        <small class="text-muted">{{ wip.item_sku.sku_code }}</small>
-                                    </td>
-                                    <td>
-                                        <span class="badge badge-sm 
-                                            {% if wip.movement_type == 'IN' %}bg-success
-                                            {% elif wip.movement_type == 'OUT' %}bg-warning
-                                            {% elif wip.movement_type == 'RETURN' %}bg-info
-                                            {% elif wip.movement_type == 'LOSS' %}bg-danger
-                                            {% elif wip.movement_type == 'ADJUST' %}bg-secondary
-                                            {% endif %}">
-                                            {{ wip.get_movement_type_display }}
-                                        </span>
-                                    </td>
-                                    <td class="text-end">
-                                        <span class="fw-medium">{{ wip.quantity|floatformat:0 }}</span>
-                                        <small class="text-muted">{{ wip.item_sku.unit }}</small>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                    {% if wip_movements|length > 10 %}
-                    <div class="text-center mt-2">
-                        <small class="text-muted">
-                            Showing 10 of {{ wip_movements|length }} movements
-                        </small>
-                    </div>
-                    {% endif %}
-                {% else %}
-                    <div class="text-center text-muted py-3">
-                        <i class="bi bi-inbox fs-4 d-block mb-2"></i>
-                        <span>No WIP movements yet</span>
-                    </div>
-                {% endif %}
-            </div>
-        </div>
+        {% include "production/orders/partials/wip-stock-card.html" %}
         {% endif %}
 
         <!-- Info Card -->
@@ -290,53 +229,6 @@
 </div>
 
 {% if over_reserved_reservations %}
-        <div class="alert alert-danger d-flex align-items-center mb-4" role="alert">
-            <i class="bi bi-exclamation-triangle-fill me-2 fs-4"></i>
-            <div>
-                พบการจองวัสดุเกิน stock จริงใน Production Order นี้ กรุณาตรวจสอบและแก้ไข
-            </div>
-        </div>
-        <div class="card border-danger mb-4">
-            <div class="card-header bg-danger bg-opacity-10 border-bottom border-danger">
-                <h6 class="card-title mb-0 text-danger">
-                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                    Over Reserved Materials
-                </h6>
-            </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover mb-0 align-middle">
-                        <thead class="table-danger">
-                            <tr>
-                                <th>Item</th>
-                                <th>Warehouse</th>
-                                <th>Reserved Qty</th>
-                                <th>Available</th>
-                                <th>Status</th>
-                                <th>Reference</th>
-                                <th>Created</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for r in over_reserved_reservations %}
-                            <tr class="table-danger">
-                                <td>{{ r.item_sku.name }} <br><small class="text-muted">{{ r.item_sku.sku_code }}</small></td>
-                                <td>{{ r.warehouse.name }}</td>
-                                <td class="fw-bold text-danger">{{ r.reserved_quantity|floatformat:0 }}</td>
-                                <td class="fw-bold text-success">{{ r.available_quantity|floatformat:0 }}</td>
-                                <td>
-                                    <span class="badge {% if r.status == 'RESERVED' %}bg-success{% elif r.status == 'CANCELLED' %}bg-secondary{% else %}bg-warning{% endif %}">
-                                        {{ r.get_status_display }}
-                                    </span>
-                                </td>
-                                <td>{{ r.reference_type }} #{{ r.reference_id }}</td>
-                                <td>{{ r.created_at|date:"Y-m-d H:i" }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-        {% endif %}
+    {% include "production/orders/partials/over-reserved-card.html" %}
+{% endif %}
 {% endblock %}
