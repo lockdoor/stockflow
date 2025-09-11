@@ -185,14 +185,14 @@ class StockItemDetailViewTestCase(TestCase):
         self.assertEqual(response.context['item'].sku_code, 'TEST001')
     
     def test_warehouse_lots_grouping(self):
-        """Test that lots are correctly grouped by warehouse"""
+        """Test that lots are correctly grouped by warehouse and all warehouses are shown"""
         self.client.login(username='testuser', password='testpass123')
         url = reverse('inventory:stock-item-detail', kwargs={'item_id': self.item.id})
         response = self.client.get(url)
         
         warehouse_lots = response.context['warehouse_lots']
         
-        # Should have 2 warehouses with stock
+        # Should show all active warehouses (both have stock in this test)
         self.assertEqual(len(warehouse_lots), 2)
         
         # Check warehouse1 has 2 lots
@@ -208,7 +208,7 @@ class StockItemDetailViewTestCase(TestCase):
         self.assertIn(Decimal('100.00'), quantities)
         self.assertIn(Decimal('50.00'), quantities)
         
-        # Check warehouse2 has 1 lot (zero quantity lot should not appear)
+        # Check warehouse2 has 1 lot (zero quantity lot should not appear in lots)
         wh2_lots = warehouse_lots[self.warehouse2]
         self.assertEqual(len(wh2_lots), 1)
         self.assertEqual(wh2_lots[0]['lot_number'], 'LOT003')
@@ -255,16 +255,23 @@ class StockItemDetailViewTestCase(TestCase):
         self.assertEqual(lot_numbers, ['LOT001', 'LOT002'])  # Alphabetical order
     
     def test_item_with_no_stock(self):
-        """Test view behavior for item with no stock"""
+        """Test view behavior for item with no stock - should show all warehouses"""
         self.client.login(username='testuser', password='testpass123')
         url = reverse('inventory:stock-item-detail', kwargs={'item_id': self.other_item.id})
         response = self.client.get(url)
         
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(response.context['warehouse_lots']), 0)
+        # Now should show all active warehouses even if no stock
+        self.assertEqual(len(response.context['warehouse_lots']), 2)  # All active warehouses
+        
+        # Each warehouse should have empty lots list
+        for warehouse, lots in response.context['warehouse_lots'].items():
+            self.assertEqual(len(lots), 0)  # No lots for this item
+        
+        # Summary should reflect no stock
         self.assertEqual(response.context['total_lots'], 0)
         self.assertEqual(response.context['total_available'], 0)
-        self.assertEqual(response.context['warehouses_count'], 0)
+        self.assertEqual(response.context['warehouses_count'], 2)  # Still count warehouses
     
     def test_lot_data_includes_required_fields(self):
         """Test that lot data includes all required fields"""
@@ -286,11 +293,11 @@ class StockItemDetailViewTestCase(TestCase):
         self.assertIsInstance(first_lot['stock'], Stock)
     
     def test_view_method_get_warehouse_lots(self):
-        """Test the get_warehouse_lots method directly"""
+        """Test the get_warehouse_lots method directly - should return all active warehouses"""
         view = StockItemDetailView()
         warehouse_lots = view.get_warehouse_lots(self.item)
         
-        # Should return 2 warehouses
+        # Should return all active warehouses (2 in our case)
         self.assertEqual(len(warehouse_lots), 2)
         
         # Check data structure
@@ -303,6 +310,8 @@ class StockItemDetailViewTestCase(TestCase):
                 self.assertIn('lot_number', lot_data)
                 self.assertIn('available_quantity', lot_data)
                 self.assertIn('expiry_date', lot_data)
+                # Ensure only lots with available quantity > 0 are included
+                self.assertGreater(lot_data['available_quantity'], 0)
     
     def test_view_method_get_item_summary(self):
         """Test the get_item_summary method directly"""
@@ -325,8 +334,11 @@ class StockItemDetailViewTestCase(TestCase):
         self.client.login(username='testuser', password='testpass123')
         view = StockItemDetailView()
         
-        # Should use minimal queries: 1 for stocks + 1 for stock alerts
-        with self.assertNumQueries(2):  # One query for stocks, one for stock alerts
+        # Updated to expect 3 queries now:
+        # 1. Get all active warehouses
+        # 2. Get stocks with available quantity  
+        # 3. Get stock alerts
+        with self.assertNumQueries(3):
             warehouse_lots = view.get_warehouse_lots(self.item)
         
         self.assertGreater(len(warehouse_lots), 0)

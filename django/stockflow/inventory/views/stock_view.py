@@ -241,7 +241,7 @@ class StockItemDetailView(LoginRequiredMixin, TemplateView):
                     'reference_id': r.reference_id,
                     'reserved_quantity': r.reserved_quantity
                 }
-                for r in reservations
+                for r in reservations if r.reserved_quantity > 0
             ]
             reservation_by_warehouse[warehouse.id] = {
                 'total_reserved': total_reserved,
@@ -255,8 +255,13 @@ class StockItemDetailView(LoginRequiredMixin, TemplateView):
     def get_warehouse_lots(self, item):
         """
         Get lots for the item grouped by warehouse.
-        Only includes lots with available_quantity > 0.
+        Shows all warehouses, but only lots with available_quantity > 0.
         """
+        from inventory.models import Warehouse
+        
+        # Get all active warehouses
+        all_warehouses = Warehouse.objects.filter(is_active=True).order_by('name')
+        
         # Get all stocks for this item with available quantity
         stocks = Stock.objects.filter(
             item_sku=item,
@@ -274,21 +279,23 @@ class StockItemDetailView(LoginRequiredMixin, TemplateView):
         for alert in alerts:
             alerts_by_warehouse[alert.warehouse.id] = alert
         
-        # Group by warehouse
+        # Create warehouse_lots dict with all warehouses
         warehouse_lots = {}
+        for warehouse in all_warehouses:
+            # Attach existing alert if any
+            warehouse.existing_alert = alerts_by_warehouse.get(warehouse.id)
+            warehouse_lots[warehouse] = []
+        
+        # Add stocks to their respective warehouses
         for stock in stocks:
             warehouse = stock.warehouse
-            if warehouse not in warehouse_lots:
-                # Attach existing alert if any
-                warehouse.existing_alert = alerts_by_warehouse.get(warehouse.id)
-                warehouse_lots[warehouse] = []
-            
-            warehouse_lots[warehouse].append({
-                'stock': stock,
-                'lot_number': stock.lot_number,
-                'available_quantity': stock.available_quantity,
-                'expiry_date': stock.expiry_date
-            })
+            if warehouse in warehouse_lots:  # Should always be true since we got all active warehouses
+                warehouse_lots[warehouse].append({
+                    'stock': stock,
+                    'lot_number': stock.lot_number,
+                    'available_quantity': stock.available_quantity,
+                    'expiry_date': stock.expiry_date
+                })
         
         return warehouse_lots
     

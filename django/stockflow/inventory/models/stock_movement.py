@@ -99,11 +99,13 @@ class StockMovement(
         ordering = ['-created_at', '-id']
         
         constraints = [
-            # Ensure only one draft stock movement per warehouse
+            # Allow multiple draft movements, but unique per reference and warehouse
+            # This prevents duplicate draft movements for the same reference in same warehouse
+            # but allows different types of draft movements (adjustments, returns, etc.)
             models.UniqueConstraint(
-                fields=['warehouse'],
-                condition=models.Q(status='DRAFT'),
-                name='unique_draft_per_warehouse'
+                fields=['warehouse', 'reference_type', 'reference_id'],
+                condition=models.Q(status='DRAFT') & ~models.Q(reference_type='NONE'),
+                name='unique_draft_per_warehouse_reference'
             )
         ]
         

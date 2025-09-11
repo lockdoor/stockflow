@@ -29,6 +29,14 @@ from production.views.production_process_views import (
 from production.views.production_process_detail import (
     ProductionProcessDetailView,
 )
+from production.views.production_order_status_views import (
+    ProductionOrderCancelConfirmView,
+    ProductionOrderCancelView,
+    ProductionOrderReturnWIPView,
+    ProductionOrderCloseCompletedView,
+    ProductionOrderCloseCancelledView,
+    ProductionOrderStatusAPI,
+)
 app_name = 'production'
 
 urlpatterns = [
@@ -44,6 +52,14 @@ urlpatterns = [
     path('production-order/<int:pk>/created-status/', ProductionOrderCreatedStatusView.as_view(), name='production-order-created-status'),
     path('production-order/<int:pk>/draft-status/', ProductionOrderDraftStatusView.as_view(), name='production-order-draft-status'),
     path('production-order/<int:pk>/wip-stock/', WIPStockListView.as_view(), name='wip-stock-list'),
+    
+    # production order status management
+    path('production-order/<int:pk>/cancel/confirm/', ProductionOrderCancelConfirmView.as_view(), name='production-order-cancel-confirm'),
+    path('production-order/<int:pk>/cancel/', ProductionOrderCancelView.as_view(), name='production-order-cancel'),
+    path('production-order/<int:pk>/return-wip/', ProductionOrderReturnWIPView.as_view(), name='production-order-return-wip'),
+    path('production-order/<int:pk>/close-completed/', ProductionOrderCloseCompletedView.as_view(), name='production-order-close-completed'),
+    path('production-order/<int:pk>/close-cancelled/', ProductionOrderCloseCancelledView.as_view(), name='production-order-close-cancelled'),
+    path('production-order/<int:pk>/status-api/', ProductionOrderStatusAPI.as_view(), name='production-order-status-api'),
 
     # production order bom
     path('production-order/<int:production_order_id>/add-bom/', 
@@ -69,4 +85,24 @@ urlpatterns = [
     path('production-order/<int:production_order_id>/process/<int:process_id>/',
         ProductionProcessDetailView.as_view(),
         name='production-process-detail'),
+    
+    # Production Order Status Management
+    path('production-order/<int:pk>/cancel/', 
+        ProductionOrderCancelView.as_view(), 
+        name='production_order_cancel'),
+    path('production-order/<int:pk>/cancel/confirm/', 
+        ProductionOrderCancelConfirmView.as_view(), 
+        name='production_order_cancel_confirm'),
+    path('production-order/<int:pk>/return-wip/', 
+        ProductionOrderReturnWIPView.as_view(), 
+        name='production_order_return_wip'),
+    path('production-order/<int:pk>/close/completed/', 
+        ProductionOrderCloseCompletedView.as_view(), 
+        name='production_order_close_completed'),
+    path('production-order/<int:pk>/close/cancelled/', 
+        ProductionOrderCloseCancelledView.as_view(), 
+        name='production_order_close_cancelled'),
+    path('api/production-order/<int:pk>/status/', 
+        ProductionOrderStatusAPI.as_view(), 
+        name='production_order_status_api'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

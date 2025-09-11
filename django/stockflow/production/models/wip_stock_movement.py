@@ -81,6 +81,7 @@ class WIPStockMovement(AuditableMixin, ValidatableMixin, models.Model):
             Decimal: ยอดคงเหลือในปัจจุบัน (บวก = มีของในสต็อก, ลบ = ใช้เกิน)
         """
         from django.db.models import Sum, Case, When, DecimalField
+        from decimal import Decimal
         
         # คำนวณยอดรวม IN (เข้า) และ OUT/LOSS/ADJUST (ออก)
         movements = cls.objects.filter(
@@ -88,10 +89,14 @@ class WIPStockMovement(AuditableMixin, ValidatableMixin, models.Model):
             item_sku=item_sku
         )
         
+        # Debug: Check if there are any movements
+        if not movements.exists():
+            return Decimal('0')
+        
         result = movements.aggregate(
             in_quantity=Sum(
                 Case(
-                    When(movement_type__in=[cls.MovementType.IN, cls.MovementType.RETURN], 
+                    When(movement_type__in=[cls.MovementType.IN], 
                          then='quantity'),
                     default=0,
                     output_field=DecimalField(max_digits=18, decimal_places=6)
@@ -99,7 +104,7 @@ class WIPStockMovement(AuditableMixin, ValidatableMixin, models.Model):
             ),
             out_quantity=Sum(
                 Case(
-                    When(movement_type__in=[cls.MovementType.OUT, cls.MovementType.LOSS], 
+                    When(movement_type__in=[cls.MovementType.OUT, cls.MovementType.LOSS, cls.MovementType.RETURN], 
                          then='quantity'),
                     default=0,
                     output_field=DecimalField(max_digits=18, decimal_places=6)
@@ -107,7 +112,64 @@ class WIPStockMovement(AuditableMixin, ValidatableMixin, models.Model):
             )
         )
         
-        in_qty = result['in_quantity'] or 0
-        out_qty = result['out_quantity'] or 0
+        in_qty = result['in_quantity'] or Decimal('0')
+        out_qty = result['out_quantity'] or Decimal('0')
         
         return in_qty - out_qty
+
+    @classmethod
+    def get_all_wip_balances(cls, production_order):
+        """
+        คำนวณยอดคงเหลือของ item_sku ทั้งหมดใน WIP ของ production_order
+        
+        Args:
+            production_order: ProductionOrder instance
+            
+        Returns:
+            dict: {item_sku_id: balance} สำหรับทุก item ที่มี movement
+        """
+        from django.db.models import Sum, Case, When, DecimalField
+        from decimal import Decimal
+        
+        movements = cls.objects.filter(production_order=production_order)
+        
+        if not movements.exists():
+            return {}
+            
+        # Group by item_sku and calculate balance for each
+        balances = {}
+        item_skus = movements.values('item_sku').distinct()
+        
+        for item_data in item_skus:
+            item_sku_id = item_data['item_sku']
+            
+            # Get movements for this specific item_sku
+            item_movements = movements.filter(item_sku_id=item_sku_id)
+            
+            result = item_movements.aggregate(
+                in_quantity=Sum(
+                    Case(
+                        When(movement_type__in=[cls.MovementType.IN], 
+                             then='quantity'),
+                        default=0,
+                        output_field=DecimalField(max_digits=18, decimal_places=6)
+                    )
+                ),
+                out_quantity=Sum(
+                    Case(
+                        When(movement_type__in=[cls.MovementType.OUT, cls.MovementType.LOSS, cls.MovementType.RETURN], 
+                             then='quantity'),
+                        default=0,
+                        output_field=DecimalField(max_digits=18, decimal_places=6)
+                    )
+                )
+            )
+            
+            in_qty = result['in_quantity'] or Decimal('0')
+            out_qty = result['out_quantity'] or Decimal('0')
+            balance = in_qty - out_qty
+            
+            if balance != 0:  # Only include non-zero balances
+                balances[item_sku_id] = balance
+                
+        return balances

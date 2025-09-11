@@ -1,0 +1,224 @@
+{% extends "base-dashboard-header.html" %}
+{% load widget_tweaks %}
+
+{% block title %}Cancel Production Order #{{ production_order.id }} - StockFlow{% endblock %}
+
+{% block title_text %}Production Management{% endblock %}
+{% block subtitle_text %}Cancel Production Order #{{ production_order.id }}{% endblock %}
+
+{% block header_actions %}
+<a href="{% url 'production:production-order-detail' production_order.id %}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i>Back to Order
+</a>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="card shadow">
+            <div class="card-header bg-danger text-white">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    Cancel Production Order #{{ production_order.id }}
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-danger">
+                    <h6 class="alert-heading">
+                        <i class="bi bi-exclamation-triangle me-1"></i>Important Warning
+                    </h6>
+                    <p class="mb-2">Cancelling this production order will:</p>
+                    <ul class="mb-0">
+                        <li><strong>Stop all production activities</strong> for this order</li>
+                        <li><strong>Cancel material reservations</strong> for future use</li>
+                        <li><strong>Require return of WIP materials</strong> to regular stock</li>
+                        <li><strong>Cannot be reversed</strong> once confirmed</li>
+                    </ul>
+                </div>
+
+                <!-- Order Summary -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6 class="card-title">Order Information</h6>
+                                <p class="mb-1"><strong>Order #:</strong> {{ production_order.id }}</p>
+                                <p class="mb-1"><strong>Warehouse:</strong> {{ production_order.warehouse.name }}</p>
+                                <p class="mb-1"><strong>Current Status:</strong> 
+                                    <span class="badge bg-primary">{{ production_order.get_status_display }}</span>
+                                </p>
+                                <p class="mb-0"><strong>Created:</strong> {{ production_order.created_at|date:"M d, Y H:i" }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6 class="card-title">Production Items</h6>
+                                {% for bom in production_order.boms.all %}
+                                <div class="d-flex justify-content-between">
+                                    <span>{{ bom.item_sku.sku_code }}</span>
+                                    <span>{{ bom.planned_quantity|floatformat:2 }} {{ bom.item_sku.unit }}</span>
+                                </div>
+                                {% empty %}
+                                <p class="text-muted mb-0">No items defined</p>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- WIP Materials Summary -->
+                {% if wip_materials %}
+                <div class="card border-warning mb-4">
+                    <div class="card-header bg-warning text-dark">
+                        <h6 class="card-title mb-0">
+                            <i class="bi bi-exclamation-circle me-1"></i>
+                            WIP Materials That Need to be Returned ({{ wip_materials|length }} items)
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted mb-3">
+                            The following materials are currently in Work-in-Progress (WIP) stock and will need to be returned 
+                            to regular inventory after cancellation:
+                        </p>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>SKU Code</th>
+                                        <th>Item Name</th>
+                                        <th>WIP Quantity</th>
+                                        <th>Unit</th>
+                                        <th>Warehouse</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for material in wip_materials %}
+                                    <tr>
+                                        <td>
+                                            <code>{{ material.item_sku.sku_code }}</code>
+                                        </td>
+                                        <td>{{ material.item_sku.name }}</td>
+                                        <td>
+                                            <strong class="text-warning">{{ material.balance|floatformat:2 }}</strong>
+                                        </td>
+                                        <td>{{ material.item_sku.unit }}</td>
+                                        <td>
+                                            <span class="badge bg-secondary">{{ material.warehouse.name }}</span>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="alert alert-info mt-3 mb-0">
+                            <i class="bi bi-info-circle me-1"></i>
+                            <strong>Next Step:</strong> After cancellation, you will be able to create stock movements 
+                            to return these WIP materials back to regular inventory.
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="card border-success mb-4">
+                    <div class="card-header bg-success text-white">
+                        <h6 class="card-title mb-0">
+                            <i class="bi bi-check-circle me-1"></i>
+                            No WIP Materials to Return
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <p class="mb-0">
+                            This production order has no materials currently in WIP stock. 
+                            Cancellation will be immediate and complete.
+                        </p>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Stock Movements Summary -->
+                {% if stock_movements %}
+                <div class="card border-info mb-4">
+                    <div class="card-header bg-info text-white">
+                        <h6 class="card-title mb-0">
+                            <i class="bi bi-arrow-down-up me-1"></i>
+                            Existing Stock Movements ({{ stock_movements|length }})
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Movement #</th>
+                                        <th>Type</th>
+                                        <th>Status</th>
+                                        <th>Items</th>
+                                        <th>Created</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for movement in stock_movements %}
+                                    <tr>
+                                        <td>
+                                            <span class="badge bg-secondary">#{{ movement.id }}</span>
+                                        </td>
+                                        <td>
+                                            {% if movement.movement_type == 'IN' %}
+                                                <span class="badge bg-success">IN</span>
+                                            {% else %}
+                                                <span class="badge bg-warning">OUT</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-{% if movement.status == 'CONFIRMED' %}success{% else %}secondary{% endif %}">
+                                                {{ movement.get_status_display }}
+                                            </span>
+                                        </td>
+                                        <td>{{ movement.items_count|default:0 }} items</td>
+                                        <td>{{ movement.created_at|date:"M d, H:i" }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Confirmation Form -->
+                <div class="row">
+                    <div class="col-md-8">
+                        <form method="post" action="{% url 'production:production-order-cancel' production_order.id %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="next" value="{% url 'production:production-order-detail' production_order.id %}">
+                            
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="confirmCancel" name="confirm_cancel" required>
+                                <label class="form-check-label" for="confirmCancel">
+                                    <strong>I understand the consequences and want to cancel this production order</strong>
+                                </label>
+                            </div>
+                            
+                            <div class="form-group mb-3">
+                                <label for="cancelReason" class="form-label">Cancellation Reason <span class="text-muted">(Optional)</span></label>
+                                <textarea class="form-control" id="cancelReason" name="cancel_reason" rows="3" 
+                                          placeholder="Enter the reason for cancelling this production order..."></textarea>
+                            </div>
+                            
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-danger">
+                                    <i class="bi bi-x-circle me-1"></i>Cancel Production Order
+                                </button>
+                                <a href="{% url 'production:production-order-detail' production_order.id %}" class="btn btn-secondary">
+                                    <i class="bi bi-arrow-left me-1"></i>Go Back
+                                </a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

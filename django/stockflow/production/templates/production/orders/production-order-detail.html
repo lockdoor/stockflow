@@ -46,6 +46,14 @@
                             <span class="badge bg-danger fs-6">
                                 <i class="bi bi-x-circle me-1"></i>Cancelled
                             </span>
+                        {% elif production_order.status == 'CLOSED_COMPLETED' %}
+                            <span class="badge bg-success fs-6">
+                                <i class="bi bi-check-circle-fill me-1"></i>Closed (Completed)
+                            </span>
+                        {% elif production_order.status == 'CLOSED_CANCELLED' %}
+                            <span class="badge bg-secondary fs-6">
+                                <i class="bi bi-x-circle-fill me-1"></i>Closed (Cancelled)
+                            </span>
                         {% endif %}
                     </div>
                 </div>
@@ -141,11 +149,14 @@
             </div>
             <div class="card-body">
                 <div class="d-grid gap-2">
+                    {% if not production_order.is_finished %}
                     <a href="{% url 'production:production-order-edit' production_order.id %}?prev={{ request.path }}" class="btn btn-outline-primary">
                         <i class="bi bi-pencil-square me-1"></i>Edit Order
                     </a>
+                    {% endif %}
+                    
                     {% if production_order.status == 'DRAFT' %}
-                    <!-- Form สำหรับเปลี่ยนสถานะเป็น CREATED -->
+                    <!-- Draft Status Actions -->
                     <form method="post" action="{% url 'production:production-order-created-status' production_order.id %}" class="d-grid gap-2 mb-2">
                         {% csrf_token %}
                         <button type="submit" class="btn btn-success">
@@ -159,11 +170,12 @@
                     <a href="{% url 'production:production-order-add-bom' production_order.id %}?prev={{ request.path }}" class="btn btn-outline-success">
                         <i class="bi bi-plus-circle me-1"></i>Manage BOM Item
                     </a>
+                    
                     {% elif production_order.status == 'CREATED' %}
+                    <!-- Created Status Actions -->
                     <a href="{% url 'inventory:stock-movement-create' %}?reference_type=PRODUCTION&reference_id={{ production_order.id }}&warehouse={{ production_order.warehouse.id }}&prev={{ request.path }}" class="btn btn-outline-warning">
                         <i class="bi bi-box-arrow-in-down me-1"></i>Withdraw Material
                     </a>
-                    <!-- Form สำหรับเปลี่ยนสถานะเป็น DRAFT -->
                     <form method="post" action="{% url 'production:production-order-draft-status' production_order.id %}" class="d-grid gap-2 mb-2">
                         {% csrf_token %}
                         <button type="submit" class="btn btn-outline-secondary"
@@ -171,12 +183,65 @@
                             <i class="bi bi-arrow-counterclockwise me-1"></i>Revert to Draft
                         </button>
                     </form>
-                    <form method="post" action="{#% url 'production:production-order-status-completed' production_order.id %#}" class="d-grid gap-2 mb-2">
+                    <a href="{% url 'production:production-order-cancel-confirm' production_order.id %}?prev={{ request.path }}" class="btn btn-outline-danger">
+                        <i class="bi bi-x-circle me-1"></i>Cancel Order
+                    </a>
+                    
+                    {% elif production_order.status == 'IN_PROGRESS' %}
+                    <!-- In Progress Status Actions -->
+                    <a href="{% url 'inventory:stock-movement-create' %}?reference_type=PRODUCTION&reference_id={{ production_order.id }}&warehouse={{ production_order.warehouse.id }}&prev={{ request.path }}" class="btn btn-outline-warning">
+                        <i class="bi bi-box-arrow-in-down me-1"></i>Withdraw Material
+                    </a>
+                    <a href="{% url 'production:production-order-cancel-confirm' production_order.id %}?prev={{ request.path }}" class="btn btn-outline-danger">
+                        <i class="bi bi-x-circle me-1"></i>Cancel Order
+                    </a>
+                    
+                    {% elif production_order.status == 'COMPLETED' %}
+                    <!-- Completed Status Actions -->
+                    <form method="post" action="{% url 'production:production-order-close-completed' production_order.id %}" class="d-grid gap-2 mb-2">
                         {% csrf_token %}
-                        <button type="submit" class="btn btn-danger">
-                            <i class="bi bi-x-circle me-1"></i>Cancel Order
+                        <button type="submit" class="btn btn-success"
+                                onclick="return confirm('Are you sure you want to close this production order as completed?');">
+                            <i class="bi bi-check-circle me-1"></i>Close as Completed
                         </button>
                     </form>
+                    <a href="{% url 'production:production-order-cancel-confirm' production_order.id %}?prev={{ request.path }}" class="btn btn-outline-danger">
+                        <i class="bi bi-x-circle me-1"></i>Cancel Order
+                    </a>
+                    
+                    {% elif production_order.status == 'CANCELLED' %}
+                    <!-- Cancelled Status Actions -->
+                    {% if production_order.has_wip_materials %}
+                    <div class="alert alert-warning mb-2">
+                        <i class="bi bi-exclamation-triangle me-1"></i>
+                        <strong>WIP Materials Need Return</strong>
+                        <br>This order has materials in WIP that must be returned to stock before closing.
+                    </div>
+                    <a href="{% url 'production:production-order-return-wip' production_order.id %}?prev={{ request.path }}" class="btn btn-warning">
+                        <i class="bi bi-arrow-up-circle me-1"></i>Return WIP Materials
+                    </a>
+                    {% else %}
+                    <div class="alert alert-success mb-2">
+                        <i class="bi bi-check-circle me-1"></i>
+                        <strong>Ready to Close</strong>
+                        <br>All WIP materials have been returned. This order can now be closed.
+                    </div>
+                    <form method="post" action="{% url 'production:production-order-close-cancelled' production_order.id %}" class="d-grid gap-2 mb-2">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-secondary"
+                                onclick="return confirm('Are you sure you want to close this cancelled production order?');">
+                            <i class="bi bi-x-circle me-1"></i>Close as Cancelled
+                        </button>
+                    </form>
+                    {% endif %}
+                    
+                    {% elif production_order.is_finished %}
+                    <!-- Finished Status - No Actions Available -->
+                    <div class="alert alert-info mb-0">
+                        <i class="bi bi-info-circle me-1"></i>
+                        <strong>Order Closed</strong>
+                        <br>{{ production_order.get_status_display_with_context }}
+                    </div>
                     {% endif %}
                 </div>
             </div>

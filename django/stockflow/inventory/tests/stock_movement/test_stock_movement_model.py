@@ -282,24 +282,88 @@ class StockMovementModelTest(TestCase):
         self.assertTrue(movement.is_immutable())
         self.assertFalse(movement.can_be_modified())
 
-    def test_unique_draft_per_warehouse(self):
-        """Test that only one draft movement per warehouse is allowed"""
-        # Create first draft movement
-        StockMovement.objects.create(
-            reference_type=StockMovement.ReferenceType.ADJUST,
+    def test_unique_draft_per_warehouse_reference(self):
+        """
+        Test unique constraint allows multiple draft movements with different references
+        
+        The updated constraint (unique_draft_per_warehouse_reference) allows:
+        - Multiple DRAFT movements per warehouse (different reference_types/reference_ids)
+        - PRODUCTION movements with different reference_ids can coexist
+        - ADJUST movements (reference_id=None) can coexist with PRODUCTION movements
+        
+        But prevents:
+        - Duplicate movements with same (warehouse, reference_type, reference_id) combination
+        """
+        
+        # Clean up any existing movements to ensure clean test state
+        StockMovement.objects.all().delete()
+        
+        # Test 1: Create multiple PRODUCTION movements with different reference_ids - should succeed
+        movement1 = StockMovement.objects.create(
+            reference_type=StockMovement.ReferenceType.PRODUCTION,
+            reference_id=12345,
             warehouse=self.warehouse,
             created_by=self.user,
             updated_by=self.user
         )
         
-        # Try to create second draft movement for same warehouse
+        movement2 = StockMovement.objects.create(
+            reference_type=StockMovement.ReferenceType.PRODUCTION,
+            reference_id=67890,
+            warehouse=self.warehouse,
+            created_by=self.user,
+            updated_by=self.user
+        )
+        
+        # Verify both movements exist before testing constraint violation
+        self.assertEqual(StockMovement.objects.count(), 2)
+        self.assertTrue(StockMovement.objects.filter(id=movement1.id).exists())
+        self.assertTrue(StockMovement.objects.filter(id=movement2.id).exists())
+    
+    def test_unique_draft_constraint_violation(self):
+        """Test that duplicate draft movements are prevented"""
+        # Create first movement
+        StockMovement.objects.create(
+            reference_type=StockMovement.ReferenceType.PRODUCTION,
+            reference_id=12345,
+            warehouse=self.warehouse,
+            created_by=self.user,
+            updated_by=self.user
+        )
+        
+        # Try to create duplicate - should fail
         with self.assertRaises(IntegrityError):
             StockMovement.objects.create(
                 reference_type=StockMovement.ReferenceType.PRODUCTION,
+                reference_id=12345,  # Same reference_id and type
                 warehouse=self.warehouse,
                 created_by=self.user,
                 updated_by=self.user
             )
+    
+    def test_adjust_movements_with_null_reference_id(self):
+        """Test ADJUST movements behavior with NULL reference_id"""
+        # ADJUST movements can coexist with PRODUCTION movements
+        production_movement = StockMovement.objects.create(
+            reference_type=StockMovement.ReferenceType.PRODUCTION,
+            reference_id=12345,
+            warehouse=self.warehouse,
+            created_by=self.user,
+            updated_by=self.user
+        )
+        
+        adjust_movement = StockMovement.objects.create(
+            reference_type=StockMovement.ReferenceType.ADJUST,
+            reference_id=None,  # ADJUST typically has no reference_id
+            warehouse=self.warehouse,
+            created_by=self.user,
+            updated_by=self.user
+        )
+        
+        # Both should exist
+        self.assertTrue(StockMovement.objects.filter(id=production_movement.id).exists())
+        self.assertTrue(StockMovement.objects.filter(id=adjust_movement.id).exists())
+        self.assertEqual(StockMovement.objects.count(), 2)
 
     def test_multiple_confirmed_movements_allowed(self):
         """Test that multiple confirmed movements per warehouse are allowed"""

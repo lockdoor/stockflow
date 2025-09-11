@@ -1,0 +1,239 @@
+{% extends "base-dashboard-header.html" %}
+{% load widget_tweaks %}
+
+{% block title %}Return WIP Materials - Production Order #{{ production_order.id }} - StockFlow{% endblock %}
+
+{% block title_text %}Production Management{% endblock %}
+{% block subtitle_text %}Return WIP Materials - Production Order #{{ production_order.id }}{% endblock %}
+
+{% block header_actions %}
+<a href="{% url 'production:production-order-detail' production_order.id %}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i>Back to Order
+</a>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="card shadow">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-arrow-up-circle me-2"></i>
+                    Return WIP Materials to Stock
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <h6 class="alert-heading">
+                        <i class="bi bi-info-circle me-1"></i>Material Return Process
+                    </h6>
+                    <p class="mb-2">This process will:</p>
+                    <ul class="mb-2">
+                        <li><strong>Return WIP materials</strong> back to regular inventory</li>
+                        <li><strong>Create stock movement records</strong> for audit trail</li>
+                        <li><strong>Automatically close the order</strong> as cancelled once all materials are returned</li>
+                    </ul>
+                    <p class="mb-0">
+                        <strong>Note:</strong> If the quantities don't match expectations, use production processes to adjust WIP stock before returning materials.
+                    </p>
+                </div>
+
+                <!-- Order Summary -->
+                <div class="row mb-4">
+                    <div class="col-md-12">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <h6 class="text-muted">Order Information</h6>
+                                        <p class="mb-1"><strong>Order #:</strong> {{ production_order.id }}</p>
+                                        <p class="mb-1"><strong>Warehouse:</strong> {{ production_order.warehouse.name }}</p>
+                                        <p class="mb-0"><strong>Status:</strong> 
+                                            <span class="badge bg-danger">{{ production_order.get_status_display }}</span>
+                                        </p>
+                                    </div>
+                                    <div class="col-md-8">
+                                        {% if production_order.note %}
+                                        <h6 class="text-muted">Order Notes</h6>
+                                        <div class="bg-white p-2 rounded border">
+                                            {{ production_order.note|linebreaksbr }}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {% if wip_materials %}
+                <!-- WIP Materials to Return -->
+                <div class="card border-warning mb-4">
+                    <div class="card-header bg-warning text-dark">
+                        <h6 class="card-title mb-0">
+                            <i class="bi bi-exclamation-circle me-1"></i>
+                            WIP Materials to Return ({{ wip_materials|length }} items)
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>SKU Code</th>
+                                        <th>Item Name</th>
+                                        <th>WIP Balance</th>
+                                        <th>Unit</th>
+                                        <th>Warehouse</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for material in wip_materials %}
+                                    <tr>
+                                        <td>
+                                            <code class="bg-light p-1">{{ material.item_sku.sku_code }}</code>
+                                        </td>
+                                        <td>
+                                            <strong>{{ material.item_sku.name }}</strong>
+                                            {% if material.item_sku.description %}
+                                            <br><small class="text-muted">{{ material.item_sku.description|truncatewords:10 }}</small>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-warning fs-6">{{ material.balance|floatformat:2 }}</span>
+                                        </td>
+                                        <td>{{ material.item_sku.unit }}</td>
+                                        <td>
+                                            <span class="badge bg-secondary">{{ material.warehouse.name }}</span>
+                                        </td>
+                                        <td>
+                                            <a href="{% url 'inventory:stock-movement-create' %}?reference_type=PRODUCTION&reference_id={{ production_order.id }}&movement_type=IN&warehouse={{ material.warehouse.id }}&item_sku={{ material.item_sku.id }}&quantity={{ material.balance }}&prev={{ request.path }}" 
+                                               class="btn btn-sm btn-success" title="Create return movement">
+                                                <i class="bi bi-arrow-up-circle me-1"></i>Return
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div class="mt-3">
+                            <div class="alert alert-warning">
+                                <i class="bi bi-lightbulb me-1"></i>
+                                <strong>Tip:</strong> Click "Return" for each material to create stock movements that will return the WIP materials to regular inventory. 
+                                You can adjust quantities if needed during the stock movement creation process.
+                            </div>
+                        </div>
+
+                        <!-- Bulk Action -->
+                        <div class="border-top pt-3 mt-3">
+                            <h6 class="text-muted">Bulk Actions</h6>
+                            <form method="post" class="d-inline" onsubmit="return confirmBulkReturn()">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-warning btn-lg">
+                                    <i class="bi bi-arrow-up-circle me-1"></i>Create Bulk Return Movement
+                                </button>
+                            </form>
+                            <script>
+                                function confirmBulkReturn() {
+                                    return confirm(
+                                        'Are you sure you want to return all WIP materials?\n\n' +
+                                        'This will:\n' +
+                                        '• Create stock movements to return all WIP materials to inventory\n' +
+                                        '• Automatically close this production order as cancelled\n' +
+                                        '• This action cannot be undone\n\n' +
+                                        'Continue?'
+                                    );
+                                }
+                            </script>
+                            <small class="text-muted d-block mt-1">
+                                Creates a single stock movement to return all WIP materials at once and automatically closes the production order
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                
+                {% else %}
+                <!-- No WIP Materials -->
+                <div class="card border-success">
+                    <div class="card-header bg-success text-white">
+                        <h6 class="card-title mb-0">
+                            <i class="bi bi-check-circle me-1"></i>
+                            All WIP Materials Returned
+                        </h6>
+                    </div>
+                    <div class="card-body text-center">
+                        <i class="bi bi-check-circle display-4 text-success mb-3"></i>
+                        <h5>Great! No WIP materials to return</h5>
+                        <p class="text-muted mb-3">
+                            This production order has no materials currently in WIP stock. 
+                            The order is ready to be closed.
+                        </p>
+                        <a href="{% url 'production:production-order-detail' production_order.id %}" class="btn btn-success">
+                            <i class="bi bi-arrow-left me-1"></i>Return to Order Details
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Recent Stock Movements -->
+                {% if recent_movements %}
+                <div class="card border-info mt-4">
+                    <div class="card-header bg-info text-white">
+                        <h6 class="card-title mb-0">
+                            <i class="bi bi-arrow-down-up me-1"></i>
+                            Recent Return Movements
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Movement #</th>
+                                        <th>Type</th>
+                                        <th>Status</th>
+                                        <th>Items</th>
+                                        <th>Created</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for movement in recent_movements %}
+                                    <tr>
+                                        <td>
+                                            <a href="{% url 'inventory:stock-movement-detail' movement.id %}" class="text-decoration-none">
+                                                <span class="badge bg-secondary">#{{ movement.id }}</span>
+                                            </a>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-success">IN</span>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-{% if movement.status == 'CONFIRMED' %}success{% else %}secondary{% endif %}">
+                                                {{ movement.get_status_display }}
+                                            </span>
+                                        </td>
+                                        <td>{{ movement.items_count|default:0 }} items</td>
+                                        <td>{{ movement.created_at|date:"M d, H:i" }}</td>
+                                        <td>
+                                            <a href="{% url 'inventory:stock-movement-detail' movement.id %}" 
+                                               class="btn btn-sm btn-outline-primary" title="View Details">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

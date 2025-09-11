@@ -216,7 +216,7 @@
                                             Over Reserved! ({{ reservation.total_reserved|floatformat:0 }} / {{ lots|sum_attr:'available_quantity'|floatformat:0 }})
                                         </span>
                                         {% endif %}
-                                    {% if reservation.details %}
+                                    {% if reservation.details and reservation.total_reserved and reservation.total_reserved > 0 %}
                                     <span class="ms-2">
                                         <a class="text-decoration-underline text-info" data-bs-toggle="collapse" href="#reservation-details-{{ warehouse.id }}" role="button" aria-expanded="false" aria-controls="reservation-details-{{ warehouse.id }}">
                                             Details
@@ -226,10 +226,10 @@
                                 {% endwith %}
                                 <!-- Stock Alert Status -->
                                 {% with reservation=reservation_by_warehouse|dict_key:warehouse.id %}
+                {% if reservation.details and reservation.total_reserved and reservation.total_reserved > 0 %}
                 <div class="collapse mt-2" id="reservation-details-{{ warehouse.id }}">
                     <div class="card card-body bg-light border-info">
                         <h6 class="mb-2"><i class="bi bi-bookmark-check me-1"></i>Reservation Details</h6>
-                        {% if reservation.details %}
                         <ul class="mb-0 ps-3">
                             {% for r in reservation.details %}
                             <li>
@@ -238,11 +238,9 @@
                             </li>
                             {% endfor %}
                         </ul>
-                        {% else %}
-                        <span class="text-muted">No active reservations.</span>
-                        {% endif %}
                     </div>
                 </div>
+                {% endif %}
                 {% endwith %}
                                 {% if warehouse.existing_alert %}
                                     {% with alert_level=warehouse.existing_alert.get_alert_level %}
@@ -340,6 +338,7 @@
                 {% endif %}
                 
                 <div class="card-body">
+                    {% if lots %}
                     <div class="row g-3">
                         {% for lot_data in lots %}
                         <div class="col-md-6 col-lg-4">
@@ -391,6 +390,17 @@
                         </div>
                         {% endfor %}
                     </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-inbox text-muted fs-2 mb-2 d-block"></i>
+                        <h6 class="text-muted mb-1">No Stock Available</h6>
+                        <p class="text-muted mb-3 small">This item has no available stock in this warehouse.</p>
+                        <a href="{% url 'inventory:stock-item-movement-history' item.id %}?warehouse={{ warehouse.id }}" 
+                           class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-clock-history me-1"></i>View Movement History
+                        </a>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -398,9 +408,9 @@
     {% else %}
         <div class="dashboard-card">
             <div class="card-body text-center py-5">
-                <i class="bi bi-inbox text-muted fs-1 mb-3 d-block"></i>
-                <h5 class="text-muted mb-2">No Stock Available</h5>
-                <p class="text-muted mb-0">This item has no available stock in any warehouse.</p>
+                <i class="bi bi-building text-muted fs-1 mb-3 d-block"></i>
+                <h5 class="text-muted mb-2">No Warehouses Available</h5>
+                <p class="text-muted mb-0">No active warehouses are configured in the system.</p>
             </div>
         </div>
     {% endif %}

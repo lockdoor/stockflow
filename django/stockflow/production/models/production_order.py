@@ -135,9 +135,84 @@ class ProductionOrder(AuditableMixin, ProductionStatusMixin, ValidatableMixin, m
             reference_type=MaterialReservation.ReferenceType.PRODUCTION,
             reference_id=self.id
         )
+    
+    def return_all_material_reservations(self, user):
+        """
+        Return all material reservations for this production order.
+        This method releases reserved materials back to available stock.
+        
+        Args:
+            user: The user performing the operation
+            
+        Returns:
+            dict: Summary of returned reservations
+        """
+        try:
+            reservations = self.get_all_reservations()
+            returned_count = reservations.count()
+            
+            # Return each reservation (this would typically update stock quantities)
+            for reservation in reservations:
+                # In a real system, this would update stock levels
+                # For now, we'll just delete the reservation
+                reservation.delete()
+            
+            return {
+                'returned_count': returned_count,
+                'status': 'success'
+            }
+        except Exception as e:
+            raise Exception(f"Failed to return material reservations: {str(e)}")
 
     def get_bom_material_items(self):
         """
         Get all material items required for this production order based on BOM
         """
         return self.boms.all()
+    
+    def can_return_wip_materials(self):
+        """
+        Check if this production order allows WIP material returns
+        Only cancelled or completed orders can return WIP materials
+        """
+        return self.status in [
+            self.Status.CANCELLED,
+            self.Status.COMPLETED,
+            self.Status.CLOSED_CANCELLED,
+            self.Status.CLOSED_COMPLETED
+        ]
+    
+    def get_wip_materials_summary(self):
+        """
+        Get summary of WIP materials that can be returned to inventory
+        Returns list of materials with their current WIP balances
+        """
+        from production.models.wip_stock_movement import WIPStockMovement
+        
+        # Get all WIP balances for this production order
+        wip_balances = WIPStockMovement.get_all_wip_balances(
+            production_order=self
+        )
+        
+        # Convert to list format expected by the view
+        materials = []
+        for item_sku_id, balance in wip_balances.items():
+            if balance > 0:  # Only include materials with positive balance
+                from catalog.models import ItemSKU
+                try:
+                    item_sku = ItemSKU.objects.get(id=item_sku_id)
+                    materials.append({
+                        'item_sku': item_sku,
+                        'balance': balance
+                    })
+                except ItemSKU.DoesNotExist:
+                    continue
+        
+        return materials
+    
+    def has_wip_materials(self):
+        """
+        Check if this production order has any WIP materials
+        """
+        wip_materials = self.get_wip_materials_summary()
+        return len(wip_materials) > 0
