@@ -42,6 +42,15 @@
                             <span class="badge bg-success fs-6">
                                 <i class="bi bi-check-circle me-1"></i>Completed
                             </span>
+                            {% if production_order.is_production_complete %}
+                                <span class="badge bg-primary fs-6 ms-1">
+                                    <i class="bi bi-trophy me-1"></i>Target Met
+                                </span>
+                            {% else %}
+                                <span class="badge bg-warning fs-6 ms-1">
+                                    <i class="bi bi-exclamation-triangle me-1"></i>Partial
+                                </span>
+                            {% endif %}
                         {% elif production_order.status == 'CANCELLED' %}
                             <span class="badge bg-danger fs-6">
                                 <i class="bi bi-x-circle me-1"></i>Cancelled
@@ -106,6 +115,7 @@
                                     <th>Name</th>
                                     <th>Planned Qty</th>
                                     <th>Actual Qty</th>
+                                    <th>Progress</th>
                                     <th>Unit</th>
                                 </tr>
                             </thead>
@@ -116,10 +126,39 @@
                                     <td>{{ bom.item_sku.name }}</td>
                                     <td>{{ bom.planned_quantity }}</td>
                                     <td>{{ bom.actual_quantity }}</td>
+                                    <td>
+                                        {% if bom.planned_quantity > 0 %}
+                                            {% widthratio bom.actual_quantity bom.planned_quantity 100 as progress_percentage %}
+                                            <div class="d-flex align-items-center">
+                                                <div class="progress flex-grow-1 me-2" style="height: 20px;">
+                                                    {% if progress_percentage >= 100 %}
+                                                        <div class="progress-bar bg-success" role="progressbar" style="width: 100%" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100">
+                                                            {{ progress_percentage }}%
+                                                        </div>
+                                                    {% elif progress_percentage >= 80 %}
+                                                        <div class="progress-bar bg-warning" role="progressbar" style="width: {{ progress_percentage|default:0 }}%" aria-valuenow="{{ progress_percentage|default:0 }}" aria-valuemin="0" aria-valuemax="100">
+                                                            {{ progress_percentage }}%
+                                                        </div>
+                                                    {% else %}
+                                                        <div class="progress-bar bg-danger" role="progressbar" style="width: {{ progress_percentage|default:0 }}%" aria-valuenow="{{ progress_percentage|default:0 }}" aria-valuemin="0" aria-valuemax="100">
+                                                            {{ progress_percentage }}%
+                                                        </div>
+                                                    {% endif %}
+                                                </div>
+                                                {% if bom.actual_quantity >= bom.planned_quantity %}
+                                                    <i class="bi bi-check-circle text-success"></i>
+                                                {% else %}
+                                                    <i class="bi bi-clock text-warning"></i>
+                                                {% endif %}
+                                            </div>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
                                     <td>{{ bom.item_sku.unit }}</td>
                                 </tr>
                                 {% empty %}
-                                <tr><td colspan="5" class="text-center">No items in this production order.</td></tr>
+                                <tr><td colspan="6" class="text-center">No items in this production order.</td></tr>
                                 {% endfor %}
                             </tbody>
                         </table>
@@ -192,9 +231,17 @@
                     <a href="{% url 'inventory:stock-movement-create' %}?reference_type=PRODUCTION&reference_id={{ production_order.id }}&warehouse={{ production_order.warehouse.id }}&prev={{ request.path }}" class="btn btn-outline-warning">
                         <i class="bi bi-box-arrow-in-down me-1"></i>Withdraw Material
                     </a>
+                    {% if production_order.is_production_complete %}
+                    <!-- Show Complete Order button when actual >= planned -->
+                    <a href="{% url 'production:production-order-complete-confirm' production_order.id %}?prev={{ request.path }}" class="btn btn-success">
+                        <i class="bi bi-check-circle me-1"></i>Complete Order
+                    </a>
+                    {% else %}
+                    <!-- Show Cancel Order button when actual < planned -->
                     <a href="{% url 'production:production-order-cancel-confirm' production_order.id %}?prev={{ request.path }}" class="btn btn-outline-danger">
                         <i class="bi bi-x-circle me-1"></i>Cancel Order
                     </a>
+                    {% endif %}
                     
                     {% elif production_order.status == 'COMPLETED' %}
                     <!-- Completed Status Actions -->
@@ -205,9 +252,9 @@
                             <i class="bi bi-check-circle me-1"></i>Close as Completed
                         </button>
                     </form>
-                    <a href="{% url 'production:production-order-cancel-confirm' production_order.id %}?prev={{ request.path }}" class="btn btn-outline-danger">
-                        <i class="bi bi-x-circle me-1"></i>Cancel Order
-                    </a>
+                    
+                    
+                    
                     
                     {% elif production_order.status == 'CANCELLED' %}
                     <!-- Cancelled Status Actions -->

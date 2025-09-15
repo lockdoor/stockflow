@@ -36,6 +36,8 @@ from production.views.production_order_status_views import (
     ProductionOrderCloseCompletedView,
     ProductionOrderCloseCancelledView,
     ProductionOrderStatusAPI,
+    ProductionOrderCompleteConfirmView,
+    ProductionOrderCompleteView,
 )
 app_name = 'production'
 
@@ -56,6 +58,8 @@ urlpatterns = [
     # production order status management
     path('production-order/<int:pk>/cancel/confirm/', ProductionOrderCancelConfirmView.as_view(), name='production-order-cancel-confirm'),
     path('production-order/<int:pk>/cancel/', ProductionOrderCancelView.as_view(), name='production-order-cancel'),
+    path('production-order/<int:pk>/complete/confirm/', ProductionOrderCompleteConfirmView.as_view(), name='production-order-complete-confirm'),
+    path('production-order/<int:pk>/complete/', ProductionOrderCompleteView.as_view(), name='production-order-complete'),
     path('production-order/<int:pk>/return-wip/', ProductionOrderReturnWIPView.as_view(), name='production-order-return-wip'),
     path('production-order/<int:pk>/close-completed/', ProductionOrderCloseCompletedView.as_view(), name='production-order-close-completed'),
     path('production-order/<int:pk>/close-cancelled/', ProductionOrderCloseCancelledView.as_view(), name='production-order-close-cancelled'),

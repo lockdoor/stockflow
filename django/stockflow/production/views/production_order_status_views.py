@@ -321,6 +321,201 @@ class ProductionOrderCloseCompletedView(LoginRequiredMixin, ProductionPermission
         return redirect('production:production-order-detail', pk=production_order.id)
 
 
+class ProductionOrderCompleteConfirmView(LoginRequiredMixin, ProductionPermissionMixin, TemplateView):
+    """
+    View to show completion confirmation page with WIP materials summary and production status
+    """
+    template_name = 'production/orders/production-order-complete-confirm.html'
+    permission_required_base = 'change_productionorder'
+    
+    def get_object(self):
+        """Get production order object"""
+        return get_object_or_404(ProductionOrder, id=self.kwargs['pk'])
+    
+    def dispatch(self, request, *args, **kwargs):
+        """Check if order can be completed"""
+        self.object = self.get_object()
+        
+        if not self.object.can_complete_production():
+            messages.error(
+                request, 
+                f"Production order #{self.object.id} cannot be completed. "
+                f"Current status: {self.object.get_status_display()}"
+            )
+            return redirect('production:production-order-detail', pk=self.object.id)
+        
+        return super().dispatch(request, *args, **kwargs)
+    
+    def get_context_data(self, **kwargs):
+        """Prepare context data for completion confirmation"""
+        context = super().get_context_data(**kwargs)
+        
+        production_order = self.object
+        context['production_order'] = production_order
+        
+        # Get WIP materials that need to be returned
+        wip_materials = production_order.get_wip_materials_summary()
+        context['wip_materials'] = wip_materials
+        
+        # Get existing stock movements for this production order
+        stock_movements = StockMovement.objects.filter(
+            reference_type=StockMovement.ReferenceType.PRODUCTION,
+            reference_id=production_order.id
+        ).prefetch_related('movement_items').order_by('-created_at')
+        context['stock_movements'] = stock_movements
+        
+        return context
+
+
+class ProductionOrderCompleteView(LoginRequiredMixin, ProductionPermissionMixin, View):
+    """
+    View to handle production order completion with WIP materials return
+    """
+    permission_required_base = 'change_productionorder'
+    
+    def post(self, request, pk):
+        """Handle completion POST request"""
+        production_order = get_object_or_404(ProductionOrder, id=pk)
+        
+        # Check if order can be completed
+        if not production_order.can_complete_production():
+            messages.error(
+                request, 
+                f"Production order #{production_order.id} cannot be completed. "
+                f"Current status: {production_order.get_status_display()}"
+            )
+            return redirect('production:production-order-detail', pk=production_order.id)
+        
+        # Validate confirmation checkbox
+        if not request.POST.get('confirm_complete'):
+            messages.error(request, "You must confirm the completion by checking the confirmation box.")
+            return redirect('production:production-order-complete-confirm', pk=production_order.id)
+        
+        # Get completion notes if provided
+        completion_reason = request.POST.get('completion_reason', '').strip()
+        
+        try:
+            with transaction.atomic():
+                # Handle WIP materials return if any exist
+                wip_materials = production_order.get_wip_materials_summary()
+                if wip_materials:
+                    # Create bulk return stock movement for WIP materials
+                    from inventory.models import StockMovementItem
+                    
+                    # Create stock movement for returning WIP materials
+                    stock_movement = StockMovement.objects.create(
+                        warehouse=production_order.warehouse,
+                        reference_type=StockMovement.ReferenceType.PRODUCTION,
+                        reference_id=production_order.id,
+                        note=f"Return of WIP materials from completed production order #{production_order.id}",
+                        created_by=request.user,
+                        updated_by=request.user
+                    )
+                    
+                    # Add movement items for each WIP material
+                    from production.utils.wip_lot_generator import generate_wip_return_lot_number
+                    
+                    movement_items_created = 0
+                    for material in wip_materials:
+                        if material['balance'] > 0:
+                            # Generate unique lot number for this WIP return
+                            lot_number = generate_wip_return_lot_number(
+                                production_order_id=production_order.id,
+                                item_sku_id=material['item_sku'].id
+                            )
+                            
+                            StockMovementItem.objects.create(
+                                stock_movement=stock_movement,
+                                item_sku=material['item_sku'],
+                                quantity=material['balance'],
+                                movement_type='IN',  # Return WIP materials back to inventory
+                                lot_number=lot_number,
+                                expiry_date=None,  # No expiry for returned WIP materials
+                                note=f"Return from completed Production Order #{production_order.id}",
+                                created_by=request.user,
+                                updated_by=request.user
+                            )
+                            movement_items_created += 1
+                    
+                    if movement_items_created > 0:
+                        # Create WIP stock movements to reduce WIP stock balances
+                        from production.models import WIPStockMovement
+                        for material in wip_materials:
+                            if material['balance'] > 0:
+                                # Create WIP stock movement to record the return (OUT from WIP)
+                                WIPStockMovement.objects.create(
+                                    production_order=production_order,
+                                    source_stock_movement=stock_movement,  # Reference to the stock movement
+                                    movement_type=WIPStockMovement.MovementType.RETURN,
+                                    item_sku=material['item_sku'],
+                                    quantity=material['balance'],
+                                    note=f"Return WIP materials to inventory upon completion via stock movement #{stock_movement.id}",
+                                    created_by=request.user,
+                                    updated_by=request.user
+                                )
+                        
+                        # Confirm the stock movement to execute the returns
+                        stock_movement.confirm(user=request.user)
+                        
+                        messages.success(
+                            request,
+                            f"Created return movement #{stock_movement.id} with {movement_items_created} WIP materials."
+                        )
+                    else:
+                        # Delete empty movement if no items were created
+                        stock_movement.delete()
+                
+                # Return material reservations if any exist
+                try:
+                    production_order.return_all_material_reservations(user=request.user)
+                except Exception as e:
+                    # Log the error but don't fail the whole operation
+                    messages.warning(
+                        request,
+                        f"Production completed successfully, but encountered issue returning reservations: {str(e)}"
+                    )
+                
+                # Change status to COMPLETED before closing
+                production_order.status = production_order.Status.COMPLETED
+                production_order.save()
+                
+                # Close the production order as completed
+                production_order.close_as_completed(user=request.user)
+                
+                # Add completion notes if provided
+                if completion_reason:
+                    if production_order.note:
+                        production_order.note += f"\n\n[COMPLETED] {completion_reason}"
+                    else:
+                        production_order.note = f"[COMPLETED] {completion_reason}"
+                    production_order.save()
+                
+                # Success message
+                if production_order.is_production_complete():
+                    messages.success(
+                        request,
+                        f"Production order #{production_order.id} has been completed successfully! "
+                        f"All production targets were met."
+                    )
+                else:
+                    messages.success(
+                        request,
+                        f"Production order #{production_order.id} has been completed. "
+                        f"Some items were partially produced - please review the final quantities."
+                    )
+            
+        except Exception as e:
+            # Transaction will be automatically rolled back due to exception
+            messages.error(request, f"Error completing production order: {str(e)}")
+            return redirect('production:production-order-complete-confirm', pk=production_order.id)
+        
+        # Redirect to next URL or production order detail
+        next_url = request.POST.get('next')
+        if next_url:
+            return redirect(next_url)
+        return redirect('production:production-order-detail', pk=production_order.id)
+
+
 class ProductionOrderCloseCancelledView(LoginRequiredMixin, ProductionPermissionMixin, View):
     """
     View to close production order as cancelled (after WIP materials returned)

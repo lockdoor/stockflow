@@ -1,0 +1,320 @@
+{% extends "base-dashboard-header.html" %}
+{% load widget_tweaks %}
+
+{% block title %}Complete Production Order #{{ production_order.id }} - StockFlow{% endblock %}
+
+{% block title_text %}Production Management{% endblock %}
+{% block subtitle_text %}Complete Production Order #{{ production_order.id }}{% endblock %}
+
+{% block header_actions %}
+<a href="{% url 'production:production-order-detail' production_order.id %}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i>Back to Order
+</a>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card shadow">
+                <div class="card-header bg-success text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-check-circle me-2"></i>
+                        Complete Production Order Confirmation
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- Warning Alert -->
+                    <div class="alert alert-warning">
+                        <h6 class="alert-heading">
+                            <i class="bi bi-exclamation-triangle me-1"></i>Important Notice
+                        </h6>
+                        <p class="mb-2">Completing this production order will:</p>
+                        <ul class="mb-0">
+                            <li><strong>Finalize all production activities</strong> for this order</li>
+                            <li><strong>Return unused WIP materials</strong> to regular stock</li>
+                            <li><strong>Release remaining material reservations</strong></li>
+                            <li><strong>Mark the order as successfully completed</strong></li>
+                            <li><strong>Cannot be reversed</strong> once confirmed</li>
+                        </ul>
+                    </div>
+
+                    <!-- Order Summary -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h6 class="card-title">Order Information</h6>
+                                    <p class="mb-1"><strong>Order #:</strong> {{ production_order.id }}</p>
+                                    <p class="mb-1"><strong>Warehouse:</strong> {{ production_order.warehouse.name }}</p>
+                                    <p class="mb-1"><strong>Current Status:</strong> 
+                                        <span class="badge bg-success">{{ production_order.get_status_display }}</span>
+                                    </p>
+                                    <p class="mb-0"><strong>Created:</strong> {{ production_order.created_at|date:"M d, Y H:i" }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h6 class="card-title">Production Items</h6>
+                                    {% for bom in production_order.boms.all %}
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <div>
+                                            <strong>{{ bom.item_sku.sku_code }}</strong><br>
+                                            <small class="text-muted">{{ bom.item_sku.name }}</small>
+                                        </div>
+                                        <div class="text-end">
+                                            <span class="badge bg-primary me-1">{{ bom.actual_quantity|floatformat:2 }}</span> /
+                                            <span class="badge bg-secondary">{{ bom.planned_quantity|floatformat:2 }}</span>
+                                            <br>
+                                            <small class="text-muted">{{ bom.item_sku.unit }}</small>
+                                        </div>
+                                    </div>
+                                    {% empty %}
+                                    <p class="text-muted mb-0">No items defined</p>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Production Completion Status -->
+                    {% if production_order.is_production_complete %}
+                    <div class="card border-success mb-4">
+                        <div class="card-header bg-success text-white">
+                            <h6 class="card-title mb-0">
+                                <i class="bi bi-check-circle me-1"></i>
+                                Production Target Met
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <p class="mb-0">
+                                <strong>Excellent!</strong> All production items have met or exceeded their planned quantities. 
+                                This order is ready to be completed successfully.
+                            </p>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="card border-warning mb-4">
+                        <div class="card-header bg-warning text-dark">
+                            <h6 class="card-title mb-0">
+                                <i class="bi bi-exclamation-triangle me-1"></i>
+                                Production Target Not Fully Met
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <p class="mb-3">
+                                Some production items have not reached their planned quantities. 
+                                You can still complete this order, but it will be marked as partially completed.
+                            </p>
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Item</th>
+                                            <th>Actual</th>
+                                            <th>Planned</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for bom in production_order.boms.all %}
+                                        <tr>
+                                            <td>
+                                                <strong>{{ bom.item_sku.sku_code }}</strong><br>
+                                                <small class="text-muted">{{ bom.item_sku.name }}</small>
+                                            </td>
+                                            <td>{{ bom.actual_quantity|floatformat:2 }} {{ bom.item_sku.unit }}</td>
+                                            <td>{{ bom.planned_quantity|floatformat:2 }} {{ bom.item_sku.unit }}</td>
+                                            <td>
+                                                {% if bom.actual_quantity >= bom.planned_quantity %}
+                                                    <span class="badge bg-success">Complete</span>
+                                                {% else %}
+                                                    <span class="badge bg-warning">Partial</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- WIP Materials Summary -->
+                    {% if wip_materials %}
+                    <div class="card border-info mb-4">
+                        <div class="card-header bg-info text-white">
+                            <h6 class="card-title mb-0">
+                                <i class="bi bi-info-circle me-1"></i>
+                                WIP Materials to be Returned ({{ wip_materials|length }} items)
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted mb-3">
+                                The following materials are currently in Work-in-Progress (WIP) stock and will be returned 
+                                to regular inventory when the order is completed:
+                            </p>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-hover">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>SKU Code</th>
+                                            <th>Item Name</th>
+                                            <th>WIP Quantity</th>
+                                            <th>Unit</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for material in wip_materials %}
+                                        <tr>
+                                            <td>
+                                                <code>{{ material.item_sku.sku_code }}</code>
+                                            </td>
+                                            <td>{{ material.item_sku.name }}</td>
+                                            <td>
+                                                <strong class="text-info">{{ material.balance|floatformat:2 }}</strong>
+                                            </td>
+                                            <td>{{ material.item_sku.unit }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="alert alert-info mt-3 mb-0">
+                                <i class="bi bi-info-circle me-1"></i>
+                                <strong>Note:</strong> These materials will be automatically returned to inventory when the order is completed.
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="card border-success mb-4">
+                        <div class="card-header bg-success text-white">
+                            <h6 class="card-title mb-0">
+                                <i class="bi bi-check-circle me-1"></i>
+                                No WIP Materials to Return
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <p class="mb-0">
+                                This production order has no materials currently in WIP stock. 
+                                Completion will be immediate and complete.
+                            </p>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Stock Movements Summary -->
+                    {% if stock_movements %}
+                    <div class="card border-secondary mb-4">
+                        <div class="card-header bg-secondary text-white">
+                            <h6 class="card-title mb-0">
+                                <i class="bi bi-arrow-down-up me-1"></i>
+                                Existing Stock Movements ({{ stock_movements|length }})
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Movement #</th>
+                                            <th>Type</th>
+                                            <th>Status</th>
+                                            <th>Items</th>
+                                            <th>Created</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for movement in stock_movements %}
+                                        <tr>
+                                            <td>
+                                                <span class="badge bg-secondary">#{{ movement.id }}</span>
+                                            </td>
+                                            <td>
+                                                {% if movement.movement_type == 'IN' %}
+                                                    <span class="badge bg-success">IN</span>
+                                                {% else %}
+                                                    <span class="badge bg-warning">OUT</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-{% if movement.status == 'CONFIRMED' %}success{% else %}secondary{% endif %}">
+                                                    {{ movement.get_status_display }}
+                                                </span>
+                                            </td>
+                                            <td>{{ movement.items_count|default:0 }} items</td>
+                                            <td>{{ movement.created_at|date:"M d, H:i" }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Confirmation Form -->
+                    <div class="card border-success">
+                        <div class="card-header bg-light">
+                            <h6 class="card-title mb-0">
+                                <i class="bi bi-clipboard-check me-1"></i>Completion Confirmation
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <form method="post" action="{% url 'production:production-order-complete' production_order.id %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="next" value="{{ request.GET.prev|default:request.META.HTTP_REFERER|default:'' }}">
+                                
+                                <!-- Completion Reason -->
+                                <div class="mb-3">
+                                    <label for="completion_reason" class="form-label">
+                                        <i class="bi bi-chat-text me-1"></i>Completion Notes (Optional)
+                                    </label>
+                                    <textarea class="form-control" 
+                                              id="completion_reason" 
+                                              name="completion_reason" 
+                                              rows="3" 
+                                              placeholder="Add any notes about the completion of this production order..."></textarea>
+                                    <div class="form-text">
+                                        These notes will be added to the production order record for future reference.
+                                    </div>
+                                </div>
+                                
+                                <!-- Confirmation Checkbox -->
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" 
+                                           type="checkbox" 
+                                           id="confirm_complete" 
+                                           name="confirm_complete" 
+                                           required>
+                                    <label class="form-check-label" for="confirm_complete">
+                                        <strong>I confirm that I want to complete this production order</strong>
+                                        <br>
+                                        <small class="text-muted">
+                                            I understand that this action will finalize the production order and cannot be undone.
+                                        </small>
+                                    </label>
+                                </div>
+                                
+                                <!-- Action Buttons -->
+                                <div class="d-flex gap-2">
+                                    <button type="submit" class="btn btn-success btn-lg">
+                                        <i class="bi bi-check-circle me-1"></i>Complete Production Order
+                                    </button>
+                                    <a href="{% url 'production:production-order-detail' production_order.id %}" 
+                                       class="btn btn-outline-secondary btn-lg">
+                                        <i class="bi bi-x me-1"></i>Cancel
+                                    </a>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

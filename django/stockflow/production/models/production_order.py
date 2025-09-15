@@ -216,3 +216,28 @@ class ProductionOrder(AuditableMixin, ProductionStatusMixin, ValidatableMixin, m
         """
         wip_materials = self.get_wip_materials_summary()
         return len(wip_materials) > 0
+    
+    def is_production_complete(self):
+        """
+        Check if actual production quantity meets or exceeds planned quantity for all BOM items
+        Returns True if all actual >= planned, False otherwise
+        If no BOM items exist, returns True (nothing to produce means production is complete)
+        """
+        bom_items = self.boms.all()
+        if not bom_items.exists():
+            return True  # No items to produce, so production is complete
+            
+        for bom in bom_items:
+            if bom.actual_quantity < bom.planned_quantity:
+                return False
+        return True
+    
+    def can_complete_production(self):
+        """
+        Check if this production order can be completed
+        Must be in IN_PROGRESS status and have production meeting planned quantities
+        """
+        return (
+            self.status == self.Status.IN_PROGRESS and 
+            self.is_production_complete()
+        )
