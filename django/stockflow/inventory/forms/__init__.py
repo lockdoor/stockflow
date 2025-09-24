@@ -12,6 +12,11 @@ from .warehouse_form import WarehouseForm
 from .stock_movement_form import StockMovementForm
 from .stock_movement_item_form import StockMovementItemForm
 from .stock_alert_form import StockAlertForm, StockAlertSearchForm, BulkStockAlertForm
+from .stock_movement_image_form import (
+    StockMovementImageForm,
+    StockMovementImageBulkUploadForm,
+    StockMovementImageUpdateForm
+)
 
 __all__ = [
     'WarehouseForm',
@@ -20,4 +25,7 @@ __all__ = [
     'StockAlertForm',
     'StockAlertSearchForm',
     'BulkStockAlertForm',
+    'StockMovementImageForm',
+    'StockMovementImageBulkUploadForm',
+    'StockMovementImageUpdateForm',
 ]

@@ -59,7 +59,7 @@ class ItemSKUModelTest(TestCase):
             sku_code='PKG-001',
             name='Package Item',
             unit='pcs',
-            type=ItemSKU.Type.PACKAGE,
+            type=ItemSKU.Type.PRODUCT,
             status=ItemSKU.Status.DRAFT,
             category=self.active_category,
             created_by=self.user,

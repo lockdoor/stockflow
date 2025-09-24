@@ -666,7 +666,7 @@ class StockMovementItemImmutableFieldValidationTest(TestCase):
         
         # Create stock movements
         self.movement1 = StockMovement.objects.create(
-            reference_type=StockMovement.ReferenceType.NONE,
+            reference_type=StockMovement.ReferenceType.ADJUST,
             warehouse=self.warehouse1,
             status='DRAFT',
             created_by=self.user,
@@ -674,7 +674,7 @@ class StockMovementItemImmutableFieldValidationTest(TestCase):
         )
         
         self.movement2 = StockMovement.objects.create(
-            reference_type=StockMovement.ReferenceType.NONE,
+            reference_type=StockMovement.ReferenceType.ADJUST,
             warehouse=self.warehouse2,
             status='DRAFT',
             created_by=self.user,

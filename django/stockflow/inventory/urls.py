@@ -25,6 +25,15 @@ from inventory.views.stock_movement_item_views import (
     StockMovementItemProductionCreateView
 )
 
+from inventory.views.stock_movement_image_views import (
+    StockMovementImageCreateView,
+    StockMovementImageListView,
+    StockMovementImageUpdateView,
+    StockMovementImageDeleteView,
+    StockMovementImageBulkUploadView,
+    StockMovementImageSetPrimaryView
+)
+
 from inventory.views.stock_view import (
     StockOverviewView,
     StockItemDetailView,
@@ -117,6 +126,26 @@ urlpatterns = [
     path('stock-alerts/<int:pk>/delete/', StockAlertDeleteView.as_view(), name='stock-alert-delete'),
     path('stock-alerts/bulk-action/', StockAlertBulkActionView.as_view(), name='stock-alert-bulk-action'),
     path('stock-alerts/<int:pk>/toggle/', StockAlertToggleView.as_view(), name='stock-alert-toggle'),
+
+    # Stock movement images
+    path('movement/<int:stock_movement_id>/images/', 
+        StockMovementImageListView.as_view(), 
+        name='stock-movement-image-list'),
+    path('movement/<int:stock_movement_id>/images/create/', 
+        StockMovementImageCreateView.as_view(), 
+        name='stock-movement-image-create'),
+    path('movement/<int:stock_movement_id>/images/<int:pk>/edit/', 
+        StockMovementImageUpdateView.as_view(), 
+        name='stock-movement-image-edit'),
+    path('movement/<int:stock_movement_id>/images/<int:pk>/delete/', 
+        StockMovementImageDeleteView.as_view(), 
+        name='stock-movement-image-delete'),
+    path('movement/<int:stock_movement_id>/images/bulk-upload/', 
+        StockMovementImageBulkUploadView.as_view(), 
+        name='stock-movement-image-bulk-upload'),
+    path('movement/<int:stock_movement_id>/images/<int:pk>/set-primary/', 
+        StockMovementImageSetPrimaryView.as_view(), 
+        name='stock-movement-image-set-primary'),
 
      # Reservation
     path('reservations/over/', 

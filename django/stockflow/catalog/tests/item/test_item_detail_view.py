@@ -98,8 +98,8 @@ class ItemDetailViewTest(TestCase):
             sku_code='NOCAT001',
             name='No Category Item',
             unit='pcs',
-            type=ItemSKU.Type.PACKAGE,
-            status=ItemStatusMixin.Status.DRAFT,  # Business rule: PACKAGE needs DRAFT
+            type=ItemSKU.Type.PRODUCT,
+            status=ItemStatusMixin.Status.DRAFT,  # Business rule: PRODUCT needs DRAFT
             created_by=self.user,
             updated_by=self.user
         )
@@ -116,8 +116,8 @@ class ItemDetailViewTest(TestCase):
             sku_code='NONOTE001',
             name='No Note Item',
             unit='pcs',
-            type=ItemSKU.Type.PACKAGE,
-            status=ItemStatusMixin.Status.DRAFT,  # Business rule: PACKAGE needs DRAFT
+            type=ItemSKU.Type.PRODUCT,
+            status=ItemStatusMixin.Status.DRAFT,  # Business rule: PRODUCT needs DRAFT
             created_by=self.user,
             updated_by=self.user
         )
@@ -213,7 +213,7 @@ class ItemDetailViewTest(TestCase):
             sku_code='PACKAGE001',
             name='Package Test',
             unit='pcs',
-            type=ItemSKU.Type.PACKAGE,
+            type=ItemSKU.Type.PRODUCT,
             status=ItemStatusMixin.Status.DRAFT,
             created_by=self.user,
             updated_by=self.user

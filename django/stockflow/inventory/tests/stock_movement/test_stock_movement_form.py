@@ -116,8 +116,8 @@ class StockMovementFormTest(TestCase):
         """Test initial values for new form instance"""
         form = StockMovementForm()
         
-        # Reference type should default to NONE
-        self.assertEqual(form.fields['reference_type'].initial, StockMovement.ReferenceType.NONE)
+        # Reference type should default to ADJUST
+        self.assertEqual(form.fields['reference_type'].initial, StockMovement.ReferenceType.ADJUST)
         
         # Reference ID should not be required
         self.assertFalse(form.fields['reference_id'].required)
@@ -137,28 +137,27 @@ class StockMovementFormValidationTest(TestCase):
             updated_by=self.user
         )
     
-    def test_valid_form_with_none_reference(self):
-        """Test valid form submission with NONE reference type"""
+    def test_valid_form_with_adjust_reference(self):
+        """Test valid form submission with ADJUST reference type"""
         form_data = {
-            'reference_type': StockMovement.ReferenceType.NONE,
+            'reference_type': StockMovement.ReferenceType.ADJUST,
             'warehouse': self.warehouse.id,
-            'note': 'Test movement with no reference',
+            'note': 'Test adjustment movement',
         }
         form = StockMovementForm(data=form_data)
         
         self.assertTrue(form.is_valid(), f"Form errors: {form.errors}")
         
         # Verify cleaned data
-        self.assertEqual(form.cleaned_data['reference_type'], StockMovement.ReferenceType.NONE)
+        self.assertEqual(form.cleaned_data['reference_type'], StockMovement.ReferenceType.ADJUST)
         self.assertEqual(form.cleaned_data['warehouse'], self.warehouse)
-        self.assertEqual(form.cleaned_data['note'], 'Test movement with no reference')
+        self.assertEqual(form.cleaned_data['note'], 'Test adjustment movement')
         self.assertIsNone(form.cleaned_data.get('reference_id'))
     
     def test_valid_form_with_reference_id(self):
         """Test valid form with reference type that requires ID"""
         test_cases = [
             StockMovement.ReferenceType.PRODUCTION,
-            StockMovement.ReferenceType.ADJUST,
         ]
         
         for ref_type in test_cases:
@@ -174,12 +173,26 @@ class StockMovementFormValidationTest(TestCase):
                 self.assertTrue(form.is_valid(), f"Form should be valid for {ref_type}. Errors: {form.errors}")
                 self.assertEqual(form.cleaned_data['reference_type'], ref_type)
                 self.assertEqual(form.cleaned_data['reference_id'], 12345)
+                
+    def test_valid_form_with_inbound_outbound_reference(self):
+        """Test valid form with INBOUND/OUTBOUND reference types (no reference_id required)"""
+        for ref_type in [StockMovement.ReferenceType.INBOUND, StockMovement.ReferenceType.OUTBOUND]:
+            with self.subTest(reference_type=ref_type):
+                form_data = {
+                    'reference_type': ref_type,
+                    'warehouse': self.warehouse.id,
+                    'note': f'Test {ref_type.lower()} movement',
+                }
+                form = StockMovementForm(data=form_data)
+                
+                self.assertTrue(form.is_valid(), f"Form errors: {form.errors}")
+                self.assertEqual(form.cleaned_data['reference_type'], ref_type)
+                self.assertIsNone(form.cleaned_data.get('reference_id'))
     
     def test_reference_id_required_validation(self):
-        """Test that reference_id is required for non-NONE reference types"""
+        """Test that reference_id is required for reference types that need it"""
         required_ref_types = [
             StockMovement.ReferenceType.PRODUCTION,
-            StockMovement.ReferenceType.ADJUST,
         ]
         
         for ref_type in required_ref_types:
@@ -196,25 +209,35 @@ class StockMovementFormValidationTest(TestCase):
                 self.assertIn('__all__', form.errors)
                 self.assertIn(f'Reference ID is required when reference type is {ref_type}', 
                             str(form.errors['__all__']))
+                            
+
     
-    def test_reference_id_optional_for_none_type(self):
-        """Test that reference_id is optional for NONE reference type"""
-        # Test without reference_id - should be valid
-        form_data = {
-            'reference_type': StockMovement.ReferenceType.NONE,
-            'warehouse': self.warehouse.id,
-        }
-        form = StockMovementForm(data=form_data)
-        self.assertTrue(form.is_valid(), f"Form errors: {form.errors}")
-        self.assertIsNone(form.cleaned_data.get('reference_id'))
+    def test_reference_id_optional_for_no_reference_types(self):
+        """Test that reference_id is optional for ADJUST, INBOUND, OUTBOUND reference types"""
+        no_ref_types = [
+            StockMovement.ReferenceType.ADJUST,
+            StockMovement.ReferenceType.INBOUND,
+            StockMovement.ReferenceType.OUTBOUND,
+        ]
         
-        # Test with reference_id - model validation should catch this  
-        form_data['reference_id'] = 999
-        form = StockMovementForm(data=form_data)
-        self.assertFalse(form.is_valid(), f"Form should be invalid when reference_id provided with NONE type")
-        # Model validation puts this error in __all__
-        self.assertIn('__all__', form.errors)
-        self.assertIn('Reference ID must be empty when reference type is None', str(form.errors['__all__']))
+        for ref_type in no_ref_types:
+            with self.subTest(reference_type=ref_type):
+                # Test without reference_id - should be valid
+                form_data = {
+                    'reference_type': ref_type,
+                    'warehouse': self.warehouse.id,
+                }
+                form = StockMovementForm(data=form_data)
+                self.assertTrue(form.is_valid(), f"Form errors: {form.errors}")
+                self.assertIsNone(form.cleaned_data.get('reference_id'))
+                
+                # Test with reference_id - model validation should catch this  
+                form_data['reference_id'] = 999
+                form = StockMovementForm(data=form_data)
+                self.assertFalse(form.is_valid(), f"Form should be invalid when reference_id provided with {ref_type} type")
+                # Model validation puts this error in __all__
+                self.assertIn('__all__', form.errors)
+                self.assertIn(f'Reference ID must be empty when reference type is {ref_type}', str(form.errors['__all__']))
     
     def test_required_fields_validation(self):
         """Test validation of required fields"""
@@ -226,7 +249,7 @@ class StockMovementFormValidationTest(TestCase):
         
         # Test missing warehouse
         form_data = {
-            'reference_type': StockMovement.ReferenceType.NONE,
+            'reference_type': StockMovement.ReferenceType.ADJUST,
             'note': 'Test note',
         }
         form = StockMovementForm(data=form_data)
@@ -291,7 +314,7 @@ class StockMovementFormCleaningTest(TestCase):
         for input_note, expected_note in test_cases:
             with self.subTest(input_note=repr(input_note)):
                 form_data = {
-                    'reference_type': StockMovement.ReferenceType.NONE,
+                    'reference_type': StockMovement.ReferenceType.ADJUST,
                     'warehouse': self.warehouse.id,
                     'note': input_note,
                 }
@@ -304,7 +327,7 @@ class StockMovementFormCleaningTest(TestCase):
         """Test that multiline notes are preserved"""
         multiline_note = "Line 1\nLine 2\nLine 3"
         form_data = {
-            'reference_type': StockMovement.ReferenceType.NONE,
+            'reference_type': StockMovement.ReferenceType.ADJUST,
             'warehouse': self.warehouse.id,
             'note': multiline_note,
         }
@@ -318,7 +341,7 @@ class StockMovementFormCleaningTest(TestCase):
         # Test max length (1000 characters)
         max_length_note = 'x' * 1000
         form_data = {
-            'reference_type': StockMovement.ReferenceType.NONE,
+            'reference_type': StockMovement.ReferenceType.ADJUST,
             'warehouse': self.warehouse.id,
             'note': max_length_note,
         }
@@ -348,7 +371,6 @@ class StockMovementFormIntegrationTest(TestCase):
         """Test that valid form can create StockMovement model instance"""
         form_data = {
             'reference_type': StockMovement.ReferenceType.ADJUST,
-            'reference_id': 555,
             'warehouse': self.warehouse.id,
             'note': 'Integration test movement',
         }
@@ -364,7 +386,7 @@ class StockMovementFormIntegrationTest(TestCase):
         
         # Verify model instance
         self.assertEqual(instance.reference_type, StockMovement.ReferenceType.ADJUST)
-        self.assertEqual(instance.reference_id, 555)
+        self.assertIsNone(instance.reference_id)  # ADJUST should have no reference_id
         self.assertEqual(instance.warehouse, self.warehouse)
         self.assertEqual(instance.note, 'Integration test movement')
         self.assertEqual(instance.status, StockMovement.Status.DRAFT)  # Default status
@@ -380,7 +402,7 @@ class StockMovementFormIntegrationTest(TestCase):
         """Test that form can edit existing StockMovement instance"""
         # Create existing instance
         existing_movement = StockMovement.objects.create(
-            reference_type=StockMovement.ReferenceType.NONE,
+            reference_type=StockMovement.ReferenceType.ADJUST,
             warehouse=self.warehouse,
             note='Original note',
             created_by=self.user,
@@ -436,7 +458,7 @@ class StockMovementFormIntegrationTest(TestCase):
     def test_form_preserves_model_defaults(self):
         """Test that form doesn't interfere with model defaults"""
         form_data = {
-            'reference_type': StockMovement.ReferenceType.NONE,
+            'reference_type': StockMovement.ReferenceType.ADJUST,
             'warehouse': self.warehouse.id,
         }
         form = StockMovementForm(data=form_data)

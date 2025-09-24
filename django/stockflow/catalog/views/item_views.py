@@ -1,7 +1,9 @@
-from django.views.generic import ListView, CreateView, UpdateView, DetailView, TemplateView
+from django.views.generic import ListView, CreateView, UpdateView, DetailView, TemplateView, DeleteView
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.core.exceptions import ValidationError
+from django.contrib import messages
+from django.urls import reverse
 
 # from catalog.forms.category_form import CategoryForm
 from catalog.models.item import ItemSKU
@@ -68,11 +70,9 @@ class ItemCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
             item.save()
             
             # Add success message
-            from django.contrib import messages
             messages.success(self.request, f'Item "{item.name}" was created successfully.')
             
             # Redirect to next URL if provided, otherwise default to item list
-            from django.shortcuts import redirect
             next_url = self.request.GET.get('next') or self.request.POST.get('next')
             if next_url:
                 return redirect(next_url)
@@ -125,11 +125,9 @@ class ItemUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
             item.save()
             
             # Add success message
-            from django.contrib import messages
             messages.success(self.request, f'Item "{item.name}" was updated successfully.')
             
             # Redirect to next URL if provided, otherwise default to item detail
-            from django.shortcuts import redirect
             next_url = self.request.GET.get('next') or self.request.POST.get('next')
             if next_url:
                 return redirect(next_url)
@@ -168,4 +166,67 @@ class ItemDetailView(LoginRequiredMixin, DetailView):
         if self.object.has_primary_image():
             context['primary_image'] = self.object.images.filter(is_primary=True).first()
         
+        # Add delete capability info
+        can_delete, blocking_references = self.object.can_be_deleted()
+        context['can_delete'] = can_delete
+        context['blocking_references'] = blocking_references
+        
         return context
+
+
+class ItemDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
+    """
+    View for deleting an Item with confirmation
+    """
+    model = ItemSKU
+    template_name = 'catalog/item/item-delete-confirm.html'
+    permission_required = 'catalog.delete_itemsku'
+    pk_url_kwarg = 'pk'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        # Check if item can be deleted
+        can_delete, blocking_references = self.object.can_be_deleted()
+        context['can_delete'] = can_delete
+        context['blocking_references'] = blocking_references
+        
+        return context
+    
+    def post(self, request, *args, **kwargs):
+        """Override post to check deletion capability before deleting"""
+        self.object = self.get_object()
+        
+        # Check if item can be deleted
+        can_delete, blocking_references = self.object.can_be_deleted()
+        
+        if not can_delete:
+            messages.error(
+                request, 
+                f'Cannot delete "{self.object.name}" because it is referenced by other records. '
+                f'Please remove all references first.'
+            )
+            return redirect('catalog:item-detail', pk=self.object.pk)
+        
+        try:
+            # Set updated_by before deletion for audit trail
+            self.object.updated_by = request.user
+            
+            # Store info for success message
+            item_name = self.object.name
+            
+            # Delete the item
+            self.object.delete()
+            
+            messages.success(request, f'Item "{item_name}" was deleted successfully.')
+            
+            # Redirect to item list
+            return redirect('catalog:item-list')
+            
+        except Exception as e:
+            messages.error(request, f'Error deleting item: {str(e)}')
+            return redirect('catalog:item-detail', pk=self.object.pk)
+    
+    def get_success_url(self):
+        """Redirect to item list after successful deletion"""
+        return reverse('catalog:item-list')

@@ -118,6 +118,11 @@ class StockMovementDetailView(LoginRequiredMixin, DetailView):
         context['movement_items'] = self.object.movement_items.select_related(
             'item_sku', 'item_sku__category'
         ).order_by('created_at')
+        
+        # Add primary image to context
+        context['primary_image'] = self.object.images.filter(is_primary=True).first()
+        context['images_count'] = self.object.images.count()
+        
         if self.object.reference_type == self.__class__.model.ReferenceType.PRODUCTION:
             context['management_items_url'] = reverse(
                 'inventory:movement-production-create',

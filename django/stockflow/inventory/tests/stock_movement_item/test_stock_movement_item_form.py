@@ -75,7 +75,7 @@ class StockMovementItemFormTest(TestCase):
         # Create test stock movement
         self.stock_movement = StockMovement.objects.create(
             warehouse=self.warehouse,
-            reference_type=StockMovement.ReferenceType.NONE,
+            reference_type=StockMovement.ReferenceType.ADJUST,
             status=StockMovement.Status.DRAFT,
             created_by=self.user,
             updated_by=self.user
@@ -209,7 +209,7 @@ class StockMovementItemFormValidationTest(TestCase):
         
         self.stock_movement = StockMovement.objects.create(
             warehouse=self.warehouse,
-            reference_type=StockMovement.ReferenceType.NONE,
+            reference_type=StockMovement.ReferenceType.ADJUST,
             status=StockMovement.Status.DRAFT,
             created_by=self.user,
             updated_by=self.user
@@ -361,7 +361,7 @@ class StockMovementItemFormCleaningTest(TestCase):
         
         self.stock_movement = StockMovement.objects.create(
             warehouse=self.warehouse,
-            reference_type=StockMovement.ReferenceType.NONE,
+            reference_type=StockMovement.ReferenceType.ADJUST,
             status=StockMovement.Status.DRAFT,
             created_by=self.user,
             updated_by=self.user
@@ -492,7 +492,7 @@ class StockMovementItemFormIntegrationTest(TestCase):
         
         self.stock_movement = StockMovement.objects.create(
             warehouse=self.warehouse,
-            reference_type=StockMovement.ReferenceType.NONE,
+            reference_type=StockMovement.ReferenceType.ADJUST,
             status=StockMovement.Status.DRAFT,
             created_by=self.user,
             updated_by=self.user
@@ -679,7 +679,7 @@ class StockMovementItemFormAccessibilityTest(TestCase):
         
         self.stock_movement = StockMovement.objects.create(
             warehouse=self.warehouse,
-            reference_type=StockMovement.ReferenceType.NONE,
+            reference_type=StockMovement.ReferenceType.ADJUST,
             status=StockMovement.Status.DRAFT,
             created_by=self.user,
             updated_by=self.user

@@ -153,6 +153,17 @@
                                 <i class="bi bi-diagram-3 me-2"></i>View BOM
                             </a>
                             {% endif %}
+                            {% if can_delete %}
+                            <a href="{% url 'catalog:item-delete' item.id %}" class="btn btn-outline-danger">
+                                <i class="bi bi-trash me-2"></i>Delete Item
+                            </a>
+                            {% else %}
+                            <button type="button" class="btn btn-outline-danger" disabled 
+                                    data-bs-toggle="tooltip" 
+                                    title="Cannot delete: Item is referenced by other records">
+                                <i class="bi bi-trash me-2"></i>Delete Item
+                            </button>
+                            {% endif %}
                             <a href="{% url 'catalog:item-list' %}" class="btn btn-outline-secondary">
                                 <i class="bi bi-list-ul me-2"></i>Back to List
                             </a>
@@ -163,4 +174,16 @@
         </div>
     </div>
 </div>
+
+{% if not can_delete %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize tooltips for disabled delete button
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+</script>
+{% endif %}
 {% endblock %}

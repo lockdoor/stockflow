@@ -65,7 +65,7 @@ class StockMovementUpdateViewTest(TestCase):
         # Create test stock movement to update
         self.stock_movement = StockMovement(
             warehouse=self.warehouse,
-            reference_type=StockMovement.ReferenceType.NONE,
+            reference_type=StockMovement.ReferenceType.ADJUST,
             note='Original note',
             status=StockMovement.Status.DRAFT,
             created_by=self.user,
@@ -79,7 +79,6 @@ class StockMovementUpdateViewTest(TestCase):
         self.valid_data = {
             'warehouse': self.warehouse.id,
             'reference_type': StockMovement.ReferenceType.ADJUST,
-            'reference_id': 123,
             'note': 'Updated note',
         }
 
@@ -146,7 +145,7 @@ class StockMovementUpdateViewTest(TestCase):
         # Check that stock movement was updated
         self.stock_movement.refresh_from_db()
         self.assertEqual(self.stock_movement.reference_type, StockMovement.ReferenceType.ADJUST)
-        self.assertEqual(self.stock_movement.reference_id, 123)
+        self.assertIsNone(self.stock_movement.reference_id)  # ADJUST should have no reference_id
         self.assertEqual(self.stock_movement.note, 'Updated note')
         self.assertEqual(self.stock_movement.updated_by, self.user)
 
@@ -191,20 +190,80 @@ class StockMovementUpdateViewTest(TestCase):
         self.assertEqual(self.stock_movement.reference_type, StockMovement.ReferenceType.PRODUCTION)
         self.assertEqual(self.stock_movement.reference_id, 456)
 
-    def test_clear_reference_id_for_none_type(self):
-        """Test clearing reference_id when type is NONE"""
+    def test_clear_reference_id_for_no_reference_types(self):
+        """Test clearing reference_id when type is ADJUST, INBOUND, or OUTBOUND"""
+        self.client.login(username='testuser', password='testpass123')
+        
+        no_ref_types = [
+            StockMovement.ReferenceType.ADJUST,
+            StockMovement.ReferenceType.INBOUND,
+            StockMovement.ReferenceType.OUTBOUND,
+        ]
+        
+        for ref_type in no_ref_types:
+            with self.subTest(reference_type=ref_type):
+                data = self.valid_data.copy()
+                data['reference_type'] = ref_type
+                data.pop('reference_id', None)  # Remove reference_id
+                
+                response = self.client.post(self.url, data)
+                self.assertEqual(response.status_code, 302)
+                
+                self.stock_movement.refresh_from_db()
+                self.assertEqual(self.stock_movement.reference_type, ref_type)
+                self.assertIsNone(self.stock_movement.reference_id)
+
+    def test_update_to_inbound_type(self):
+        """Test updating stock movement to INBOUND type"""
         self.client.login(username='testuser', password='testpass123')
         
         data = self.valid_data.copy()
-        data['reference_type'] = StockMovement.ReferenceType.NONE
-        data.pop('reference_id', None)  # Remove reference_id
+        data['reference_type'] = StockMovement.ReferenceType.INBOUND
+        data['note'] = 'Inbound stock movement'
         
         response = self.client.post(self.url, data)
         self.assertEqual(response.status_code, 302)
         
         self.stock_movement.refresh_from_db()
-        self.assertEqual(self.stock_movement.reference_type, StockMovement.ReferenceType.NONE)
+        self.assertEqual(self.stock_movement.reference_type, StockMovement.ReferenceType.INBOUND)
         self.assertIsNone(self.stock_movement.reference_id)
+        self.assertEqual(self.stock_movement.note, 'Inbound stock movement')
+
+    def test_update_to_outbound_type(self):
+        """Test updating stock movement to OUTBOUND type"""
+        self.client.login(username='testuser', password='testpass123')
+        
+        data = self.valid_data.copy()
+        data['reference_type'] = StockMovement.ReferenceType.OUTBOUND
+        data['note'] = 'Outbound stock movement'
+        
+        response = self.client.post(self.url, data)
+        self.assertEqual(response.status_code, 302)
+        
+        self.stock_movement.refresh_from_db()
+        self.assertEqual(self.stock_movement.reference_type, StockMovement.ReferenceType.OUTBOUND)
+        self.assertIsNone(self.stock_movement.reference_id)
+        self.assertEqual(self.stock_movement.note, 'Outbound stock movement')
+
+    def test_validation_error_when_reference_id_provided_for_no_ref_types(self):
+        """Test validation error when reference_id is provided for ADJUST, INBOUND, OUTBOUND types"""
+        self.client.login(username='testuser', password='testpass123')
+        
+        no_ref_types = [
+            StockMovement.ReferenceType.ADJUST,
+            StockMovement.ReferenceType.INBOUND,
+            StockMovement.ReferenceType.OUTBOUND,
+        ]
+        
+        for ref_type in no_ref_types:
+            with self.subTest(reference_type=ref_type):
+                data = self.valid_data.copy()
+                data['reference_type'] = ref_type
+                data['reference_id'] = 999  # Should not be allowed
+                
+                response = self.client.post(self.url, data)
+                self.assertEqual(response.status_code, 200)  # Form returned with errors
+                self.assertContains(response, f'Reference ID must be empty when reference type is {ref_type}')
 
     def test_form_validation_errors(self):
         """Test form validation with invalid data"""
@@ -232,7 +291,7 @@ class StockMovementUpdateViewTest(TestCase):
         # Create confirmed stock movement
         confirmed_movement = StockMovement(
             warehouse=self.warehouse,
-            reference_type=StockMovement.ReferenceType.NONE,
+            reference_type=StockMovement.ReferenceType.ADJUST,
             note='Confirmed movement',
             status=StockMovement.Status.CONFIRMED,
             created_by=self.user,
@@ -348,13 +407,13 @@ class StockMovementUpdateViewTest(TestCase):
         # Note field may be None or empty string depending on form cleaning
         self.assertIn(self.stock_movement.note, [None, ''])
 
-    def test_reference_id_validation_with_non_none_type(self):
-        """Test that reference_id is required for non-NONE reference types"""
+    def test_reference_id_validation_with_production_type(self):
+        """Test that reference_id is required for PRODUCTION reference type"""
         self.client.login(username='testuser', password='testpass123')
         
         data = self.valid_data.copy()
         data.update({
-            'reference_type': StockMovement.ReferenceType.ADJUST,
+            'reference_type': StockMovement.ReferenceType.PRODUCTION,
             # Don't provide reference_id
         })
         data.pop('reference_id', None)
@@ -364,6 +423,21 @@ class StockMovementUpdateViewTest(TestCase):
         # Should show validation error
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Reference ID is required')
+        
+    def test_clear_reference_id_for_adjust_type(self):
+        """Test clearing reference_id when type is ADJUST"""
+        self.client.login(username='testuser', password='testpass123')
+        
+        data = self.valid_data.copy()
+        data['reference_type'] = StockMovement.ReferenceType.ADJUST
+        data.pop('reference_id', None)  # Remove reference_id
+        
+        response = self.client.post(self.url, data)
+        self.assertEqual(response.status_code, 302)
+        
+        self.stock_movement.refresh_from_db()
+        self.assertEqual(self.stock_movement.reference_type, StockMovement.ReferenceType.ADJUST)
+        self.assertIsNone(self.stock_movement.reference_id)
 
     def test_template_inheritance(self):
         """Test that template extends correct base template"""
@@ -401,7 +475,9 @@ class StockMovementUpdateViewTest(TestCase):
         self.client.login(username='testuser', password='testpass123')
         
         reference_types = [
-            (StockMovement.ReferenceType.ADJUST, 123),
+            (StockMovement.ReferenceType.ADJUST, None),  # ADJUST should have no reference_id
+            (StockMovement.ReferenceType.INBOUND, None),  # INBOUND should have no reference_id
+            (StockMovement.ReferenceType.OUTBOUND, None),  # OUTBOUND should have no reference_id
             (StockMovement.ReferenceType.PRODUCTION, 789),
         ]
         
@@ -409,9 +485,12 @@ class StockMovementUpdateViewTest(TestCase):
             data = {
                 'warehouse': self.warehouse.id,
                 'reference_type': ref_type,
-                'reference_id': ref_id,
                 'note': f'Updated with {ref_type}',
             }
+            
+            # Only add reference_id if it's not None
+            if ref_id is not None:
+                data['reference_id'] = ref_id
             
             response = self.client.post(self.url, data)
             self.assertEqual(response.status_code, 302)
@@ -559,7 +638,7 @@ class StockMovementUpdateViewNextUrlTest(TestCase):
         # Create test stock movement
         self.stock_movement = StockMovement(
             warehouse=self.warehouse,
-            reference_type=StockMovement.ReferenceType.NONE,
+            reference_type=StockMovement.ReferenceType.ADJUST,
             note='Original note',
             status=StockMovement.Status.DRAFT,
             created_by=self.user,

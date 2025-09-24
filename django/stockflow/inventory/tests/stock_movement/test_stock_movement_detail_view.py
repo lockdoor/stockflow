@@ -218,7 +218,7 @@ class StockMovementDetailViewTest(TestCase):
         # Create stock movement without note
         movement_no_note = StockMovement(
             warehouse=warehouse_2,
-            reference_type=StockMovement.ReferenceType.NONE,
+            reference_type=StockMovement.ReferenceType.ADJUST,
             note=None,
             status=StockMovement.Status.DRAFT,
             created_by=self.user,
@@ -233,37 +233,45 @@ class StockMovementDetailViewTest(TestCase):
         self.assertEqual(response.status_code, 200)
         # Should handle empty note gracefully
 
-    def test_reference_none_type_display(self):
-        """Test that NONE reference type is displayed correctly"""
-        # Create additional warehouse to avoid constraint issues
-        warehouse_3 = Warehouse(
-            name='Test Warehouse 3',
-            code='TEST03',
-            address='789 Test St',
-            is_active=True,
-            created_by=self.user,
-            updated_by=self.user
-        )
-        super(Warehouse, warehouse_3).save()
+    def test_reference_no_reference_types_display(self):
+        """Test that ADJUST, INBOUND, OUTBOUND reference types are displayed correctly"""
+        no_ref_types = [
+            (StockMovement.ReferenceType.ADJUST, 'Adjust'),
+            (StockMovement.ReferenceType.INBOUND, 'Inbound'),
+            (StockMovement.ReferenceType.OUTBOUND, 'Outbound'),
+        ]
         
-        # Create stock movement with NONE reference type
-        movement_no_ref = StockMovement(
-            warehouse=warehouse_3,
-            reference_type=StockMovement.ReferenceType.NONE,
-            reference_id=None,
-            note='No reference movement',
-            status=StockMovement.Status.DRAFT,
-            created_by=self.user,
-            updated_by=self.user
-        )
-        super(StockMovement, movement_no_ref).save()
-        
-        self.client.login(username='testuser', password='testpass123')
-        url = reverse('inventory:stock-movement-detail', kwargs={'pk': movement_no_ref.pk})
-        response = self.client.get(url)
-        
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'None')
+        for i, (ref_type, expected_text) in enumerate(no_ref_types):
+            with self.subTest(reference_type=ref_type):
+                # Create additional warehouse to avoid constraint issues
+                warehouse = Warehouse(
+                    name=f'Test Warehouse {i+3}',
+                    code=f'TEST{i+3:02d}',
+                    address=f'{i+789} Test St',
+                    is_active=True,
+                    created_by=self.user,
+                    updated_by=self.user
+                )
+                super(Warehouse, warehouse).save()
+                
+                # Create stock movement with no reference type
+                movement_no_ref = StockMovement(
+                    warehouse=warehouse,
+                    reference_type=ref_type,
+                    reference_id=None,
+                    note=f'{expected_text} movement',
+                    status=StockMovement.Status.DRAFT,
+                    created_by=self.user,
+                    updated_by=self.user
+                )
+                super(StockMovement, movement_no_ref).save()
+                
+                self.client.login(username='testuser', password='testpass123')
+                url = reverse('inventory:stock-movement-detail', kwargs={'pk': movement_no_ref.pk})
+                response = self.client.get(url)
+                
+                self.assertEqual(response.status_code, 200)
+                self.assertContains(response, expected_text)
 
     def test_different_reference_types_display(self):
         """Test that different reference types are displayed correctly"""
@@ -444,7 +452,7 @@ class StockMovementDetailViewTest(TestCase):
             # Create movement with specific status
             movement = StockMovement(
                 warehouse=warehouse,
-                reference_type=StockMovement.ReferenceType.NONE,
+                reference_type=StockMovement.ReferenceType.ADJUST,
                 note=f'Movement with {status} status',
                 status=status,
                 created_by=self.user,

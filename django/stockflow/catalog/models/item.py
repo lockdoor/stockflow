@@ -24,7 +24,6 @@ class ItemSKU(AuditableMixin, ItemStatusMixin, ValidatableMixin, models.Model):
     class Type(models.TextChoices):
         RAW = 'RAW', 'Raw Material'
         PRODUCT = 'PRODUCT', 'Finished Product'
-        PACKAGE = 'PACKAGE', 'Package'
     
     # Core fields
     sku_code = models.CharField(
@@ -115,9 +114,9 @@ class ItemSKU(AuditableMixin, ItemStatusMixin, ValidatableMixin, models.Model):
     def can_have_bom(self) -> bool:
         """
         Check if this item can have a BOM (Bill of Materials)
-        Only PRODUCT and PACKAGE types can have a BOM structure
+        Only PRODUCT types can have a BOM structure
         """
-        return self.type in [self.Type.PRODUCT, self.Type.PACKAGE]
+        return self.type == self.Type.PRODUCT
 
     @property
     def can_be_component(self) -> bool:
@@ -183,3 +182,88 @@ class ItemSKU(AuditableMixin, ItemStatusMixin, ValidatableMixin, models.Model):
     def get_display_name(self):
         """Get formatted display name"""
         return f"{self.sku_code} - {self.name}"
+    
+    def can_be_deleted(self):
+        """
+        Check if this item can be deleted (not referenced by other entities)
+        Returns tuple (can_delete: bool, blocking_references: list)
+        """
+        blocking_references = []
+        
+        # Check if item is used in any BOMs as parent
+        if hasattr(self, 'bom_parent') and self.bom_parent.exists():
+            blocking_references.append({
+                'type': 'BOM (as parent)',
+                'count': self.bom_parent.count(),
+                'description': 'This item has BOM components'
+            })
+        
+        # Check if item is used in any BOMs as component
+        if hasattr(self, 'bom_component') and self.bom_component.exists():
+            blocking_references.append({
+                'type': 'BOM (as component)',
+                'count': self.bom_component.count(),
+                'description': 'This item is used as a component in other BOMs'
+            })
+        
+        # Check if item has stock movements
+        try:
+            if hasattr(self, 'stockmovementitem_set') and self.stockmovementitem_set.exists():
+                blocking_references.append({
+                    'type': 'Stock Movements',
+                    'count': self.stockmovementitem_set.count(),
+                    'description': 'This item has stock movement history'
+                })
+        except Exception:
+            pass  # Table might not exist or other database issues
+        
+        # Check if item has stock records
+        try:
+            if hasattr(self, 'stocks') and self.stocks.exists():
+                blocking_references.append({
+                    'type': 'Stock Records',
+                    'count': self.stocks.count(),
+                    'description': 'This item has current stock records'
+                })
+        except Exception:
+            pass  # Table might not exist or other database issues
+        
+        # Check if item has production results
+        try:
+            from django.apps import apps
+            if apps.is_installed('production'):
+                ProductionResult = apps.get_model('production', 'ProductionResult')
+                production_results = ProductionResult.objects.filter(item_sku=self)
+                if production_results.exists():
+                    blocking_references.append({
+                        'type': 'Production Results',
+                        'count': production_results.count(),
+                        'description': 'This item has production result records'
+                    })
+        except Exception:
+            pass  # Production app not available or table doesn't exist
+        
+        # Check if item has material reservations
+        try:
+            if hasattr(self, 'material_reservations') and self.material_reservations.exists():
+                blocking_references.append({
+                    'type': 'Material Reservations',
+                    'count': self.material_reservations.count(), 
+                    'description': 'This item has material reservation records'
+                })
+        except Exception:
+            pass  # Table might not exist or other database issues
+        
+        # Check if item has stock alerts
+        try:
+            if hasattr(self, 'stock_alerts') and self.stock_alerts.exists():
+                blocking_references.append({
+                    'type': 'Stock Alerts',
+                    'count': self.stock_alerts.count(),
+                    'description': 'This item has stock alert records'
+                })
+        except Exception:
+            pass  # Table might not exist or other database issues
+        
+        can_delete = len(blocking_references) == 0
+        return can_delete, blocking_references

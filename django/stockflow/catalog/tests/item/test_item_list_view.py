@@ -102,12 +102,12 @@ class ItemListViewTest(TestCase):
 
     def test_inactive_items_shown(self):
         """Test that inactive items are also shown in the list"""
-        # Create an inactive item - use PACKAGE type to avoid business rule issues
+        # Create an inactive item - use PRODUCT type to avoid business rule issues
         inactive_item = ItemSKU.objects.create(
             sku_code='INACTIVE001',
             name='Inactive Item',
             unit='pcs',
-            type=ItemSKU.Type.PACKAGE,  # Use PACKAGE type
+            type=ItemSKU.Type.PRODUCT,  # Use PRODUCT type
             status=ItemSKU.Status.DRAFT,  # Start as DRAFT then change to INACTIVE
             category=self.category,
             created_by=self.user,

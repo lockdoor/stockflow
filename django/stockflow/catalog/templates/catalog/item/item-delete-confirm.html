@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+{% load widget_tweaks %}
+
+{% block title %}Delete {{ object.name }} - StockFlow{% endblock %}
+
+{% block content %}
+<div class="main-content">
+    <!-- Header -->
+    <div class="dashboard-header">
+        <div class="container-fluid">
+            <div class="d-flex justify-content-between align-items-center py-4">
+                <div>
+                    {% include 'shared/breadcrumb.html' %}
+                    <h1 class="h2 mb-1 text-danger">
+                        <i class="bi bi-exclamation-triangle me-2"></i>Delete Item
+                    </h1>
+                    <p class="text-muted mb-0">
+                        Confirm deletion of <strong>{{ object.name }}</strong>
+                    </p>
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="{% url 'catalog:item-detail' object.id %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-1"></i>Back to Item
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="container-fluid py-4">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                {% if not can_delete %}
+                <!-- Cannot Delete - Show Blocking References -->
+                <div class="card shadow-sm border-warning">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="card-title mb-0">
+                            <i class="bi bi-shield-exclamation me-2"></i>Cannot Delete Item
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-warning mb-4">
+                            <h6 class="alert-heading">
+                                <i class="bi bi-exclamation-triangle me-2"></i>Deletion Blocked
+                            </h6>
+                            <p class="mb-0">
+                                This item cannot be deleted because it is referenced by other records in the system. 
+                                You must remove all references before deleting this item.
+                            </p>
+                        </div>
+
+                        <!-- Item Details -->
+                        <div class="row mb-4">
+                            <div class="col-md-4">
+                                <strong>Item:</strong>
+                            </div>
+                            <div class="col-md-8">
+                                <span class="badge bg-secondary me-2">{{ object.sku_code }}</span>
+                                {{ object.name }}
+                            </div>
+                        </div>
+
+                        <!-- Blocking References -->
+                        <h6 class="mb-3">Blocking References:</h6>
+                        <div class="list-group">
+                            {% for ref in blocking_references %}
+                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-1">{{ ref.type }}</h6>
+                                    <p class="mb-1 text-muted">{{ ref.description }}</p>
+                                </div>
+                                <span class="badge bg-primary rounded-pill">{{ ref.count }}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="mt-4">
+                            <p class="text-muted">
+                                <i class="bi bi-info-circle me-1"></i>
+                                To delete this item, you need to remove or reassign all the references listed above.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <div class="d-flex gap-2">
+                            <a href="{% url 'catalog:item-detail' object.id %}" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left me-1"></i>Back to Item
+                            </a>
+                            <a href="{% url 'catalog:item-list' %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-list-ul me-1"></i>Back to List
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <!-- Can Delete - Show Confirmation -->
+                <div class="card shadow-sm border-danger">
+                    <div class="card-header bg-danger text-white">
+                        <h5 class="card-title mb-0">
+                            <i class="bi bi-trash me-2"></i>Confirm Deletion
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-danger mb-4">
+                            <h6 class="alert-heading">
+                                <i class="bi bi-exclamation-triangle me-2"></i>Warning: This action cannot be undone!
+                            </h6>
+                            <p class="mb-0">
+                                You are about to permanently delete this item from the system. 
+                                All associated data will be lost.
+                            </p>
+                        </div>
+
+                        <!-- Item Details -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <div class="bg-light p-3 rounded border">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <dl class="mb-0">
+                                                <dt>SKU Code:</dt>
+                                                <dd class="fw-bold">{{ object.sku_code }}</dd>
+                                                
+                                                <dt>Name:</dt>
+                                                <dd>{{ object.name }}</dd>
+                                                
+                                                <dt>Type:</dt>
+                                                <dd>
+                                                    <span class="badge bg-secondary">{{ object.get_type_display }}</span>
+                                                </dd>
+                                            </dl>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <dl class="mb-0">
+                                                <dt>Category:</dt>
+                                                <dd>{{ object.category.name|default:"-" }}</dd>
+                                                
+                                                <dt>Status:</dt>
+                                                <dd>
+                                                    {% if object.status == 'ACTIVE' %}
+                                                    <span class="badge bg-success">{{ object.get_status_display }}</span>
+                                                    {% elif object.status == 'INACTIVE' %}
+                                                    <span class="badge bg-danger">{{ object.get_status_display }}</span>
+                                                    {% else %}
+                                                    <span class="badge bg-warning">{{ object.get_status_display }}</span>
+                                                    {% endif %}
+                                                </dd>
+                                                
+                                                <dt>Created:</dt>
+                                                <dd>{{ object.created_at|date:"M d, Y" }}</dd>
+                                            </dl>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <p class="text-muted">
+                                <i class="bi bi-check-circle me-1 text-success"></i>
+                                This item has no references and can be safely deleted.
+                            </p>
+                        </div>
+
+                        <!-- Confirmation Form -->
+                        <form method="post">
+                            {% csrf_token %}
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="confirmDelete" required>
+                                <label class="form-check-label" for="confirmDelete">
+                                    I understand that this action cannot be undone and want to proceed with deletion.
+                                </label>
+                            </div>
+                            
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-danger" id="deleteButton" disabled>
+                                    <i class="bi bi-trash me-1"></i>Delete Item
+                                </button>
+                                <a href="{% url 'catalog:item-detail' object.id %}" class="btn btn-secondary">
+                                    <i class="bi bi-x-lg me-1"></i>Cancel
+                                </a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if can_delete %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const confirmCheckbox = document.getElementById('confirmDelete');
+    const deleteButton = document.getElementById('deleteButton');
+    
+    confirmCheckbox.addEventListener('change', function() {
+        deleteButton.disabled = !this.checked;
+    });
+});
+</script>
+{% endif %}
+{% endblock %}

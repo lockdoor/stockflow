@@ -60,12 +60,12 @@ class StockMovementReferenceValidator:
         reference_type = self.stock_movement.reference_type
         reference_id = self.stock_movement.reference_id
         
-        # If reference type is NONE, reference_id should be None
-        if reference_type == 'NONE' and reference_id is not None:
-            return "Reference ID must be empty when reference type is None"
+        # If reference type is ADJUST, INBOUND, or OUTBOUND, reference_id should be None
+        if reference_type in ['ADJUST', 'INBOUND', 'OUTBOUND'] and reference_id is not None:
+            return f"Reference ID must be empty when reference type is {reference_type}"
         
-        # If reference type is not NONE, reference_id should be provided
-        if reference_type != 'NONE' and reference_id is None:
+        # If reference type requires reference_id, it should be provided
+        if reference_type not in ['ADJUST', 'INBOUND', 'OUTBOUND'] and reference_id is None:
             return f"Reference ID is required when reference type is {reference_type}"
         
         # Validate reference_id is positive

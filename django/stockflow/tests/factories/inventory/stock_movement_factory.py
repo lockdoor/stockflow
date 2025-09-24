@@ -13,7 +13,7 @@ class StockMovementFactory(factory.django.DjangoModelFactory):
         
     # Core fields
     warehouse = factory.SubFactory(warehouse_factory.WarehouseFactory)
-    reference_type = StockMovement.ReferenceType.NONE
+    reference_type = StockMovement.ReferenceType.ADJUST
 
     # Audit fields
     created_by = factory.SubFactory(AdminFactory)

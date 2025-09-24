@@ -24,7 +24,7 @@ erDiagram
         varchar sku_code UK "Unique SKU identifier"
         varchar name "Item display name"
         varchar unit "Unit of measurement"
-        enum type "RAW, PRODUCT, PACKAGE"
+        enum type "RAW, PRODUCT"
         enum status "ACTIVE, INACTIVE, DRAFT"
         text note "Additional notes"
         int category_id FK "Optional category"

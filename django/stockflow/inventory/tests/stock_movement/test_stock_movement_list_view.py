@@ -40,7 +40,7 @@ class StockMovementListViewTest(TestCase):
         
         # Create test stock movements
         self.stock_movement1 = StockMovement.objects.create(
-            reference_type=StockMovement.ReferenceType.NONE,
+            reference_type=StockMovement.ReferenceType.ADJUST,
             note='Test movement 1',
             warehouse=self.warehouse,
             status=StockMovement.Status.DRAFT,
@@ -121,7 +121,6 @@ class StockMovementListViewTest(TestCase):
         self.assertContains(response, self.warehouse.name)
         
         # Check for reference types
-        self.assertContains(response, 'None')  # NONE reference type
         self.assertContains(response, 'Adjust')  # ADJUST reference type
 
     def test_view_displays_status_badges(self):
@@ -198,7 +197,7 @@ class StockMovementListViewTest(TestCase):
             status = statuses[i % len(statuses)]
             
             StockMovement.objects.create(
-                reference_type=StockMovement.ReferenceType.NONE,
+                reference_type=StockMovement.ReferenceType.ADJUST,
                 note=f'Bulk test movement {i}',
                 warehouse=warehouse,
                 status=status,

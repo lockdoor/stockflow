@@ -67,7 +67,7 @@ class StockMovementCreateViewTest(TestCase):
         # Valid form data
         self.valid_data = {
             'warehouse': self.warehouse.id,
-            'reference_type': StockMovement.ReferenceType.NONE,
+            'reference_type': StockMovement.ReferenceType.ADJUST,
             'note': 'Test stock movement creation',
         }
 
@@ -130,7 +130,7 @@ class StockMovementCreateViewTest(TestCase):
         # Get the created movement
         movement = StockMovement.objects.latest('created_at')
         self.assertEqual(movement.warehouse, self.warehouse)
-        self.assertEqual(movement.reference_type, StockMovement.ReferenceType.NONE)
+        self.assertEqual(movement.reference_type, StockMovement.ReferenceType.ADJUST)
         self.assertEqual(movement.note, 'Test stock movement creation')
         self.assertEqual(movement.status, StockMovement.Status.DRAFT)
         self.assertEqual(movement.created_by, self.user)
@@ -154,7 +154,7 @@ class StockMovementCreateViewTest(TestCase):
         data = self.valid_data.copy()
         data.update({
             'warehouse': warehouse2.id,
-            'reference_type': StockMovement.ReferenceType.ADJUST,
+            'reference_type': StockMovement.ReferenceType.PRODUCTION,
             'reference_id': 123
         })
         
@@ -162,22 +162,22 @@ class StockMovementCreateViewTest(TestCase):
         self.assertEqual(response.status_code, 302)
         
         movement = StockMovement.objects.latest('created_at')
-        self.assertEqual(movement.reference_type, StockMovement.ReferenceType.ADJUST)
+        self.assertEqual(movement.reference_type, StockMovement.ReferenceType.PRODUCTION)
         self.assertEqual(movement.reference_id, 123)
 
-    def test_create_without_reference_id_for_none_type(self):
-        """Test creating movement without reference_id when type is NONE"""
+    def test_create_without_reference_id_for_adjust_type(self):
+        """Test creating movement without reference_id when type is ADJUST"""
         self.client.login(username='testuser', password='testpass123')
         
         data = self.valid_data.copy()
-        data['reference_type'] = StockMovement.ReferenceType.NONE
+        data['reference_type'] = StockMovement.ReferenceType.ADJUST
         # Don't include reference_id
         
         response = self.client.post(self.url, data)
         self.assertEqual(response.status_code, 302)
         
         movement = StockMovement.objects.latest('created_at')
-        self.assertEqual(movement.reference_type, StockMovement.ReferenceType.NONE)
+        self.assertEqual(movement.reference_type, StockMovement.ReferenceType.ADJUST)
         self.assertIsNone(movement.reference_id)
 
     def test_form_validation_errors(self):
@@ -283,13 +283,13 @@ class StockMovementCreateViewTest(TestCase):
         movement = StockMovement.objects.latest('created_at')
         self.assertIsNone(movement.note)
 
-    def test_reference_id_validation_with_non_none_type(self):
-        """Test that reference_id is required for non-NONE reference types"""
+    def test_reference_id_validation_with_production_type(self):
+        """Test that reference_id is required for PRODUCTION reference type"""
         self.client.login(username='testuser', password='testpass123')
         
         data = self.valid_data.copy()
         data.update({
-            'reference_type': StockMovement.ReferenceType.ADJUST,
+            'reference_type': StockMovement.ReferenceType.PRODUCTION,
             # Don't provide reference_id
         })
         
@@ -298,6 +298,24 @@ class StockMovementCreateViewTest(TestCase):
         # Should show validation error
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Reference ID is required')
+        
+    def test_create_adjust_movement_without_reference_id(self):
+        """Test creating ADJUST movement without reference_id (should be valid)"""
+        self.client.login(username='testuser', password='testpass123')
+        
+        data = self.valid_data.copy()
+        data.update({
+            'reference_type': StockMovement.ReferenceType.ADJUST,
+            # Don't provide reference_id - should be OK for ADJUST
+        })
+        data.pop('reference_id', None)
+        
+        response = self.client.post(self.url, data)
+        self.assertEqual(response.status_code, 302)
+        
+        movement = StockMovement.objects.latest('created_at')
+        self.assertEqual(movement.reference_type, StockMovement.ReferenceType.ADJUST)
+        self.assertIsNone(movement.reference_id)
 
     def test_created_and_updated_by_fields(self):
         """Test that created_by and updated_by are set correctly"""
@@ -366,9 +384,10 @@ class StockMovementCreateViewTest(TestCase):
         self.client.login(username='testuser', password='testpass123')
         
         reference_types = [
-            (StockMovement.ReferenceType.ADJUST, 123),
+            (StockMovement.ReferenceType.ADJUST, None),  # ADJUST should have no reference_id
+            (StockMovement.ReferenceType.INBOUND, None),  # INBOUND should have no reference_id
+            (StockMovement.ReferenceType.OUTBOUND, None),  # OUTBOUND should have no reference_id
             (StockMovement.ReferenceType.PRODUCTION, 789),
-            (StockMovement.ReferenceType.NONE, None),
         ]
         
         for i, (ref_type, ref_id) in enumerate(reference_types):
@@ -537,7 +556,7 @@ class StockMovementCreateViewNextUrlTest(TestCase):
         # Valid form data
         self.valid_data = {
             'warehouse': self.warehouse.id,
-            'reference_type': StockMovement.ReferenceType.NONE,
+            'reference_type': StockMovement.ReferenceType.ADJUST,
             'note': 'Test stock movement creation',
         }
 

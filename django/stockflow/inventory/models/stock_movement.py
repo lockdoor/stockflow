@@ -43,8 +43,9 @@ class StockMovement(
     """
     
     class ReferenceType(models.TextChoices):
-        NONE = 'NONE', 'None'
         ADJUST = 'ADJUST', 'Adjust'
+        INBOUND = 'INBOUND', 'Inbound'
+        OUTBOUND = 'OUTBOUND', 'Outbound'
         PRODUCTION = 'PRODUCTION', 'Production'
         # PACKING_LIST = 'PACKING_LIST', 'Packing List'
         # INVOICE = 'INVOICE', 'Invoice'
@@ -60,7 +61,7 @@ class StockMovement(
     reference_type = models.CharField(
         max_length=20,
         choices=ReferenceType.choices,
-        default=ReferenceType.NONE,
+        default=ReferenceType.ADJUST,
         help_text="Type of document this movement references"
     )
     reference_id = models.IntegerField(
@@ -101,10 +102,10 @@ class StockMovement(
         constraints = [
             # Allow multiple draft movements, but unique per reference and warehouse
             # This prevents duplicate draft movements for the same reference in same warehouse
-            # but allows different types of draft movements (adjustments, returns, etc.)
+            # but allows different types of draft movements (adjustments, inbound, outbound, etc.)
             models.UniqueConstraint(
                 fields=['warehouse', 'reference_type', 'reference_id'],
-                condition=models.Q(status='DRAFT') & ~models.Q(reference_type='NONE'),
+                condition=models.Q(status='DRAFT') & ~models.Q(reference_type__in=['ADJUST', 'INBOUND', 'OUTBOUND']),
                 name='unique_draft_per_warehouse_reference'
             )
         ]
@@ -415,8 +416,8 @@ class StockMovement(
 
     def get_reference_display(self):
         """Get formatted reference display"""
-        if self.reference_type == self.ReferenceType.NONE:
-            return "No Reference"
+        if self.reference_type in [self.ReferenceType.ADJUST, self.ReferenceType.INBOUND, self.ReferenceType.OUTBOUND]:
+            return self.get_reference_type_display()
         
         if self.reference_id:
             return f"{self.get_reference_type_display()} #{self.reference_id}"

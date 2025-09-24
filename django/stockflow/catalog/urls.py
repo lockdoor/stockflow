@@ -8,7 +8,7 @@ from catalog.views.category_views import (
 )
 
 from catalog.views.item_views import (
-    ItemListView, ItemCreateView, ItemUpdateView, ItemDetailView
+    ItemListView, ItemCreateView, ItemUpdateView, ItemDetailView, ItemDeleteView
 )
 
 from catalog.views.bom_views import (
@@ -40,6 +40,7 @@ urlpatterns = [
     path('items/<int:pk>/edit/', ItemUpdateView.as_view(), name='item-edit-form'),
     path('items/', ItemListView.as_view(), name='item-list'),
     path('items/<int:pk>/detail/', ItemDetailView.as_view(), name='item-detail'),
+    path('items/<int:pk>/delete/', ItemDeleteView.as_view(), name='item-delete'),
     
     path('bom/<int:parent_id>/create', BomCreateView.as_view(), name='bom-create'),
     path('bom/<int:parent_id>/list', BomListByParentIDView.as_view(), name='bom-list'),

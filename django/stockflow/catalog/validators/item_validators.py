@@ -128,9 +128,8 @@ class ItemBusinessRulesValidator(BaseValidator):
                 errors.append(
                     "New raw materials should typically be ACTIVE. Use INACTIVE only if intentional."
                 )
-            
-            # For new PRODUCT/PACKAGE, recommend DRAFT status
-            if (self.instance.type in [self.instance.Type.PRODUCT, self.instance.Type.PACKAGE] and 
+            # For new PRODUCT, recommend DRAFT status
+            if (self.instance.type == self.instance.Type.PRODUCT and 
                 self.instance.status == self.instance.Status.ACTIVE):
                 errors.append(
                     f"New {self.instance.type.lower()}s should typically start as DRAFT to allow BOM editing. "

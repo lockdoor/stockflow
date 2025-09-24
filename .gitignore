@@ -10,3 +10,4 @@ __pycache__
 *.DS_Store
 django/stockflow/static/css/tailwindcss
 django/stockflow/media/item_images/*
+django/stockflow/media/stock_movement_images/*

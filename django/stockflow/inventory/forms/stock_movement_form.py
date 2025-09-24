@@ -65,9 +65,9 @@ class StockMovementForm(forms.ModelForm):
         # Limit warehouse choices to active warehouses only
         self.fields['warehouse'].queryset = Warehouse.objects.filter(is_active=True)
         
-        # Set initial reference type to NONE for new movements
+        # Set initial reference type to ADJUST for new movements
         if not self.instance.pk:
-            self.fields['reference_type'].initial = StockMovement.ReferenceType.NONE
+            self.fields['reference_type'].initial = StockMovement.ReferenceType.ADJUST
         
         # Make reference_id conditionally required based on reference_type
         self.fields['reference_id'].required = False

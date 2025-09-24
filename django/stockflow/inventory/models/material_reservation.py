@@ -92,8 +92,8 @@ class MaterialReservation(AuditableMixin, ValidatableMixin, models.Model):
         if reserved_quantity <= 0:
             raise ValueError("Reserved quantity must be positive.")
 
-        if item_sku.type in [ItemSKU.Type.PRODUCT, ItemSKU.Type.PACKAGE]:
-            # For PRODUCT or PACKAGE, we need to reserve for each component in its BOM
+        if item_sku.type  == ItemSKU.Type.PRODUCT:
+            # For PRODUCT, we need to reserve for each component in its BOM
             boms = BOM.objects.filter(parent_sku=item_sku)
             if not boms.exists():
                 raise ValueError(f"No active BOM found for item SKU {item_sku}. Cannot create reservation.")

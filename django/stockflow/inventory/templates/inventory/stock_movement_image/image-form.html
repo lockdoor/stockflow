@@ -1,0 +1,311 @@
+{% extends "base-dashboard-header.html" %}
+{% load widget_tweaks %}
+
+{% block title %}
+{% if form.instance.id %}
+Edit Document - Stock Movement #{{ stock_movement.id }}
+{% else %}
+Add New Document
+{% endif %} - StockFlow
+{% endblock %}
+
+{% block title_text %}
+{% if form.instance.id %}
+Edit Document - Stock Movement #{{ stock_movement.id }}
+{% else %}
+Add New Document
+{% endif %}
+{% endblock %}
+
+{% block subtitle_text %}
+Document management for Stock Movement #{{ stock_movement.id }}
+{% endblock %}
+
+{% block header_actions %}
+<a href="{{ prev_url }}" class="btn btn-outline-secondary">
+  <i class="bi bi-arrow-left me-1"></i>Back
+</a>
+{% endblock %}
+
+
+{% block dashboard_content %}
+<div class="main-content">
+  <!-- Form Content -->
+  <div class="container-fluid">
+    <div class="row">
+      <div class="col-lg-8 mx-auto">
+        <div class="card border-0 shadow-sm">
+          <div class="card-body p-4">
+            
+            <!-- Messages -->
+            {% if messages %}
+            <div class="mb-4">
+              {% for message in messages %}
+              <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+              </div>
+              {% endfor %}
+            </div>
+            {% endif %}
+            
+            <!-- Current Image Preview (for edit mode) -->
+            {% if form.instance.id and form.instance.image %}
+            <div class="mb-4">
+              <h5 class="card-title mb-3">Current Document</h5>
+              <div class="text-center">
+                {% if form.instance.image.url|slice:"-4:" == ".pdf" %}
+                <!-- PDF Preview -->
+                <div class="border rounded p-4">
+                  <i class="bi bi-file-earmark-pdf text-danger" style="font-size: 4rem;"></i>
+                  <p class="mt-2 mb-0">
+                    <a href="{{ form.instance.image.url }}" target="_blank" class="btn btn-outline-primary">
+                      <i class="bi bi-eye me-1"></i>View PDF
+                    </a>
+                  </p>
+                </div>
+                {% else %}
+                <!-- Image Preview -->
+                <img src="{{ form.instance.image.url }}" 
+                     alt="{{ form.instance.caption|default:'Stock Movement Document' }}" 
+                     class="img-fluid rounded shadow-sm" 
+                     style="max-height: 300px;">
+                {% endif %}
+                
+                {% if form.instance.caption %}
+                <p class="text-muted mt-2 mb-0">{{ form.instance.caption }}</p>
+                {% endif %}
+                {% if form.instance.is_primary %}
+                <span class="badge bg-primary mt-2">Primary Document</span>
+                {% endif %}
+              </div>
+              <hr class="my-4">
+            </div>
+            {% endif %}
+
+            <form method="post" enctype="multipart/form-data" novalidate>
+              {% csrf_token %}
+              
+              <!-- Error Summary -->
+              {% if form.non_field_errors %}
+              <div class="alert alert-danger mb-4">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                <strong>Please correct the following errors:</strong>
+                <ul class="mb-0 mt-2">
+                  {% for error in form.non_field_errors %}
+                  <li>{{ error }}</li>
+                  {% endfor %}
+                </ul>
+              </div>
+              {% endif %}
+
+              <div class="row">
+                <!-- Stock Movement Selection -->
+                {% if not form.instance.id %}
+                <div class="col-md-6 mb-3">
+                  <label for="{{ form.stock_movement.id_for_label }}" class="form-label">
+                    <i class="bi bi-arrow-repeat me-1"></i>{{ form.stock_movement.label }}
+                    {% if form.stock_movement.field.required %}<span class="text-danger">*</span>{% endif %}
+                  </label>
+                  {{ form.stock_movement|add_class:"form-select" }}
+                  {% if form.stock_movement.help_text %}
+                  <div class="form-text">{{ form.stock_movement.help_text }}</div>
+                  {% endif %}
+                  {% if form.stock_movement.errors %}
+                  <div class="invalid-feedback d-block">
+                    {% for error in form.stock_movement.errors %}
+                    {{ error }}
+                    {% endfor %}
+                  </div>
+                  {% endif %}
+                </div>
+                {% endif %}
+
+                <!-- Primary Document Checkbox -->
+                <div class="col-md-6 mb-3">
+                  <div class="form-check mt-4">
+                    {{ form.is_primary|add_class:"form-check-input" }}
+                    <label class="form-check-label" for="{{ form.is_primary.id_for_label }}">
+                      <i class="bi bi-star me-1"></i>{{ form.is_primary.label }}
+                    </label>
+                    {% if form.is_primary.help_text %}
+                    <div class="form-text">{{ form.is_primary.help_text }}</div>
+                    {% endif %}
+                    {% if form.is_primary.errors %}
+                    <div class="invalid-feedback d-block">
+                      {% for error in form.is_primary.errors %}
+                      {{ error }}
+                      {% endfor %}
+                    </div>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+
+              <!-- Document Upload -->
+              {% if not form.instance.id %}
+              <div class="mb-3">
+                <label for="{{ form.image.id_for_label }}" class="form-label">
+                  <i class="bi bi-cloud-upload me-1"></i>{{ form.image.label }}
+                  {% if form.image.field.required %}<span class="text-danger">*</span>{% endif %}
+                </label>
+                {{ form.image|add_class:"form-control" }}
+                {% if form.image.help_text %}
+                <div class="form-text">{{ form.image.help_text }}</div>
+                {% endif %}
+                {% if form.image.errors %}
+                <div class="invalid-feedback d-block">
+                  {% for error in form.image.errors %}
+                  {{ error }}
+                  {% endfor %}
+                </div>
+                {% endif %}
+              </div>
+              {% endif %}
+
+              <!-- Caption -->
+              <div class="mb-3">
+                <label for="{{ form.caption.id_for_label }}" class="form-label">
+                  <i class="bi bi-card-text me-1"></i>{{ form.caption.label }}
+                </label>
+                {{ form.caption|add_class:"form-control" }}
+                {% if form.caption.help_text %}
+                <div class="form-text">{{ form.caption.help_text }}</div>
+                {% endif %}
+                {% if form.caption.errors %}
+                <div class="invalid-feedback d-block">
+                  {% for error in form.caption.errors %}
+                  {{ error }}
+                  {% endfor %}
+                </div>
+                {% endif %}
+              </div>
+
+              <!-- Note -->
+              <div class="mb-4">
+                <label for="{{ form.note.id_for_label }}" class="form-label">
+                  <i class="bi bi-chat-text me-1"></i>{{ form.note.label }}
+                </label>
+                {{ form.note|add_class:"form-control" }}
+                {% if form.note.help_text %}
+                <div class="form-text">{{ form.note.help_text }}</div>
+                {% endif %}
+                {% if form.note.errors %}
+                <div class="invalid-feedback d-block">
+                  {% for error in form.note.errors %}
+                  {{ error }}
+                  {% endfor %}
+                </div>
+                {% endif %}
+              </div>
+
+              <!-- Submit Buttons -->
+              <div class="d-flex justify-content-between">
+                <div>
+                  <a href="{{ prev_url }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-x-lg me-1"></i>Cancel
+                  </a>
+                </div>
+                <div>
+                  <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check-lg me-1"></i>
+                    {% if form.instance.id %}Update Document{% else %}Upload Document{% endif %}
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- Help Card -->
+        <div class="card border-0 shadow-sm mt-4">
+          <div class="card-body p-4">
+            <h5 class="card-title">
+              <i class="bi bi-info-circle me-2"></i>Document Guidelines
+            </h5>
+            <div class="row">
+              <div class="col-md-6">
+                <h6>Supported Formats</h6>
+                <ul class="list-unstyled text-muted">
+                  <li><i class="bi bi-check-circle text-success me-1"></i>JPEG (.jpg, .jpeg)</li>
+                  <li><i class="bi bi-check-circle text-success me-1"></i>PNG (.png)</li>
+                  <li><i class="bi bi-check-circle text-success me-1"></i>GIF (.gif)</li>
+                  <li><i class="bi bi-check-circle text-success me-1"></i>PDF (.pdf)</li>
+                </ul>
+              </div>
+              <div class="col-md-6">
+                <h6>File Restrictions</h6>
+                <ul class="list-unstyled text-muted">
+                  <li><i class="bi bi-file-earmark me-1"></i>Maximum file size: 10MB</li>
+                  <li><i class="bi bi-images me-1"></i>Upload supporting documents</li>
+                  <li><i class="bi bi-shield-check me-1"></i>Documents are securely stored</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Document Preview Script -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const fileInput = document.querySelector('input[type="file"][name="image"]');
+    if (fileInput) {
+        fileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                // Validate file size
+                const maxSize = 10 * 1024 * 1024; // 10MB
+                if (file.size > maxSize) {
+                    alert('File is too large. Maximum size is 10MB.');
+                    this.value = '';
+                    return;
+                }
+                
+                // Show preview
+                let preview = document.getElementById('file-preview');
+                if (!preview) {
+                    preview = document.createElement('div');
+                    preview.id = 'file-preview';
+                    preview.className = 'mt-3 text-center';
+                    fileInput.parentNode.appendChild(preview);
+                }
+                
+                if (file.type.startsWith('image/')) {
+                    // Image preview
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        preview.innerHTML = `
+                            <div class="border rounded p-3">
+                                <img src="${e.target.result}" class="img-fluid rounded" style="max-height: 200px;">
+                                <p class="text-muted mt-2 mb-0">Preview: ${file.name}</p>
+                            </div>
+                        `;
+                    };
+                    reader.readAsDataURL(file);
+                } else if (file.type === 'application/pdf') {
+                    // PDF preview
+                    preview.innerHTML = `
+                        <div class="border rounded p-3">
+                            <i class="bi bi-file-earmark-pdf text-danger" style="font-size: 3rem;"></i>
+                            <p class="text-muted mt-2 mb-0">PDF Document: ${file.name}</p>
+                        </div>
+                    `;
+                } else {
+                    // Generic file preview
+                    preview.innerHTML = `
+                        <div class="border rounded p-3">
+                            <i class="bi bi-file-earmark text-primary" style="font-size: 3rem;"></i>
+                            <p class="text-muted mt-2 mb-0">File: ${file.name}</p>
+                        </div>
+                    `;
+                }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

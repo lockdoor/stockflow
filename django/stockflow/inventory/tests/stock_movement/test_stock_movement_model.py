@@ -477,17 +477,17 @@ class StockMovementModelTest(TestCase):
 
     def test_reference_display_methods(self):
         """Test reference display methods"""
-        # Test with NONE reference type
-        movement_none = StockMovement.objects.create(
-            reference_type=StockMovement.ReferenceType.NONE,
+        # Test with ADJUST reference type (no reference ID)
+        movement_adjust = StockMovement.objects.create(
+            reference_type=StockMovement.ReferenceType.ADJUST,
             warehouse=self.warehouse,
             created_by=self.user,
             updated_by=self.user
         )
-        self.assertEqual(movement_none.get_reference_display(), "No Reference")
+        self.assertEqual(movement_adjust.get_reference_display(), "Adjust")
         
         # Delete the first movement to avoid unique constraint violation
-        movement_none.delete()
+        movement_adjust.delete()
         
         # Test with reference type and ID
         movement_with_ref = StockMovement.objects.create(
@@ -708,6 +708,8 @@ class StockMovementModelTest(TestCase):
         """Test different reference types work correctly"""
         reference_types = [
             (StockMovement.ReferenceType.ADJUST, None),
+            (StockMovement.ReferenceType.INBOUND, None),
+            (StockMovement.ReferenceType.OUTBOUND, None),
             (StockMovement.ReferenceType.PRODUCTION, 67890),
         ]
         
@@ -775,19 +777,30 @@ class StockMovementModelTest(TestCase):
         self.assertEqual(movement.created_by, self.user)  # Should not change
         self.assertEqual(movement.updated_by, self.user2)  # Should change
 
-    def test_edge_case_empty_reference_id_for_none_type(self):
-        """Test that NONE reference type allows empty reference_id"""
-        movement = StockMovement.objects.create(
-            reference_type=StockMovement.ReferenceType.NONE,
-            reference_id=None,
-            warehouse=self.warehouse,
-            created_by=self.user,
-            updated_by=self.user
-        )
+    def test_edge_case_empty_reference_id_for_no_reference_types(self):
+        """Test that ADJUST, INBOUND, OUTBOUND reference types allow empty reference_id"""
+        no_ref_types = [
+            (StockMovement.ReferenceType.ADJUST, "Adjust"),
+            (StockMovement.ReferenceType.INBOUND, "Inbound"),
+            (StockMovement.ReferenceType.OUTBOUND, "Outbound"),
+        ]
         
-        self.assertEqual(movement.reference_type, StockMovement.ReferenceType.NONE)
-        self.assertIsNone(movement.reference_id)
-        self.assertEqual(movement.get_reference_display(), "No Reference")
+        for ref_type, expected_display in no_ref_types:
+            with self.subTest(reference_type=ref_type):
+                movement = StockMovement.objects.create(
+                    reference_type=ref_type,
+                    reference_id=None,
+                    warehouse=self.warehouse,
+                    created_by=self.user,
+                    updated_by=self.user
+                )
+                
+                self.assertEqual(movement.reference_type, ref_type)
+                self.assertIsNone(movement.reference_id)
+                self.assertEqual(movement.get_reference_display(), expected_display)
+                
+                # Clean up for next iteration
+                movement.delete()
 
     def test_model_string_representations(self):
         """Test string representations of movements in different states"""

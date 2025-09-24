@@ -10,6 +10,9 @@
 <a href="{% url 'inventory:stock-movement-list' %}" class="btn btn-outline-secondary">
     <i class="bi bi-arrow-left me-1"></i>Back to List
 </a>
+<a href="{% url 'inventory:stock-movement-image-list' stock_movement.id %}" class="btn btn-outline-info">
+    <i class="bi bi-images me-1"></i>Images & Documents
+</a>
 {% if stock_movement.status == 'DRAFT' %}
 <a href="{% url 'inventory:stock-movement-update' stock_movement.id %}" class="btn btn-outline-primary">
     <i class="bi bi-pencil-square me-1"></i>Edit
@@ -144,6 +147,75 @@
                 </div>
                 {% endif %}
 
+                <!-- Primary Image Card -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h6 class="card-title mb-0">
+                            <i class="bi bi-image me-2"></i>Primary Document
+                        </h6>
+                        <small class="text-muted">
+                            {% if images_count > 0 %}
+                                {{ images_count }} document{{ images_count|pluralize }}
+                            {% else %}
+                                No documents
+                            {% endif %}
+                        </small>
+                    </div>
+                    <div class="card-body text-center">
+                        {% if primary_image %}
+                            <div class="mb-3">
+                                {% if primary_image.image.name|slice:"-4:" == ".pdf" %}
+                                    <!-- PDF Document -->
+                                    <div class="d-flex flex-column align-items-center">
+                                        <i class="bi bi-file-earmark-pdf text-danger" style="font-size: 4rem;"></i>
+                                        <small class="text-muted mt-2">PDF Document</small>
+                                    </div>
+                                {% else %}
+                                    <!-- Image Preview -->
+                                    <img src="{{ primary_image.image.url }}" 
+                                         alt="Primary Image" 
+                                         class="img-fluid rounded" 
+                                         style="max-height: 200px; object-fit: cover;">
+                                {% endif %}
+                            </div>
+                            <div class="mb-2">
+                                <strong>{{ primary_image.image.name|slice:"20:"|default:"Document" }}</strong>
+                                {% if primary_image.note %}
+                                    <p class="text-muted small mb-0">{{ primary_image.note|truncatechars:50 }}</p>
+                                {% endif %}
+                            </div>
+                            <div class="d-grid gap-2">
+                                <a href="{{ primary_image.image.url }}" 
+                                   target="_blank" 
+                                   class="btn btn-outline-primary btn-sm">
+                                    <i class="bi bi-eye me-1"></i>View Full Size
+                                </a>
+                                <a href="{% url 'inventory:stock-movement-image-list' stock_movement.pk %}" 
+                                   class="btn btn-outline-secondary btn-sm">
+                                    <i class="bi bi-images me-1"></i>All Documents ({{ images_count }})
+                                </a>
+                            </div>
+                        {% else %}
+                            <div class="text-muted py-4">
+                                <i class="bi bi-image" style="font-size: 3rem; opacity: 0.3;"></i>
+                                <p class="mt-2 mb-3">No primary document set</p>
+                                <div class="d-grid gap-2">
+                                    <a href="{% url 'inventory:stock-movement-image-create' stock_movement.pk %}" 
+                                       class="btn btn-primary btn-sm">
+                                        <i class="bi bi-plus-lg me-1"></i>Add Document
+                                    </a>
+                                    {% if images_count > 0 %}
+                                    <a href="{% url 'inventory:stock-movement-image-list' stock_movement.pk %}" 
+                                       class="btn btn-outline-secondary btn-sm">
+                                        <i class="bi bi-images me-1"></i>View All ({{ images_count }})
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
                 <!-- Info Card -->
                 <div class="card shadow-sm">
                     <div class="card-header">
@@ -187,3 +259,4 @@
             </div>
         </div>
 {% endblock %}
+

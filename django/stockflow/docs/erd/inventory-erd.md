@@ -24,7 +24,7 @@ erDiagram
     
     StockMovement {
         int id PK
-        enum reference_type "NONE, ADJUST, PACKING_LIST, PRODUCTION, INVOICE"
+        enum reference_type "ADJUST, INBOUND, OUTBOUND, PRODUCTION"
         int reference_id
         text note
         int warehouse_id FK
